@@ -1,13 +1,13 @@
 package com.ga.arqemio.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @AllArgsConstructor
@@ -15,32 +15,32 @@ import java.util.List;
 @Getter
 @Setter
 @Entity
-@Table(name = "users")
-@ToString(exclude = {"password", "memberships"})
-public class User {
+@Table(name = "companies")
+@ToString(exclude = {"owner","memberships"})
+public class Company {
     @Id
     @Column
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @OneToOne
+    @JoinColumn(name = "owner_id")
+    private CompanyMembership owner;
+
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, unique = true)
-    private String email;
+    @Column
+    private String description;
 
     @Column(nullable = false)
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private String password;
+    private String location;
 
-    @Column(nullable = true)
-    private String profilePicture;
-
-    @Column
-    private Boolean status= true;
+    @Column(nullable = false)
+    private String address;
 
     @Column
-    private Boolean isPlatformAdmin= false;
+    private String status;
 
     @Column
     @CreationTimestamp
@@ -50,7 +50,8 @@ public class User {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-//    @OneToMany(mappedBy = "user")
-//    private List<CompanyMembership> memberships;
+    @JsonIgnore
+    @OneToMany(mappedBy = "company")
+    private List<CompanyMembership> memberships= new ArrayList<>();
 
 }
