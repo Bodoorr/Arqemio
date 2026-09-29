@@ -50,7 +50,7 @@ public class User {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-//    @OneToMany(mappedBy = "user")
-//    private List<CompanyMembership> memberships;
+    @OneToMany(mappedBy = "user")
+    private List<CompanyMembership> memberships;
 
 }
