@@ -1,5 +1,6 @@
 package com.ga.arqemio.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -16,7 +17,7 @@ import java.util.List;
 @Setter
 @Entity
 @Table(name = "projects")
-@ToString(exclude = {"company","managers", "tasks"})
+@ToString(exclude = {"company","managers", "tasks","reservations"})
 public class Project {
     @Id
     @Column
@@ -62,4 +63,8 @@ public class Project {
 
     @OneToMany(mappedBy = "project")
     private List<Task> tasks = new ArrayList<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "project")
+    private List<Reservation> reservations = new ArrayList<>();
 }

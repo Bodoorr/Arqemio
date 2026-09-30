@@ -1,41 +1,51 @@
 package com.ga.arqemio.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
 @Entity
-@Table(name = "company_memberships")
-@ToString(exclude = {"user","company","reservations"})
-public class CompanyMembership {
+@Table(name = "reservations")
+@ToString(exclude = {"equipment","project","membership"})
+public class Reservation {
     @Id
     @Column
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "equipment_id", nullable = false)
+    private Equipment equipment;
 
     @ManyToOne
-    @JoinColumn(name = "company_id", nullable = false)
-    private Company company;
+    @JoinColumn(name = "project_id", nullable = false)
+    private Project project;
+
+    @ManyToOne
+    @JoinColumn(name = "reserved_by", nullable = false)
+    private CompanyMembership membership;
 
     @Column(nullable = false)
-    private String role;
+    private LocalDateTime startDateTime;
 
     @Column(nullable = false)
-    private String status= "ACTIVE";
+    private LocalDateTime endDateTime;
+
+    @Column
+    private String description;
+
+    @Column
+    private String status;
+
+    @Column
+    private int quantity;
 
     @Column
     @CreationTimestamp
@@ -45,8 +55,6 @@ public class CompanyMembership {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "membership")
-    private List<Reservation> reservations = new ArrayList<>();
+
 
 }
