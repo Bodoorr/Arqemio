@@ -3,7 +3,6 @@ package com.ga.arqemio.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -12,9 +11,9 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "project_updates")
-@ToString(exclude = {"project","updatedBy","reviewedBy"})
-public class ProjectUpdate {
+@Table(name = "file_attachments")
+@ToString(exclude = {"project","expense","projectUpdate","uploadedBy"})
+public class FileAttachment {
     @Id
     @Column
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,29 +24,29 @@ public class ProjectUpdate {
     private Project project;
 
     @ManyToOne
-    @JoinColumn(name = "updated_by", nullable = false)
-    private CompanyMembership updatedBy;
+    @JoinColumn(name = "expense_id")
+    private Expense expense;
 
     @Column
-    private String title;
+    private String fileUrl;
 
     @Column
-    private String description;
+    private String fileName;
 
     @Column
-    private String status;
+    private String fileType;
 
     @ManyToOne
-    @JoinColumn(name = "reviewed_by")
-    private CompanyMembership reviewedBy;
+    @JoinColumn(name = "uploaded_by", nullable = false)
+    private CompanyMembership uploadedBy;
+
+    @ManyToOne
+    @JoinColumn(name = "project_update_id")
+    private ProjectUpdate projectUpdate;
 
     @Column
     @CreationTimestamp
     private LocalDateTime createdAt;
-
-    @Column
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 
 
 }
