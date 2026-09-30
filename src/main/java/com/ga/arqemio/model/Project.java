@@ -16,7 +16,7 @@ import java.util.List;
 @Setter
 @Entity
 @Table(name = "projects")
-@ToString(exclude = {"company","managers"})
+@ToString(exclude = {"company","managers", "tasks"})
 public class Project {
     @Id
     @Column
@@ -60,4 +60,6 @@ public class Project {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @OneToMany(mappedBy = "project")
+    private List<Task> tasks = new ArrayList<>();
 }
