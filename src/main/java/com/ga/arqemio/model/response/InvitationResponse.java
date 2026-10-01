@@ -9,5 +9,10 @@ import lombok.Getter;
 public class InvitationResponse {
     private boolean success;
     private String message;
-    private Invitation invitation;
+    private Long invitationId;
+    private String email;
+    private String role;
+    private String status;
+    private String invitedBy;
+    private Long invitedById;
 }
