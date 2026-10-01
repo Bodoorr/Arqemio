@@ -3,6 +3,7 @@ package com.ga.arqemio.controller;
 import com.ga.arqemio.model.Invitation;
 import com.ga.arqemio.model.request.InvitationRequest;
 import com.ga.arqemio.model.response.InvitationResponse;
+import com.ga.arqemio.model.response.InvitationValidationResponse;
 import com.ga.arqemio.service.InvitationService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -38,7 +39,7 @@ public class InvitationController {
     }
 
     @GetMapping("/validate/{token}")
-    public ResponseEntity<InvtiationValidationResponse> validateInvitation(@PathVariable String token){
+    public ResponseEntity<InvitationValidationResponse> validateInvitation(@PathVariable String token){
         Invitation invitation= invitationService.validateInvitation(token);
 
         InvitationValidationResponse response=new InvitationValidationResponse(
