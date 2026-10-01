@@ -40,7 +40,7 @@ public class EmailServiceImpl implements EmailService {
             return "Mail Sent Successfully";
 
         } catch (Exception e) {
-
+            e.printStackTrace();
             return "Error while sending mail";
         }
     }
