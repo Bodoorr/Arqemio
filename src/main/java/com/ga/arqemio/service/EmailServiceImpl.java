@@ -75,7 +75,7 @@ public class EmailServiceImpl implements EmailService {
 
             return true;
 
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return false;
 
