@@ -101,5 +101,19 @@ public class InvitationService {
         return savedInvitation;
     }
 
+    public Invitation validateInvitation(String token){
+        Invitation invitation= invitationRepository.findByToken(token).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitation not found."));
+
+        if (invitation.getStatus().equals("PENDING")){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "This invitation is no longer available.");
+        }
+        if (!invitation.getExpiresAt().isAfter(LocalDateTime.now())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "This invitation has expired.");
+        }
+        return invitation;
+    }
+
 
 }
