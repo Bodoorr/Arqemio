@@ -1,5 +1,6 @@
 package com.ga.arqemio.model.response;
 
+import com.ga.arqemio.model.Invitation;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -8,4 +9,5 @@ import lombok.Getter;
 public class InvitationResponse {
     private boolean success;
     private String message;
+    private Invitation invitation;
 }

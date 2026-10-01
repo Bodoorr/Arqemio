@@ -23,17 +23,17 @@ public class InvitationService {
         return userDetails.getUser();
     }
 
-    public Invitation createInvitation(String email, String role){
-        User currentUser= getCurrentLoggedInUser();
+    public Invitation createInvitation(String email, String role) {
+        User currentUser = getCurrentLoggedInUser();
 
-        if (!currentUser.getIsPlatformAdmin().equals(true) ){
+        if (!currentUser.getIsPlatformAdmin().equals(true)) {
             throw new RuntimeException("Only Platform Admin can invite company owners.");
         }
 
-        if (!role.equals("OWNER")){
+        if (!role.equals("OWNER")) {
             throw new RuntimeException("Platform Admin can only invite company owners.");
         }
-        Invitation invitation= new Invitation();
+        Invitation invitation = new Invitation();
 
         invitation.setEmail(email);
         invitation.setRole(role);
@@ -48,9 +48,9 @@ public class InvitationService {
         invitation.setExpiresAt(LocalDateTime.now().plusHours(48));
 
 
-        Invitation savedInvitation= invitationRepository.save(invitation);
+        Invitation savedInvitation = invitationRepository.save(invitation);
 
-        EmailDetails emailDetails=new EmailDetails();
+        EmailDetails emailDetails = new EmailDetails();
         emailDetails.setRecipient(email);
         emailDetails.setSubject("You're invited to join Arqemio!");
         emailDetails.setMsgBody(
@@ -62,12 +62,13 @@ public class InvitationService {
                         "Arqemio Team"
         );
 
-        String result= emailService.sendSimpleMail(emailDetails);
+        boolean isEmailSent = emailService.sendSimpleMail(emailDetails);
 
-        if (!result.equals(""))
+        if (!isEmailSent) {
+            throw new RuntimeException("Invitation saved, but email could not be sent.");
+        }
         return savedInvitation;
     }
-
 
 
 }
