@@ -6,8 +6,10 @@ import com.ga.arqemio.model.User;
 import com.ga.arqemio.repository.InvitationRepository;
 import com.ga.arqemio.security.MyUserDetails;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -33,6 +35,34 @@ public class InvitationService {
         if (!role.equals("OWNER")) {
             throw new RuntimeException("Platform Admin can only invite company owners.");
         }
+
+        boolean alreadyAccepted =
+                invitationRepository.existsByEmailIgnoreCaseAndRoleAndStatus(
+                        email,
+                        "OWNER",
+                        "ACCEPTED"
+                );
+
+        if (alreadyAccepted) {
+            throw new RuntimeException(
+                    "This email has already accepted an owner invitation."
+            );
+        }
+
+        boolean alreadyPending =
+                invitationRepository.existsByEmailIgnoreCaseAndRoleAndStatus(
+                        email,
+                        "OWNER",
+                        "PENDING"
+                );
+
+        if (alreadyPending) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "This email already has a pending invitation."
+            );
+        }
+
         Invitation invitation = new Invitation();
 
         invitation.setEmail(email);
@@ -67,7 +97,22 @@ public class InvitationService {
         if (!isEmailSent) {
             throw new RuntimeException("Invitation saved, but email could not be sent.");
         }
+
         return savedInvitation;
+    }
+
+    public Invitation validateInvitation(String token){
+        Invitation invitation= invitationRepository.findByToken(token).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitation not found."));
+
+        if (invitation.getStatus().equals("PENDING")){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "This invitation is no longer available.");
+        }
+        if (!invitation.getExpiresAt().isAfter(LocalDateTime.now())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "This invitation has expired.");
+        }
+        return invitation;
     }
 
 
