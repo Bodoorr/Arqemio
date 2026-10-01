@@ -23,7 +23,7 @@ public class EmailServiceImpl implements EmailService {
     private String sender;
 
     // Send simple mail
-    public String sendSimpleMail(EmailDetails details) {
+    public boolean sendSimpleMail(EmailDetails details) {
 
         try {
 
@@ -37,16 +37,16 @@ public class EmailServiceImpl implements EmailService {
 
             javaMailSender.send(mailMessage);
 
-            return "Mail Sent Successfully";
+            return true;
 
         } catch (Exception e) {
             e.printStackTrace();
-            return "Error while sending mail";
+            return false;
         }
     }
 
     // Send mail with attachment
-    public String sendMailWithAttachment(
+    public boolean sendMailWithAttachment(
             EmailDetails details) {
 
         MimeMessage mimeMessage =
@@ -73,11 +73,12 @@ public class EmailServiceImpl implements EmailService {
 
             javaMailSender.send(mimeMessage);
 
-            return "Mail Sent Successfully";
+            return true;
 
-        } catch (MessagingException e) {
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
 
-            return "Error while sending mail";
         }
     }
 }
