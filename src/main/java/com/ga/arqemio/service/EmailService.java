@@ -1,8 +1,8 @@
-package com.ga.arqemio.repository;
+package com.ga.arqemio.service;
 
-import com.ga.arqemio.security.EmailDetails;
+import com.ga.arqemio.model.EmailDetails;
 
-public interface EmailRepository {
+public interface EmailService {
     //to send simple email
     String sendSimpleMail(EmailDetails details);
 

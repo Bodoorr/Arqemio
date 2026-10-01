@@ -1,4 +1,4 @@
-package com.ga.arqemio.security;
+package com.ga.arqemio.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
