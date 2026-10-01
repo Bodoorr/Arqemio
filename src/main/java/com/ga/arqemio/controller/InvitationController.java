@@ -7,10 +7,7 @@ import com.ga.arqemio.service.InvitationService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping(path = "/invitation")
@@ -38,6 +35,20 @@ public class InvitationController {
                 invitation.getUser().getId()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/validate/{token}")
+    public ResponseEntity<InvtiationValidationResponse> validateInvitation(@PathVariable String token){
+        Invitation invitation= invitationService.validateInvitation(token);
+
+        InvitationValidationResponse response=new InvitationValidationResponse(
+                true,
+                "Invitation is valid.",
+                invitation.getEmail(),
+                invitation.getRole(),
+                invitation.getExpiresAt()
+        );
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
 
