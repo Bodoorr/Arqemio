@@ -1,8 +1,10 @@
 package com.ga.arqemio.service;
 
+import com.ga.arqemio.model.Company;
 import com.ga.arqemio.model.EmailDetails;
 import com.ga.arqemio.model.Invitation;
 import com.ga.arqemio.model.User;
+import com.ga.arqemio.repository.CompanyRepository;
 import com.ga.arqemio.repository.InvitationRepository;
 import com.ga.arqemio.security.MyUserDetails;
 import lombok.AllArgsConstructor;
@@ -19,13 +21,14 @@ import java.util.UUID;
 public class InvitationService {
     private InvitationRepository invitationRepository;
     private EmailService emailService;
+    private CompanyRepository companyRepository;
 
     public User getCurrentLoggedInUser(){
         MyUserDetails userDetails= (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return userDetails.getUser();
     }
 
-    public Invitation createInvitation(String email, String role) {
+    public Invitation createInvitation(String email, String role, Long companyId) {
         User currentUser = getCurrentLoggedInUser();
 
         if (!currentUser.getIsPlatformAdmin().equals(true)) {
@@ -35,6 +38,9 @@ public class InvitationService {
         if (!role.equals("OWNER")) {
             throw new RuntimeException("Platform Admin can only invite company owners.");
         }
+
+        Company company= companyRepository.findById(companyId)
+                .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
 
         boolean alreadyAccepted =
                 invitationRepository.existsByEmailIgnoreCaseAndRoleAndStatus(
@@ -69,7 +75,7 @@ public class InvitationService {
         invitation.setRole(role);
         invitation.setUser(currentUser);
 
-        invitation.setCompany(null);
+        invitation.setCompany(company);
 
         invitation.setToken(UUID.randomUUID().toString());
 
@@ -85,7 +91,9 @@ public class InvitationService {
         emailDetails.setSubject("You're invited to join Arqemio!");
         emailDetails.setMsgBody(
                 "Hello!\n\n" +
-                        "You have been invited to join Arqemio as a Company Owner.\n\n" +
+                        "You have been invited to join " +
+                        company.getName() +
+                        " on Arqemio as a Company Owner.\n\n" +
                         "Your invitation token is:\n" +
                         savedInvitation.getToken() + "\n\n" +
                         "This invitation expires in 48 hours.\n\n" +
