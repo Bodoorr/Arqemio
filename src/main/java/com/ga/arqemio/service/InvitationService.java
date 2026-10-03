@@ -134,12 +134,11 @@ public class InvitationService {
         if (!invitation.getRole().equals("OWNER")){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This invitation is not an owner invitation.");
         }
-        User user;
+
         if (userRepository.existsByEmail(invitation.getEmail())){
-            user=userRepository.findUserByEmail(invitation.getEmail())
-                    .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found."));
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exist. Please login to accept the invitation.");
         }
-        else {
+
             User newUser=new User();
             newUser.setName(invitationRegistrationRequest.getName());
             newUser.setEmail(invitation.getEmail());
@@ -148,11 +147,10 @@ public class InvitationService {
             newUser.setStatus(true);
             newUser.setIsPlatformAdmin(false);
 
-            user=userService.createUser(newUser);
-        }
+            User savedUser= userService.createUser(newUser);
 
         CompanyMembership membership=new CompanyMembership();
-        membership.setUser(user);
+        membership.setUser(savedUser);
         membership.setCompany(invitation.getCompany());
         membership.setRole(invitation.getRole());
         membership.setStatus("ACTIVE");
@@ -166,7 +164,7 @@ public class InvitationService {
         invitation.setStatus("ACCEPTED");
         invitationRepository.save(invitation);
 
-        return user;
+        return savedUser;
     }
 
 
