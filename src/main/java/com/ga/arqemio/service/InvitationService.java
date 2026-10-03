@@ -1,11 +1,11 @@
 package com.ga.arqemio.service;
 
-import com.ga.arqemio.model.Company;
-import com.ga.arqemio.model.EmailDetails;
-import com.ga.arqemio.model.Invitation;
-import com.ga.arqemio.model.User;
+import com.ga.arqemio.model.*;
+import com.ga.arqemio.model.request.InvitationRegistrationRequest;
+import com.ga.arqemio.repository.CompanyMembershipRepository;
 import com.ga.arqemio.repository.CompanyRepository;
 import com.ga.arqemio.repository.InvitationRepository;
+import com.ga.arqemio.repository.UserRepository;
 import com.ga.arqemio.security.MyUserDetails;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,6 +22,9 @@ public class InvitationService {
     private InvitationRepository invitationRepository;
     private EmailService emailService;
     private CompanyRepository companyRepository;
+    private CompanyMembershipRepository companyMembershipRepository;
+    private UserRepository userRepository;
+    private UserService userService;
 
     public User getCurrentLoggedInUser(){
         MyUserDetails userDetails= (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -124,6 +127,50 @@ public class InvitationService {
         }
         return invitation;
     }
+
+    public User registerOwner(InvitationRegistrationRequest invitationRegistrationRequest){
+        Invitation invitation= validateInvitation(invitationRegistrationRequest.getToken());
+
+        if (!invitation.getRole().equals("OWNER")){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This invitation is not an owner invitation.");
+        }
+        User user;
+        if (userRepository.existsByEmail(invitation.getEmail())){
+            user=userRepository.findUserByEmail(invitation.getEmail())
+                    .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found."));
+        }
+        else {
+            User newUser=new User();
+            newUser.setName(invitationRegistrationRequest.getName());
+            newUser.setEmail(invitation.getEmail());
+            newUser.setPassword(invitationRegistrationRequest.getPassword());
+            newUser.setProfilePicture(invitationRegistrationRequest.getProfilePicture());
+            newUser.setStatus(true);
+            newUser.setIsPlatformAdmin(false);
+
+            user=userService.createUser(newUser);
+        }
+
+        CompanyMembership membership=new CompanyMembership();
+        membership.setUser(user);
+        membership.setCompany(invitation.getCompany());
+        membership.setRole(invitation.getRole());
+        membership.setStatus("ACTIVE");
+
+        CompanyMembership savedMembership= companyMembershipRepository.save(membership);
+
+        Company company=invitation.getCompany();
+        company.setOwner(savedMembership);
+        companyRepository.save(company);
+
+        invitation.setStatus("ACCEPTED");
+        invitationRepository.save(invitation);
+
+        return user;
+    }
+
+
+
 
 
 }
