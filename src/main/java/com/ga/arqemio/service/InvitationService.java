@@ -43,8 +43,9 @@ public class InvitationService {
                 .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
 
         boolean alreadyAccepted =
-                invitationRepository.existsByEmailIgnoreCaseAndRoleAndStatus(
+                invitationRepository.existsByEmailIgnoreCaseAndCompanyIdRoleAndStatus(
                         email,
+                        companyId,
                         "OWNER",
                         "ACCEPTED"
                 );
@@ -56,8 +57,9 @@ public class InvitationService {
         }
 
         boolean alreadyPending =
-                invitationRepository.existsByEmailIgnoreCaseAndRoleAndStatus(
+                invitationRepository.existsByEmailIgnoreCaseAndCompanyIdRoleAndStatus(
                         email,
+                        companyId,
                         "OWNER",
                         "PENDING"
                 );
