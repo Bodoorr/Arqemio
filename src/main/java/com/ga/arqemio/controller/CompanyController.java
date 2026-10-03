@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping(path = "/comapny")
+@RequestMapping(path = "/company")
 @AllArgsConstructor
 public class CompanyController {
     private CompanyService companyService;
