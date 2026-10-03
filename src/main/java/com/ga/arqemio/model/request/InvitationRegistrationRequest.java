@@ -6,5 +6,6 @@ import lombok.Getter;
 public class InvitationRegistrationRequest {
     private String token;
     private String name;
+    private String profilePicture;
     private String password;
 }

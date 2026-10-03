@@ -1,6 +1,8 @@
 package com.ga.arqemio.controller;
 
 import com.ga.arqemio.model.Invitation;
+import com.ga.arqemio.model.User;
+import com.ga.arqemio.model.request.InvitationRegistrationRequest;
 import com.ga.arqemio.model.request.InvitationRequest;
 import com.ga.arqemio.model.response.InvitationResponse;
 import com.ga.arqemio.model.response.InvitationValidationResponse;
@@ -53,5 +55,10 @@ public class InvitationController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @PostMapping("/register")
+    public ResponseEntity<?> registerOwner(@RequestBody InvitationRegistrationRequest invitationRegistrationRequest){
+        User user= invitationService.registerOwner(invitationRegistrationRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(user);
+    }
 
 }
