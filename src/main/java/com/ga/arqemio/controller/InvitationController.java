@@ -22,7 +22,8 @@ public class InvitationController {
 
         Invitation invitation = invitationService.createInvitation(
                 request.getEmail(),
-                request.getRole()
+                request.getRole(),
+                request.getCompanyID()
         );
 
         InvitationResponse response=new InvitationResponse(
