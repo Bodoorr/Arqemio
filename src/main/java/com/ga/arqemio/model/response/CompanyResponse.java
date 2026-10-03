@@ -7,7 +7,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public class CompanyResponse {
     private boolean success;
-    private boolean message;
+    private String message;
     private Long companyId;
     private String name;
     private String description;
