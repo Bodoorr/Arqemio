@@ -168,6 +168,32 @@ public class InvitationService {
     }
 
 
+    public Invitation acceptInvitation(String token){
+        User currentUser= getCurrentLoggedInUser();
+        Invitation invitation= validateInvitation(token);
+
+        if (!currentUser.getEmail().equalsIgnoreCase(invitation.getEmail())){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This invitation does not belong to the logged in user.");
+        }
+
+        CompanyMembership membership=new CompanyMembership();
+        membership.setUser(currentUser);
+        membership.setCompany(invitation.getCompany());
+        membership.setRole(invitation.getRole());
+        membership.setStatus("ACTIVE");
+
+        CompanyMembership savedMembership= companyMembershipRepository.save(membership);
+
+        if (invitation.getRole().equals("OWNER")){
+            Company company= invitation.getCompany();
+            company.setOwner(savedMembership);
+            companyRepository.save(company);
+        }
+
+        invitation.setStatus("ACCEPTED");
+
+        return invitationRepository.save(invitation);
+    }
 
 
 
