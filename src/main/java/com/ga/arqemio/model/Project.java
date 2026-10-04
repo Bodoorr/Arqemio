@@ -17,7 +17,7 @@ import java.util.List;
 @Setter
 @Entity
 @Table(name = "projects")
-@ToString(exclude = {"company","managers", "tasks","reservations"})
+@ToString(exclude = {"company","managers","tasks","reservations","workers"})
 public class Project {
     @Id
     @Column
@@ -32,6 +32,13 @@ public class Project {
     @ManyToMany
     @JoinTable(name = "project_managers", joinColumns = @JoinColumn(name = "project_id"), inverseJoinColumns = @JoinColumn(name = "membership_id"))
     private List<CompanyMembership> managers= new ArrayList<>();
+
+
+    @JsonIgnore
+    @ManyToMany
+    @JoinTable(name = "project_workers", joinColumns = @JoinColumn(name = "project_id"), inverseJoinColumns = @JoinColumn(name = "membership_id"))
+    private List<CompanyMembership> workers= new ArrayList<>();
+
 
     @Column(nullable = false)
     private String name;
