@@ -215,6 +215,40 @@ public class InvitationService {
         return invitation;
     }
 
+    public Invitation resendInvitation(Long invitationId){
+        User currentUser= getCurrentLoggedInUser();
+        if (!currentUser.getIsPlatformAdmin()){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to resend the invitation.");
+
+        }
+        Invitation invitation= invitationRepository.findById(invitationId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitation not found."));
+        if (invitation.getStatus().equals("ACCEPTED")){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You can't resend this invitation.");
+        }
+
+        invitation.setToken(UUID.randomUUID().toString());
+        invitation.setStatus("PENDING");
+        invitation.setExpiresAt(LocalDateTime.now().plusHours(48));
+        invitationRepository.save(invitation);
+
+
+        EmailDetails emailDetails = new EmailDetails();
+        emailDetails.setRecipient(invitation.getEmail());
+        emailDetails.setSubject("You're invited to join Arqemio!");
+        emailDetails.setMsgBody(
+                "Hello!\n\n" +
+                        "You have been invited to join " +
+                        invitation.getCompany().getName() +
+                        " on Arqemio as a "+invitation.getRole()+".\n\n" +
+                        "Your invitation token is:\n" +
+                        invitation.getToken() + "\n\n" +
+                        "This invitation expires in 48 hours.\n\n" +
+                        "Arqemio Team"
+        );
+        emailService.sendSimpleMail(emailDetails);
+
+        return invitation;
+    }
 
 
 }
