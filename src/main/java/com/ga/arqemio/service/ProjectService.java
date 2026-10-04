@@ -73,11 +73,8 @@ public class ProjectService {
         if (currentUser.getIsPlatformAdmin()) {
             return projectRepository.findAll();
         }
-        List<CompanyMembership> memberships= companyMembershipRepository.findByUserIdAndStatus(currentUser.getId(), "ACTIVE");
-        List<Project> projects= new ArrayList<>();
 
-
-
+        return projectRepository.findByCompanyMembershipsUserIdAndCompanyMembershipsStatus(currentUser.getId(), "ACTIVE");
 
     }
 
