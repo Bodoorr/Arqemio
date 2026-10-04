@@ -42,7 +42,7 @@ public class ProjectService {
                         );
 
         if (!isPlatformAdmin && !isCompanyOwner){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to create projects for this company.")
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to create projects for this company.");
         }
 
         if (projectRequest.getExpectedEndDate().isBefore(projectRequest.getStartDate())){
