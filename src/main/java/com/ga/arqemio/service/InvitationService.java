@@ -36,6 +36,17 @@ public class InvitationService {
         Company company= companyRepository.findById(companyId)
                 .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
 
+        if (
+                !"OWNER".equals(role) &&
+                        !"MANAGER".equals(role) &&
+                        !"WORKER".equals(role)
+        ) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid role. Role must be OWNER, MANAGER, or WORKER."
+            );
+        }
+
         boolean isPlatformAdmin = currentUser.getIsPlatformAdmin().equals(true);
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId,"OWNER", "ACTIVE");
 
@@ -120,8 +131,6 @@ public class InvitationService {
 
         return savedInvitation;
     }
-
-
 
 
     public Invitation validateInvitation(String token){
