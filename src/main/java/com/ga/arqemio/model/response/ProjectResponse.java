@@ -10,7 +10,9 @@ import java.time.LocalDate;
 public class ProjectResponse {
     private boolean success;
     private String message;
+    private Long id;
     private Long companyId;
+    private String companyName;
     private String name;
     private String description;
     private String location;
