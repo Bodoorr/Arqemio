@@ -197,6 +197,24 @@ public class InvitationService {
         return invitationRepository.save(invitation);
     }
 
+    public Invitation cancelInvitation(Long invitationId){
+        User currentUser= getCurrentLoggedInUser();
+        if (!currentUser.getIsPlatformAdmin()){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to cancel the invitation.");
+        }
+
+        Invitation invitation= invitationRepository.findById(invitationId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitation not found."));
+
+        if (!invitation.getStatus().equals("PENDING")){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You can't cancel this invitation.");
+        }
+
+        invitation.setStatus("CANCELLED");
+        invitationRepository.save(invitation);
+
+        return invitation;
+    }
+
 
 
 }
