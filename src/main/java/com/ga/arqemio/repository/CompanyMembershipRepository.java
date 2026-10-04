@@ -6,4 +6,10 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CompanyMembershipRepository extends JpaRepository<CompanyMembership, Long> {
+    boolean existsByUserIdAndCompanyIdAndRoleAndStatus(
+            Long userId,
+            Long companyId,
+            String role,
+            String status
+    );
 }
