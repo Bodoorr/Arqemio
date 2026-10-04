@@ -93,4 +93,20 @@ public class InvitationController {
         return ResponseEntity.status(HttpStatus.OK).body(invitationResponse);
 
     }
+
+    @PutMapping("/resend/{invitationId}")
+    public ResponseEntity<?> resendInvitation(@PathVariable Long invitationId){
+        Invitation invitation= invitationService.resendInvitation(invitationId);
+        InvitationResponse invitationResponse=new InvitationResponse(
+                true,
+                "Invitation sent again successfully.",
+                invitation.getId(),
+                invitation.getEmail(),
+                invitation.getRole(),
+                invitation.getStatus(),
+                invitation.getUser().getName(),
+                invitation.getUser().getId()
+        );
+        return ResponseEntity.status(HttpStatus.OK).body(invitationResponse);
+    }
 }
