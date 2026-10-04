@@ -122,6 +122,8 @@ public class InvitationService {
                     "This invitation is no longer available.");
         }
         if (!invitation.getExpiresAt().isAfter(LocalDateTime.now())){
+            invitation.setStatus("EXPIRED");
+            invitationRepository.save(invitation);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "This invitation has expired.");
         }
