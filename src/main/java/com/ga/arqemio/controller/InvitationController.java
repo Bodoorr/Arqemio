@@ -66,7 +66,7 @@ public class InvitationController {
         Invitation invitation= invitationService.acceptInvitation(token);
         InvitationResponse invitationResponse=new InvitationResponse(
                 true,
-                "Invitation accepted successfully",
+                "Invitation accepted successfully.",
                 invitation.getId(),
                 invitation.getEmail(),
                 invitation.getRole(),
@@ -77,4 +77,20 @@ public class InvitationController {
         return ResponseEntity.status(HttpStatus.OK).body(invitationResponse);
     }
 
+    @DeleteMapping("/cancel/{invitationId}")
+    public ResponseEntity<?> cancelInvitation(@PathVariable Long invitationId){
+        Invitation invitation= invitationService.cancelInvitation(invitationId);
+        InvitationResponse invitationResponse=new InvitationResponse(
+                true,
+                "Invitation cancelled successfully.",
+                invitation.getId(),
+                invitation.getEmail(),
+                invitation.getRole(),
+                invitation.getStatus(),
+                invitation.getUser().getName(),
+                invitation.getUser().getId()
+        );
+        return ResponseEntity.status(HttpStatus.OK).body(invitationResponse);
+
+    }
 }
