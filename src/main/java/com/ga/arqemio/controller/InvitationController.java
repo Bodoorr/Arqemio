@@ -66,7 +66,7 @@ public class InvitationController {
         Invitation invitation= invitationService.acceptInvitation(token);
         InvitationResponse invitationResponse=new InvitationResponse(
                 true,
-                "Invitation accepted sucessfully",
+                "Invitation accepted successfully",
                 invitation.getId(),
                 invitation.getEmail(),
                 invitation.getRole(),
