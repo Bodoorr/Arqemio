@@ -57,7 +57,7 @@ public class InvitationController {
 
     @PostMapping("/register")
     public ResponseEntity<?> registerOwner(@RequestBody InvitationRegistrationRequest invitationRegistrationRequest){
-        User user= invitationService.registerOwner(invitationRegistrationRequest);
+        User user= invitationService.registerInvitedUser(invitationRegistrationRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(user);
     }
 
