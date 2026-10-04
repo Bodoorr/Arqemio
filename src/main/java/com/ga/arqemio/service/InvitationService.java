@@ -33,29 +33,36 @@ public class InvitationService {
 
     public Invitation createInvitation(String email, String role, Long companyId) {
         User currentUser = getCurrentLoggedInUser();
-
-        if (!currentUser.getIsPlatformAdmin().equals(true)) {
-            throw new RuntimeException("Only Platform Admin can invite company owners.");
-        }
-
-        if (!role.equals("OWNER")) {
-            throw new RuntimeException("Platform Admin can only invite company owners.");
-        }
-
         Company company= companyRepository.findById(companyId)
                 .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
+
+        boolean isPlatformAdmin = currentUser.getIsPlatformAdmin().equals(true);
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId,"OWNER", "ACTIVE");
+
+        if (!isPlatformAdmin && !isCompanyOwner){
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to invite users to this company."
+            );
+        }
+
+        if (role.equals("OWNER") && !isPlatformAdmin && isCompanyOwner) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Company owners cannot invite another company owner."
+            );        }
 
         boolean alreadyAccepted =
                 invitationRepository.existsByEmailIgnoreCaseAndCompanyIdAndRoleAndStatus(
                         email,
                         companyId,
-                        "OWNER",
+                        role,
                         "ACCEPTED"
                 );
 
         if (alreadyAccepted) {
             throw new RuntimeException(
-                    "This email has already accepted an owner invitation."
+                    "This email has already accepted an invitation for this role."
             );
         }
 
@@ -63,7 +70,7 @@ public class InvitationService {
                 invitationRepository.existsByEmailIgnoreCaseAndCompanyIdAndRoleAndStatus(
                         email,
                         companyId,
-                        "OWNER",
+                        role,
                         "PENDING"
                 );
 
@@ -98,7 +105,7 @@ public class InvitationService {
                 "Hello!\n\n" +
                         "You have been invited to join " +
                         company.getName() +
-                        " on Arqemio as a Company Owner.\n\n" +
+                        " on Arqemio as a "+role+".\n\n" +
                         "Your invitation token is:\n" +
                         savedInvitation.getToken() + "\n\n" +
                         "This invitation expires in 48 hours.\n\n" +
@@ -113,6 +120,9 @@ public class InvitationService {
 
         return savedInvitation;
     }
+
+
+
 
     public Invitation validateInvitation(String token){
         Invitation invitation= invitationRepository.findByToken(token).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitation not found."));
