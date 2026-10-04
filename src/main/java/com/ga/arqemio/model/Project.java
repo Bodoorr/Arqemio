@@ -28,29 +28,30 @@ public class Project {
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
 
+    @JsonIgnore
     @ManyToMany
     @JoinTable(name = "project_managers", joinColumns = @JoinColumn(name = "project_id"), inverseJoinColumns = @JoinColumn(name = "membership_id"))
     private List<CompanyMembership> managers= new ArrayList<>();
 
-    @Column
+    @Column(nullable = false)
     private String name;
 
     @Column
     private String description;
 
-    @Column
+    @Column(nullable = false)
     private String location;
 
-    @Column
+    @Column(nullable = false)
     private LocalDate startDate;
 
-    @Column
+    @Column(nullable = false)
     private LocalDate expectedEndDate;
 
     @Column
     private double budget;
 
-    @Column
+    @Column(nullable = false)
     private String status;
 
     @Column
@@ -61,6 +62,7 @@ public class Project {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "project")
     private List<Task> tasks = new ArrayList<>();
 
