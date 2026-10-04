@@ -1,6 +1,7 @@
 package com.ga.arqemio.service;
 
 import com.ga.arqemio.model.Company;
+import com.ga.arqemio.model.CompanyMembership;
 import com.ga.arqemio.model.Project;
 import com.ga.arqemio.model.User;
 import com.ga.arqemio.model.request.ProjectRequest;
@@ -14,6 +15,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @AllArgsConstructor
@@ -61,6 +65,17 @@ public class ProjectService {
 
 
         return projectRepository.save(project);
+
+    }
+
+    public List<Project> getAllProjects(){
+        User currentUser= getCurrentLoggedInUser();
+        if (currentUser.getIsPlatformAdmin()) {
+            return projectRepository.findAll();
+        }
+        List<CompanyMembership> memberships= companyMembershipRepository.findByUserIdAndStatus(currentUser.getId(), "ACTIVE");
+        List<Project> projects= new ArrayList<>();
+
 
     }
 
