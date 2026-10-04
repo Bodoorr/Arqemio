@@ -4,6 +4,8 @@ import com.ga.arqemio.model.CompanyMembership;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface CompanyMembershipRepository extends JpaRepository<CompanyMembership, Long> {
     boolean existsByUserIdAndCompanyIdAndRoleAndStatus(
@@ -12,4 +14,6 @@ public interface CompanyMembershipRepository extends JpaRepository<CompanyMember
             String role,
             String status
     );
+
+    List<CompanyMembership> findByUserIdAndStatus(Long userId, String status);
 }
