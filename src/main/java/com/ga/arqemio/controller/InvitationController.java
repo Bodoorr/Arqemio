@@ -61,4 +61,20 @@ public class InvitationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(user);
     }
 
+    @PostMapping("/accept/{token}")
+    public ResponseEntity<?> acceptInvitation(@PathVariable String token){
+        Invitation invitation= invitationService.acceptInvitation(token);
+        InvitationResponse invitationResponse=new InvitationResponse(
+                true,
+                "Invitation accepted successfully",
+                invitation.getId(),
+                invitation.getEmail(),
+                invitation.getRole(),
+                invitation.getStatus(),
+                invitation.getUser().getName(),
+                invitation.getUser().getId()
+        );
+        return ResponseEntity.status(HttpStatus.OK).body(invitationResponse);
+    }
+
 }
