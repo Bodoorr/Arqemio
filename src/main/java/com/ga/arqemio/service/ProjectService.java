@@ -98,7 +98,7 @@ public class ProjectService {
         boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
         if (!isPlatformAdmin && !isCompanyOwner){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to edit this project.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this project.");
         }
 
         if (projectRequest.getExpectedEndDate().isBefore(projectRequest.getStartDate())){

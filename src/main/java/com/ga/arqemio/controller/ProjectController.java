@@ -82,4 +82,23 @@ public class ProjectController {
         return ResponseEntity.ok(projectResponse);
     }
 
+    @PutMapping("/{projectId}")
+    public ResponseEntity<ProjectResponse> updateProject(@PathVariable Long projectId, @RequestBody ProjectRequest projectRequest){
+        Project project= projectService.updateProject(projectId, projectRequest);
+
+        ProjectResponse projectResponse=new ProjectResponse(
+                project.getId(),
+                project.getCompany().getId(),
+                project.getCompany().getName(),
+                project.getName(),
+                project.getDescription(),
+                project.getLocation(),
+                project.getStartDate(),
+                project.getExpectedEndDate(),
+                project.getBudget(),
+                project.getStatus()
+        );
+          return ResponseEntity.ok(projectResponse);
+    }
+
 }
