@@ -154,6 +154,38 @@ public class ProjectController {
         return ResponseEntity.ok(projectMemberResponse);
     }
 
+    @PostMapping("/{projectId}/workers/{membershipId}")
+    public ResponseEntity<ProjectMemberResponse> assignWorker(@PathVariable Long projectId, @PathVariable Long membershipId){
+        CompanyMembership worker = projectService.assignWorker(projectId,membershipId);
+
+        ProjectMemberResponse projectMemberResponse=new ProjectMemberResponse(
+                projectId,
+                worker.getCompany().getName(),
+                worker.getId(),
+                worker.getUser().getName(),
+                worker.getRole()
+        );
+
+        return ResponseEntity.ok(projectMemberResponse);
+    }
+
+    @DeleteMapping("/{projectId}/workers/{membershipId}")
+    public ResponseEntity<ProjectMemberResponse> removeWorker(@PathVariable Long projectId, @PathVariable Long membershipId){
+        CompanyMembership worker= projectService.removeWorker(projectId,membershipId);
+
+        ProjectMemberResponse projectMemberResponse= new ProjectMemberResponse(
+                projectId,
+                worker.getCompany().getName(),
+                worker.getId(),
+                worker.getUser().getName(),
+                worker.getRole()
+        );
+
+        return ResponseEntity.ok(projectMemberResponse);
+    }
+
+
+
 }
 
 
