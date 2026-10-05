@@ -78,5 +78,60 @@ public class ProjectService {
 
     }
 
+    public Project getProjectById(Long projectId){
+        User currentUser= getCurrentLoggedInUser();
+
+        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
+         boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
+         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), project.getCompany().getId(), "ACTIVE");
+        if (!isActiveMember && !isPlatformAdmin){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this project.");
+        }
+
+        return project;
+    }
+
+    public Project updateProject(Long projectId, ProjectRequest projectRequest){
+        User currentUser= getCurrentLoggedInUser();
+
+        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
+        if (!isPlatformAdmin && !isCompanyOwner){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this project.");
+        }
+
+        if (projectRequest.getExpectedEndDate().isBefore(projectRequest.getStartDate())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expected end date cannot be before start date.");
+        }
+
+        project.setName(projectRequest.getName());
+        project.setDescription(projectRequest.getDescription());
+        project.setLocation(projectRequest.getLocation());
+        project.setStartDate(projectRequest.getStartDate());
+        project.setExpectedEndDate(projectRequest.getExpectedEndDate());
+        project.setBudget(projectRequest.getBudget());
+        project.setStatus(projectRequest.getStatus());
+
+        return projectRepository.save(project);
+
+    }
+
+    public Project archiveProject(Long projectId){
+        User currentUser= getCurrentLoggedInUser();
+        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
+
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
+        boolean isActiveOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
+
+        if (!isActiveOwner && !isPlatformAdmin){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to delete this project.");
+        }
+
+        project.setStatus("ARCHIVED");
+
+        return projectRepository.save(project);
+    }
+
 
 }
