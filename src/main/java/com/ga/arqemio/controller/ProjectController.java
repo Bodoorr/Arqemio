@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -23,8 +24,6 @@ public class ProjectController {
     public ResponseEntity<ProjectResponse> createProject(@RequestBody ProjectRequest projectRequest){
         Project project= projectService.createProject(projectRequest);
         ProjectResponse projectResponse=new ProjectResponse(
-                true,
-                "Project created successfully.",
                 project.getId(),
                 project.getCompany().getId(),
                 project.getCompany().getName(),
@@ -42,8 +41,26 @@ public class ProjectController {
     }
 
     @GetMapping
-    public List<Project> getAllProjects() {
-        return projectService.getAllProjects();
+    public ResponseEntity<List<ProjectResponse>> getAllProjects() {
+        List<Project> projects= projectService.getAllProjects();
+        List<ProjectResponse> projectResponses= new ArrayList<>();
+        for (Project project: projects){
+            ProjectResponse projectResponse= new ProjectResponse(
+                    project.getId(),
+                    project.getCompany().getId(),
+                    project.getCompany().getName(),
+                    project.getName(),
+                    project.getDescription(),
+                    project.getLocation(),
+                    project.getStartDate(),
+                    project.getExpectedEndDate(),
+                    project.getBudget(),
+                    project.getStatus()
+            );
+            projectResponses.add(projectResponse);
+        }
+
+         return ResponseEntity.ok(projectResponses);
     }
 
 }

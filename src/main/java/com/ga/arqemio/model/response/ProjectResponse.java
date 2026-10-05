@@ -8,8 +8,6 @@ import java.time.LocalDate;
 @Getter
 @AllArgsConstructor
 public class ProjectResponse {
-    private boolean success;
-    private String message;
     private Long id;
     private Long companyId;
     private String companyName;
