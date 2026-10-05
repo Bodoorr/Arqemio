@@ -15,4 +15,10 @@ public interface CompanyMembershipRepository extends JpaRepository<CompanyMember
             String status
     );
 
+    boolean existsByUserIdAndCompanyIdAndStatus(
+            Long userId,
+            Long companyId,
+            String status
+    );
+
 }
