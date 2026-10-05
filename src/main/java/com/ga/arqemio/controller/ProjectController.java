@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @RestController
-@RequestMapping("/projects")
+@RequestMapping("/company/projects")
 @AllArgsConstructor
 public class ProjectController {
     private ProjectService projectService;
@@ -61,6 +61,25 @@ public class ProjectController {
         }
 
          return ResponseEntity.ok(projectResponses);
+    }
+
+    @GetMapping("/{projectId}")
+    public ResponseEntity<ProjectResponse> getProject(@PathVariable Long projectId){
+        Project project= projectService.getProjectById(projectId);
+
+        ProjectResponse projectResponse=new ProjectResponse(
+                project.getId(),
+                project.getCompany().getId(),
+                project.getCompany().getName(),
+                project.getName(),
+                project.getDescription(),
+                project.getLocation(),
+                project.getStartDate(),
+                project.getExpectedEndDate(),
+                project.getBudget(),
+                project.getStatus()
+        );
+        return ResponseEntity.ok(projectResponse);
     }
 
 }
