@@ -173,4 +173,32 @@ public class ProjectService {
 
         return membership;
     }
+
+    public CompanyMembership removeManager(Long projectId, Long membershipId){
+        User currentUser= getCurrentLoggedInUser();
+        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
+        CompanyMembership membership= companyMembershipRepository.findById(membershipId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membership not found."));
+
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
+        boolean isCompanyOwner =
+                companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(
+                        currentUser.getId(),
+                        project.getCompany().getId(),
+                        "OWNER",
+                        "ACTIVE"
+                );
+
+        if (!isPlatformAdmin && !isCompanyOwner) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to remove managers from this project.");
+        }
+
+        if (!project.getManagers().contains(membership)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This manager is not assigned to this project.");
+        }
+
+        project.getManagers().remove(membership);
+        projectRepository.save(project);
+
+        return membership;
+    }
 }
