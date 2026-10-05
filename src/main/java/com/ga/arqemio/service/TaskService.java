@@ -66,5 +66,19 @@ public class TaskService {
         );
     }
 
+    public Task getTaskById(Long taskId){
+        User currentUser= getCurrentLoggedInUser();
+
+        Task task= taskRepository.findById(taskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "task not found."));
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), task.getProject().getCompany().getId(), "ACTIVE");
+        if (!isActiveMember && !isPlatformAdmin){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this task.");
+        }
+
+        return task;
+    }
+
+
 
 }
