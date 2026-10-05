@@ -14,6 +14,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 @Service
 @AllArgsConstructor
 public class TaskService {
@@ -49,6 +51,20 @@ public class TaskService {
         task.setDueDateTime(taskRequest.getDueDateTime());
 
         return taskRepository.save(task);
-
     }
+
+    public List<Task> getAllTasks(){
+        User currentUser= getCurrentLoggedInUser();
+
+        if (currentUser.getIsPlatformAdmin()){
+            return taskRepository.findAll();
+        }
+
+        return taskRepository.findByProjectCompanyMembershipsUserIdAndProjectCompanyMembershipsStatus(
+                currentUser.getId(),
+                "ACTIVE"
+        );
+    }
+
+
 }
