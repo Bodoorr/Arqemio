@@ -101,4 +101,26 @@ public class ProjectController {
           return ResponseEntity.ok(projectResponse);
     }
 
+    @DeleteMapping("/{projectId}")
+    public ResponseEntity<ProjectResponse> archiveProject(
+            @PathVariable Long projectId) {
+
+        Project project = projectService.archiveProject(projectId);
+
+        ProjectResponse projectResponse = new ProjectResponse(
+                project.getId(),
+                project.getCompany().getId(),
+                project.getCompany().getName(),
+                project.getName(),
+                project.getDescription(),
+                project.getLocation(),
+                project.getStartDate(),
+                project.getExpectedEndDate(),
+                project.getBudget(),
+                project.getStatus()
+        );
+
+        return ResponseEntity.ok(projectResponse);
+    }
+
 }

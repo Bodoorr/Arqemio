@@ -117,5 +117,21 @@ public class ProjectService {
 
     }
 
+    public Project archiveProject(Long projectId){
+        User currentUser= getCurrentLoggedInUser();
+        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
+
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
+        boolean isActiveOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
+
+        if (!isActiveOwner && !isPlatformAdmin){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to delete this project.");
+        }
+
+        project.setStatus("ARCHIVED");
+
+        return projectRepository.save(project);
+    }
+
 
 }
