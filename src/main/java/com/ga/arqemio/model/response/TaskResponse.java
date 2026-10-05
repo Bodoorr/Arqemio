@@ -1,10 +1,12 @@
 package com.ga.arqemio.model.response;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
 
 @Getter
+@AllArgsConstructor
 public class TaskResponse {
     private Long id;
     private Long projectId;
