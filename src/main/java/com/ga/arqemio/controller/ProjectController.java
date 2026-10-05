@@ -139,4 +139,21 @@ public class ProjectController {
         return ResponseEntity.ok(projectMemberResponse);
     }
 
+    @DeleteMapping("/{projectId}/managers/{membershipId}")
+    public ResponseEntity<ProjectMemberResponse> removeManager(@PathVariable Long projectId, @PathVariable Long membershipId){
+        CompanyMembership manager= projectService.removeManager(projectId,membershipId);
+
+        ProjectMemberResponse projectMemberResponse= new ProjectMemberResponse(
+                projectId,
+                manager.getCompany().getName(),
+                manager.getId(),
+                manager.getUser().getName(),
+                manager.getRole()
+        );
+
+        return ResponseEntity.ok(projectMemberResponse);
+    }
+
 }
+
+
