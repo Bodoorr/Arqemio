@@ -3,6 +3,7 @@ package com.ga.arqemio.service;
 import com.ga.arqemio.model.Project;
 import com.ga.arqemio.model.Task;
 import com.ga.arqemio.model.User;
+import com.ga.arqemio.model.request.ProjectRequest;
 import com.ga.arqemio.model.request.TaskRequest;
 import com.ga.arqemio.repository.CompanyMembershipRepository;
 import com.ga.arqemio.repository.ProjectRepository;
@@ -79,6 +80,29 @@ public class TaskService {
         return task;
     }
 
+    public Task updateTask(Long taskId, TaskRequest taskRequest){
+        User currentUser= getCurrentLoggedInUser();
+
+        Task task= taskRepository.findById(taskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "task not found."));
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), task.getProject().getCompany().getId(), "OWNER", "ACTIVE");
+        if (!isPlatformAdmin && !isCompanyOwner){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this task.");
+        }
+
+        if (taskRequest.getDueDateTime().isBefore(task.getCreatedAt())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Task due date cannot be before the task creation date.");
+        }
+
+        task.setTitle(taskRequest.getTitle());
+        task.setDescription(taskRequest.getDescription());
+        task.setStatus(taskRequest.getStatus());
+        task.setPriority(taskRequest.getPriority());
+        task.setDueDateTime(taskRequest.getDueDateTime());
+
+        return taskRepository.save(task);
+
+    }
 
 
 }
