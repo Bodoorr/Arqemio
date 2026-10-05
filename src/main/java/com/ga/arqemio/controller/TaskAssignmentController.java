@@ -25,5 +25,10 @@ public class TaskAssignmentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(taskAssignment);
     }
 
+    @DeleteMapping("/{taskId}/assignments/{workerMembershipId}")
+    public ResponseEntity<TaskAssignment> removeAssignedWorker(@PathVariable Long taskId, @PathVariable Long workerMembershipId){
+        TaskAssignment taskAssignment= taskAssignmentService.removeAssignedWorker(taskId, workerMembershipId);
 
+        return ResponseEntity.ok(taskAssignment);
+    }
 }

@@ -86,7 +86,7 @@ public class TaskAssignmentService {
         return taskAssignmentRepository.save(taskAssignment);
     }
 
-    public void removeAssignedWorker(Long taskId, Long workerMembershipId) {
+    public TaskAssignment removeAssignedWorker(Long taskId, Long workerMembershipId) {
         User currentUser = getCurrentLoggedInUser();
         Task task = taskRepository.findById(taskId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found."));
         boolean isCompanyOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), task.getProject().getCompany().getId(), "OWNER", "ACTIVE");
@@ -101,6 +101,7 @@ public class TaskAssignmentService {
                                 "This worker is not assigned to this task."));
 
         taskAssignmentRepository.delete(taskAssignment);
+        return taskAssignment;
     }
 
 
