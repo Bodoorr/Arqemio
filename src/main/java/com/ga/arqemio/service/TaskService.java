@@ -3,7 +3,6 @@ package com.ga.arqemio.service;
 import com.ga.arqemio.model.Project;
 import com.ga.arqemio.model.Task;
 import com.ga.arqemio.model.User;
-import com.ga.arqemio.model.request.ProjectRequest;
 import com.ga.arqemio.model.request.TaskRequest;
 import com.ga.arqemio.repository.CompanyMembershipRepository;
 import com.ga.arqemio.repository.ProjectRepository;
@@ -39,7 +38,8 @@ public class TaskService {
                         "OWNER",
                         "ACTIVE"
                 );
-        if (!isPlatformAdmin && !isCompanyOwner){
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), currentUser.getId(), "ACTIVE");
+        if (!isPlatformAdmin && !isCompanyOwner && !isAssignedManager){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to create Tasks for this project.");
         }
 
@@ -86,7 +86,9 @@ public class TaskService {
         Task task= taskRepository.findById(taskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "task not found."));
         boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), task.getProject().getCompany().getId(), "OWNER", "ACTIVE");
-        if (!isPlatformAdmin && !isCompanyOwner){
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(task.getProject().getId(), currentUser.getId(), "ACTIVE");
+
+        if (!isPlatformAdmin && !isCompanyOwner && !isAssignedManager){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this task.");
         }
 
@@ -104,5 +106,21 @@ public class TaskService {
 
     }
 
+    public Task archiveTask(Long taskId){
+        User currentUser= getCurrentLoggedInUser();
+
+        Task task= taskRepository.findById(taskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "task not found."));
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
+        boolean isActiveOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), task.getProject().getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(task.getProject().getId(), currentUser.getId(), "ACTIVE");
+
+        if (!isActiveOwner && !isPlatformAdmin && !isAssignedManager){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to delete this task.");
+        }
+
+        task.setStatus("ARCHIVED");
+
+        return taskRepository.save(task);
+    }
 
 }

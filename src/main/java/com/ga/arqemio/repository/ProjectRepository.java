@@ -10,4 +10,10 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
             Long userId,
             String status
     );
+
+    boolean existsByIdAndManagersUserIdAndManagersStatus(
+            Long projectId,
+            Long userId,
+            String status
+    );
 }
