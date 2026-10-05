@@ -78,5 +78,18 @@ public class ProjectService {
 
     }
 
+    public Project getProjectById(Long projectId){
+        User currentUser= getCurrentLoggedInUser();
+
+        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
+         boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
+         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), project.getCompany().getId(), "ACTIVE");
+        if (!isActiveMember && !isPlatformAdmin){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this project.");
+        }
+
+        return project;
+    }
+
 
 }
