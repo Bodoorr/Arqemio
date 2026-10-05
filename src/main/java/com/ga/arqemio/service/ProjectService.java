@@ -134,4 +134,39 @@ public class ProjectService {
     }
 
 
+    public Project assignManager(Long projectId, Long membershipId){
+        User currentUser= getCurrentLoggedInUser();
+        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
+        CompanyMembership membership= companyMembershipRepository.findById(membershipId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membership not found."));
+
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
+        boolean isCompanyOwner =
+                companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(
+                        currentUser.getId(),
+                        project.getCompany().getId(),
+                        "OWNER",
+                        "ACTIVE"
+                );
+
+        if (!isPlatformAdmin && !isCompanyOwner) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to assign managers to this project.");
+        }
+
+        if (!membership.getCompany().getId().equals(project.getCompany().getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This member does not belong to the project's company.");
+        }
+
+        if (!membership.getRole().equals("MANAGER")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This member is not a manager."
+            );
+        }
+
+        if (!membership.getStatus().equals("ACTIVE")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This manager is not active.");
+        }
+
+        project.getManagers().add(membership);
+
+        return projectRepository.save(project);
+    }
 }
