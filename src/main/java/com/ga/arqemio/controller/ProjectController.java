@@ -1,15 +1,16 @@
 package com.ga.arqemio.controller;
 
+import com.ga.arqemio.model.CompanyMembership;
 import com.ga.arqemio.model.Project;
-import com.ga.arqemio.model.User;
 import com.ga.arqemio.model.request.ProjectRequest;
-import com.ga.arqemio.model.response.InvitationResponse;
+import com.ga.arqemio.model.response.ProjectMemberResponse;
 import com.ga.arqemio.model.response.ProjectResponse;
 import com.ga.arqemio.service.ProjectService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -123,4 +124,36 @@ public class ProjectController {
         return ResponseEntity.ok(projectResponse);
     }
 
+    @PostMapping("/{projectId}/managers/{membershipId}")
+    public ResponseEntity<ProjectMemberResponse> assignManager(@PathVariable Long projectId, @PathVariable Long membershipId){
+        CompanyMembership manager = projectService.assignManager(projectId,membershipId);
+
+        ProjectMemberResponse projectMemberResponse=new ProjectMemberResponse(
+                projectId,
+                manager.getCompany().getName(),
+                manager.getId(),
+                manager.getUser().getName(),
+                manager.getRole()
+        );
+
+        return ResponseEntity.ok(projectMemberResponse);
+    }
+
+    @DeleteMapping("/{projectId}/managers/{membershipId}")
+    public ResponseEntity<ProjectMemberResponse> removeManager(@PathVariable Long projectId, @PathVariable Long membershipId){
+        CompanyMembership manager= projectService.removeManager(projectId,membershipId);
+
+        ProjectMemberResponse projectMemberResponse= new ProjectMemberResponse(
+                projectId,
+                manager.getCompany().getName(),
+                manager.getId(),
+                manager.getUser().getName(),
+                manager.getRole()
+        );
+
+        return ResponseEntity.ok(projectMemberResponse);
+    }
+
 }
+
+
