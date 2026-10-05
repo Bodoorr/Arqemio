@@ -134,7 +134,7 @@ public class ProjectService {
     }
 
 
-    public Project assignManager(Long projectId, Long membershipId){
+    public CompanyMembership assignManager(Long projectId, Long membershipId){
         User currentUser= getCurrentLoggedInUser();
         Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
         CompanyMembership membership= companyMembershipRepository.findById(membershipId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membership not found."));
@@ -165,8 +165,12 @@ public class ProjectService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This manager is not active.");
         }
 
+        if (project.getManagers().contains(membership)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This manager is already assigned to this project.");
+        }
         project.getManagers().add(membership);
+        projectRepository.save(project);
 
-        return projectRepository.save(project);
+        return membership;
     }
 }
