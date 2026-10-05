@@ -91,5 +91,31 @@ public class ProjectService {
         return project;
     }
 
+    public Project updateProject(Long projectId, ProjectRequest projectRequest){
+        User currentUser= getCurrentLoggedInUser();
+
+        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
+        if (!isPlatformAdmin && !isCompanyOwner){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to edit this project.");
+        }
+
+        if (projectRequest.getExpectedEndDate().isBefore(projectRequest.getStartDate())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expected end date cannot be before start date.");
+        }
+
+        project.setName(projectRequest.getName());
+        project.setDescription(projectRequest.getDescription());
+        project.setLocation(projectRequest.getLocation());
+        project.setStartDate(projectRequest.getStartDate());
+        project.setExpectedEndDate(projectRequest.getExpectedEndDate());
+        project.setBudget(projectRequest.getBudget());
+        project.setStatus(projectRequest.getStatus());
+
+        return projectRepository.save(project);
+
+    }
+
 
 }
