@@ -65,6 +65,16 @@ public class FileAttachmentService {
         CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(),project.getCompany().getId(), "ACTIVE")
                 .orElseThrow(()-> new ResponseStatusException(HttpStatus.FORBIDDEN,"You're not an active member of this company."));
 
+        boolean isOwner = membership.getRole().equals("OWNER");
+
+        boolean isManager = projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), currentUser.getId(), "ACTIVE");
+
+        boolean isWorker = projectRepository.existsByIdAndWorkersUserIdAndWorkersStatus(project.getId(), currentUser.getId(), "ACTIVE");
+
+        if (!isOwner && !isManager && !isWorker) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
+        }
+
         ProjectUpdate projectUpdate= null;
         if (projectUpdateId != null){
             projectUpdate= projectUpdateRepository.findById(projectUpdateId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Project update not found."));
