@@ -15,4 +15,5 @@ public class FileAttachmentResponse {
     private String fileType;
     private Long uploadedByMembershipId;
     private String uploadedByName;
+    private String status;
 }
