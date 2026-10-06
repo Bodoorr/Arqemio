@@ -178,5 +178,28 @@ public class ReservationService {
         return reservationRepository.save(reservation);
     }
 
+    public Reservation updateReservationStatus(Long reservationId, String status){
+        User currentUser= getCurrentLoggedInUser();
+        Reservation reservation= reservationRepository.findById(reservationId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Reservation not found."));
+        CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(), reservation.getProject().getCompany().getId(), "ACTIVE").orElseThrow(()-> new ResponseStatusException(HttpStatus.FORBIDDEN, "Active company membership not found."));
+        boolean isAssignedWorker= projectRepository.existsByIdAndWorkersId(reservation.getProject().getId(), membership.getId());
 
+        if (!isAssignedWorker || !membership.getRole().equals("WORKER")){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this reservation status.");
+        }
+
+        if (reservation.getStatus().equals("RESERVED")){
+            if (!status.equals("IN_USE")){
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reserved reservation can only be changed to IN_USE.");
+            } else if (reservation.getStatus().equals("IN_USE")){
+                if (!status.equals("COMPLETED")){
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "In-use reservation can only be changed to completed.");
+                }
+            } else {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This reservation status can no longer be updated.");
+            }
+        }
+        reservation.setStatus(status);
+        return reservationRepository.save(reservation);
+    }
 }
