@@ -91,4 +91,26 @@ public class ReservationService {
 
         return reservationRepository.save(reservation);
     }
+
+    public List<Reservation> getAllReservation(){
+        User currentUser= getCurrentLoggedInUser();
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin().equals(true);
+        if (isPlatformAdmin){
+            return reservationRepository.findAll();
+        }
+        return reservationRepository.findByProjectCompanyMembershipsUserIdAndProjectCompanyMembershipsStatus(currentUser.getId(), "ACTIVE");
+    }
+
+    public Reservation getReservationById(Long reservationId){
+        User currentUser=getCurrentLoggedInUser();
+        Reservation reservation= reservationRepository.findById(reservationId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reservation not found."));
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), reservation.getProject().getCompany().getId(), "ACTIVE");
+
+        if (!isActiveMember && !isPlatformAdmin){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this reservation.");
+        }
+
+        return reservation;
+    }
 }
