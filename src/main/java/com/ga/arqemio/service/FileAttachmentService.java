@@ -108,7 +108,7 @@ public class FileAttachmentService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
         }
 
-        return fileAttachmentRepository.findByProjectId(projectId);
+        return fileAttachmentRepository.findByProjectIdAndStatus(projectId, "ACTIVE");
     }
 
     public List<FileAttachment> getAllProjectUpdateAttachments(Long projectUpdateId){
@@ -119,7 +119,7 @@ public class FileAttachmentService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
         }
 
-        return fileAttachmentRepository.findByProjectUpdateId(projectUpdateId);
+        return fileAttachmentRepository.findByProjectUpdateIdAndStatus(projectUpdateId, "ACTIVE");
     }
 
     public List<FileAttachment> getAllProjectExpenseAttachments(Long expenseId){
@@ -130,7 +130,42 @@ public class FileAttachmentService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
         }
 
-        return fileAttachmentRepository.findByProjectUpdateId(expenseId);
+        return fileAttachmentRepository.findByExpenseIdAndStatus(expenseId, "ACTIVE");
+    }
+
+    public FileAttachment getFileAttachmentById(Long attachmentId){
+        User currentUser= getCurrentLoggedInUser();
+        FileAttachment fileAttachment= fileAttachmentRepository.findById(attachmentId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "File attachment not found."));
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), fileAttachment.getProject().getCompany().getId(), "ACTIVE");
+        if (!currentUser.getIsPlatformAdmin() && !isActiveMember){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
+        }
+        if (!fileAttachment.getStatus().equals("ACTIVE")) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File attachment not found.");
+        }
+        return fileAttachment;
+    }
+
+    public FileAttachment archiveFileAttachment(Long attachmentId) {
+        User currentUser = getCurrentLoggedInUser();
+        FileAttachment fileAttachment = fileAttachmentRepository.findById(attachmentId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File attachment not found."));
+
+        if (!fileAttachment.getStatus().equals("ACTIVE")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File attachment is already archived.");
+        }
+
+        Project project = fileAttachment.getProject();
+
+        boolean isUploader = fileAttachment.getUploadedBy().getUser().getId().equals(currentUser.getId());
+        boolean isOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isManager = projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), currentUser.getId(), "ACTIVE");
+
+        if (!currentUser.getIsPlatformAdmin() && !isUploader && !isOwner && !isManager) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to archive this attachment.");
+        }
+
+        fileAttachment.setStatus("ARCHIVED");
+        return fileAttachmentRepository.save(fileAttachment);
     }
 
 
