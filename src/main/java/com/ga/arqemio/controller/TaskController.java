@@ -2,6 +2,7 @@ package com.ga.arqemio.controller;
 
 import com.ga.arqemio.model.Task;
 import com.ga.arqemio.model.request.TaskRequest;
+import com.ga.arqemio.model.request.TaskStatusRequest;
 import com.ga.arqemio.model.response.TaskResponse;
 import com.ga.arqemio.service.TaskService;
 import lombok.AllArgsConstructor;
@@ -108,6 +109,25 @@ public class TaskController {
 
         Task task = taskService.archiveTask(taskId);
         TaskResponse taskResponse = new TaskResponse(
+                task.getId(),
+                task.getProject().getId(),
+                task.getProject().getName(),
+                task.getTitle(),
+                task.getDescription(),
+                task.getStatus(),
+                task.getPriority(),
+                task.getDueDateTime(),
+                task.getCreatedAt(),
+                task.getUpdatedAt()
+        );
+
+        return ResponseEntity.ok(taskResponse);
+    }
+
+    @PostMapping("/{taskId}/status")
+    public ResponseEntity<TaskResponse> updateTaskStatus(@PathVariable Long taskId, @RequestBody TaskStatusRequest taskStatusRequest){
+        Task task= taskService.updateTaskStatus(taskId, taskStatusRequest.getStatus());
+        TaskResponse taskResponse= new TaskResponse(
                 task.getId(),
                 task.getProject().getId(),
                 task.getProject().getName(),
