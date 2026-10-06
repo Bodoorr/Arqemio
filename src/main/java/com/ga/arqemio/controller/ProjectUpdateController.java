@@ -2,6 +2,7 @@ package com.ga.arqemio.controller;
 
 import com.ga.arqemio.model.ProjectUpdate;
 import com.ga.arqemio.model.request.ProjectUpdateRequest;
+import com.ga.arqemio.model.request.ProjectUpdateReviewRequest;
 import com.ga.arqemio.model.response.ProjectUpdateResponse;
 import com.ga.arqemio.service.ProjectUpdateService;
 import lombok.AllArgsConstructor;
@@ -98,5 +99,76 @@ public class ProjectUpdateController {
         return projectUpdateResponse;
     }
 
+    @PutMapping("/{updateId}")
+    public ProjectUpdateResponse updateProjectUpdate(@PathVariable Long updateId, @RequestBody ProjectUpdateRequest projectUpdateRequest){
+        ProjectUpdate projectUpdate= projectUpdateService.updateProjectUpdate(updateId,projectUpdateRequest);
+        Long reviewedByMembershipId = null;
+        String reviewedByName = null;
+        if (projectUpdate.getReviewedBy() != null) {
+            reviewedByMembershipId = projectUpdate.getReviewedBy().getId();
+            reviewedByName = projectUpdate.getReviewedBy().getUser().getName();
+        }
+        ProjectUpdateResponse projectUpdateResponse=new ProjectUpdateResponse(
+                projectUpdate.getId(),
+                projectUpdate.getProject().getId(),
+                projectUpdate.getProject().getName(),
+                projectUpdate.getUpdatedBy().getId(),
+                projectUpdate.getUpdatedBy().getUser().getName(),
+                projectUpdate.getTitle(),
+                projectUpdate.getDescription(),
+                projectUpdate.getStatus(),
+                reviewedByMembershipId,
+                reviewedByName
+        );
+        return projectUpdateResponse;
+    }
+
+    @DeleteMapping("/{updateId}")
+    public ProjectUpdateResponse archiveProjectUpdate(@PathVariable Long updateId){
+        ProjectUpdate projectUpdate= projectUpdateService.archiveProjectUpdate(updateId);
+        Long reviewedByMembershipId = null;
+        String reviewedByName = null;
+        if (projectUpdate.getReviewedBy() != null) {
+            reviewedByMembershipId = projectUpdate.getReviewedBy().getId();
+            reviewedByName = projectUpdate.getReviewedBy().getUser().getName();
+        }
+        ProjectUpdateResponse projectUpdateResponse=new ProjectUpdateResponse(
+                projectUpdate.getId(),
+                projectUpdate.getProject().getId(),
+                projectUpdate.getProject().getName(),
+                projectUpdate.getUpdatedBy().getId(),
+                projectUpdate.getUpdatedBy().getUser().getName(),
+                projectUpdate.getTitle(),
+                projectUpdate.getDescription(),
+                projectUpdate.getStatus(),
+                reviewedByMembershipId,
+                reviewedByName
+        );
+        return projectUpdateResponse;
+    }
+
+    @PatchMapping("/{updateId}/review")
+    public ProjectUpdateResponse reviewProjectUpdate(@PathVariable Long updateId, @RequestBody ProjectUpdateReviewRequest projectUpdateReviewRequest){
+        ProjectUpdate projectUpdate= projectUpdateService.reviewProjectUpdate(updateId,projectUpdateReviewRequest.getStatus());
+        Long reviewedByMembershipId = null;
+        String reviewedByName = null;
+        if (projectUpdate.getReviewedBy() != null) {
+            reviewedByMembershipId = projectUpdate.getReviewedBy().getId();
+            reviewedByName = projectUpdate.getReviewedBy().getUser().getName();
+        }
+        ProjectUpdateResponse projectUpdateResponse=new ProjectUpdateResponse(
+                projectUpdate.getId(),
+                projectUpdate.getProject().getId(),
+                projectUpdate.getProject().getName(),
+                projectUpdate.getUpdatedBy().getId(),
+                projectUpdate.getUpdatedBy().getUser().getName(),
+                projectUpdate.getTitle(),
+                projectUpdate.getDescription(),
+                projectUpdate.getStatus(),
+                reviewedByMembershipId,
+                reviewedByName
+        );
+        return projectUpdateResponse;
+    }
     }
 
