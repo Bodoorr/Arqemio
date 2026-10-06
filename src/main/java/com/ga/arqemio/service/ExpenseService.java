@@ -15,6 +15,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 @Service
 @AllArgsConstructor
 public class ExpenseService {
@@ -57,5 +59,25 @@ public class ExpenseService {
         return expenseRepository.save(expense);
     }
 
+    public List<Expense> getAllExpenses(){
+        User currentUser= getCurrentLoggedInUser();
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin().equals(true);
+        if (isPlatformAdmin){
+            return expenseRepository.findAll();
+        }
 
+        return expenseRepository.findByProjectCompanyMembershipsUserIdAndProjectCompanyMembershipsStatus(currentUser.getId(), "ACTIVE");
+    }
+
+    public Expense getExpenseById(Long expenseId){
+        User currentUser= getCurrentLoggedInUser();
+        Expense expense= expenseRepository.findById(expenseId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found."));
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin().equals(true);
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), expense.getProject().getCompany().getId(), "ACTIVE");
+
+        if (!isPlatformAdmin && !isActiveMember){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this expense.");
+        }
+        return expense;
+    }
 }
