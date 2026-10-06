@@ -16,6 +16,7 @@ public class ExpenseResponse {
     private String title;
     private double amount;
     private String category;
+    private String description;
     private String status;
     private LocalDateTime expenseDateTime;
 
