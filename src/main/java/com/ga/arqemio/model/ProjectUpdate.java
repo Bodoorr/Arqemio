@@ -42,6 +42,9 @@ public class ProjectUpdate {
     private CompanyMembership reviewedBy;
 
     @Column
+    private String reviewNote;
+
+    @Column
     @CreationTimestamp
     private LocalDateTime createdAt;
 

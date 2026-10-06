@@ -14,7 +14,9 @@ public class ProjectUpdateResponse {
     private String title;
     private String description;
     private String status;
+    private String reviewNote;
     private Long reviewedByMembershipId;
     private String reviewedByName;
+
 
 }

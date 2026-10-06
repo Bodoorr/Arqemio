@@ -38,6 +38,7 @@ public class ProjectUpdateController {
                 projectUpdate.getTitle(),
                 projectUpdate.getDescription(),
                 projectUpdate.getStatus(),
+                projectUpdate.getReviewNote(),
                 reviewedByMembershipId,
                 reviewedByName
         );
@@ -66,6 +67,7 @@ public class ProjectUpdateController {
                     projectUpdate.getTitle(),
                     projectUpdate.getDescription(),
                     projectUpdate.getStatus(),
+                    projectUpdate.getReviewNote(),
                     reviewedByMembershipId,
                     reviewedByName
             );
@@ -93,6 +95,7 @@ public class ProjectUpdateController {
                 projectUpdate.getTitle(),
                 projectUpdate.getDescription(),
                 projectUpdate.getStatus(),
+                projectUpdate.getReviewNote(),
                 reviewedByMembershipId,
                 reviewedByName
         );
@@ -117,6 +120,7 @@ public class ProjectUpdateController {
                 projectUpdate.getTitle(),
                 projectUpdate.getDescription(),
                 projectUpdate.getStatus(),
+                projectUpdate.getReviewNote(),
                 reviewedByMembershipId,
                 reviewedByName
         );
@@ -141,6 +145,7 @@ public class ProjectUpdateController {
                 projectUpdate.getTitle(),
                 projectUpdate.getDescription(),
                 projectUpdate.getStatus(),
+                projectUpdate.getReviewNote(),
                 reviewedByMembershipId,
                 reviewedByName
         );
@@ -149,7 +154,7 @@ public class ProjectUpdateController {
 
     @PatchMapping("/{updateId}/review")
     public ProjectUpdateResponse reviewProjectUpdate(@PathVariable Long updateId, @RequestBody ProjectUpdateReviewRequest projectUpdateReviewRequest){
-        ProjectUpdate projectUpdate= projectUpdateService.reviewProjectUpdate(updateId,projectUpdateReviewRequest.getStatus());
+        ProjectUpdate projectUpdate= projectUpdateService.reviewProjectUpdate(updateId,projectUpdateReviewRequest.getStatus(), projectUpdateReviewRequest.getReviewNote());
         Long reviewedByMembershipId = null;
         String reviewedByName = null;
         if (projectUpdate.getReviewedBy() != null) {
@@ -165,6 +170,7 @@ public class ProjectUpdateController {
                 projectUpdate.getTitle(),
                 projectUpdate.getDescription(),
                 projectUpdate.getStatus(),
+                projectUpdate.getReviewNote(),
                 reviewedByMembershipId,
                 reviewedByName
         );

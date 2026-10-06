@@ -5,4 +5,5 @@ import lombok.Getter;
 @Getter
 public class ProjectUpdateReviewRequest {
     private String status;
+    private String reviewNote;
 }

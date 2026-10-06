@@ -85,7 +85,7 @@ public class ProjectUpdateService {
         return projectUpdate;
     }
 
-    public ProjectUpdate reviewProjectUpdate(Long updateId, String status){
+    public ProjectUpdate reviewProjectUpdate(Long updateId, String status, String reviewNote){
         User currentUser= getCurrentLoggedInUser();
         ProjectUpdate projectUpdate= projectUpdateRepository.findById(updateId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project update not found."));
         Project project= projectUpdate.getProject();
@@ -109,6 +109,8 @@ public class ProjectUpdateService {
 
         projectUpdate.setStatus(status);
         projectUpdate.setReviewedBy(reviewer);
+        projectUpdate.setReviewNote(reviewNote);
+
 
         return projectUpdateRepository.save(projectUpdate);
     }
