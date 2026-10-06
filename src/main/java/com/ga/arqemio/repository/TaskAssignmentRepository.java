@@ -17,4 +17,10 @@ public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, 
             Long taskId,
             Long membershipId
     );
+
+    boolean existsByTaskIdAndAssignedToUserIdAndAssignedToStatus(
+            Long taskId,
+            Long userId,
+            String status
+    );
 }

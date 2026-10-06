@@ -6,6 +6,7 @@ import com.ga.arqemio.model.User;
 import com.ga.arqemio.model.request.TaskRequest;
 import com.ga.arqemio.repository.CompanyMembershipRepository;
 import com.ga.arqemio.repository.ProjectRepository;
+import com.ga.arqemio.repository.TaskAssignmentRepository;
 import com.ga.arqemio.repository.TaskRepository;
 import com.ga.arqemio.security.MyUserDetails;
 import lombok.AllArgsConstructor;
@@ -22,6 +23,7 @@ public class TaskService {
     private TaskRepository taskRepository;
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
+    private TaskAssignmentRepository taskAssignmentRepository;
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -120,6 +122,19 @@ public class TaskService {
 
         task.setStatus("ARCHIVED");
 
+        return taskRepository.save(task);
+    }
+
+    public Task updateTaskStatus(Long taskId, String status){
+        User currentUser= getCurrentLoggedInUser();
+        Task task= taskRepository.findById(taskId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found."));
+        boolean isAssignedWorker= taskAssignmentRepository.existsByTaskIdAndAssignedToUserIdAndAssignedToStatus(taskId,currentUser.getId(),"ACTIVE");
+
+        if (!isAssignedWorker){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not assigned to this task.");
+        }
+
+        task.setStatus(status);
         return taskRepository.save(task);
     }
 
