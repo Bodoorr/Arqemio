@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 @Service
 @AllArgsConstructor
@@ -98,5 +99,41 @@ public class FileAttachmentService {
             throw new RuntimeException("Failed to upload image.");
         }
     }
+
+    public List<FileAttachment> getAllProjectAttachments(Long projectId){
+        User currentUser= getCurrentLoggedInUser();
+        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Project not found."));
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), project.getCompany().getId(), "ACTIVE");
+        if (!currentUser.getIsPlatformAdmin() && !isActiveMember){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
+        }
+
+        return fileAttachmentRepository.findByProjectId(projectId);
+    }
+
+    public List<FileAttachment> getAllProjectUpdateAttachments(Long projectUpdateId){
+        User currentUser= getCurrentLoggedInUser();
+        ProjectUpdate projectUpdate= projectUpdateRepository.findById(projectUpdateId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Project update not found."));
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), projectUpdate.getProject().getCompany().getId(), "ACTIVE");
+        if (!currentUser.getIsPlatformAdmin() && !isActiveMember){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
+        }
+
+        return fileAttachmentRepository.findByProjectUpdateId(projectUpdateId);
+    }
+
+    public List<FileAttachment> getAllProjectExpenseAttachments(Long expenseId){
+        User currentUser= getCurrentLoggedInUser();
+        Expense expense= expenseRepository.findById(expenseId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), expense.getProject().getCompany().getId(), "ACTIVE");
+        if (!currentUser.getIsPlatformAdmin() && !isActiveMember){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
+        }
+
+        return fileAttachmentRepository.findByProjectUpdateId(expenseId);
+    }
+
+
+
 
 }
