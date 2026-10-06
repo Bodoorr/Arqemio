@@ -123,5 +123,21 @@ public class FileAttachmentController {
         return ResponseEntity.ok(fileAttachmentResponses);
     }
 
-
+    @DeleteMapping("/{attachmentId}")
+    public ResponseEntity<FileAttachmentResponse> archiveFileAttachment(@PathVariable Long attachmentId){
+        FileAttachment fileAttachment= fileAttachmentService.archiveFileAttachment(attachmentId);
+        FileAttachmentResponse fileAttachmentResponse=new FileAttachmentResponse(
+                fileAttachment.getId(),
+                fileAttachment.getProject().getId(),
+                fileAttachment.getExpense() != null ? fileAttachment.getExpense().getId() : null,
+                fileAttachment.getProjectUpdate() != null ? fileAttachment.getProjectUpdate().getId() : null,
+                fileAttachment.getFileUrl(),
+                fileAttachment.getFileName(),
+                fileAttachment.getFileType(),
+                fileAttachment.getUploadedBy().getId(),
+                fileAttachment.getUploadedBy().getUser().getName(),
+                fileAttachment.getStatus()
+        );
+        return ResponseEntity.ok(fileAttachmentResponse);
+    }
 }
