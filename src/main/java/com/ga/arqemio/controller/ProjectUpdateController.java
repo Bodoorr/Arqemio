@@ -7,10 +7,10 @@ import com.ga.arqemio.service.ProjectUpdateService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequestMapping("/company/projects/updates")
@@ -43,5 +43,60 @@ public class ProjectUpdateController {
         return ResponseEntity.status(HttpStatus.CREATED).body(projectUpdateResponse);
     }
 
+    @GetMapping("/project/{projectId}")
+    public List<ProjectUpdateResponse> getAllProjectUpdates(@PathVariable Long projectId){
+        List<ProjectUpdate> projectUpdates= projectUpdateService.getProjectUpdates(projectId);
+        List<ProjectUpdateResponse> projectUpdateResponses=new ArrayList<>();
 
-}
+        for (ProjectUpdate projectUpdate:projectUpdates){
+            Long reviewedByMembershipId = null;
+            String reviewedByName = null;
+
+            if (projectUpdate.getReviewedBy() != null) {
+                reviewedByMembershipId = projectUpdate.getReviewedBy().getId();
+                reviewedByName = projectUpdate.getReviewedBy().getUser().getName();
+            }
+            ProjectUpdateResponse projectUpdateResponse=new ProjectUpdateResponse(
+                    projectUpdate.getId(),
+                    projectUpdate.getProject().getId(),
+                    projectUpdate.getProject().getName(),
+                    projectUpdate.getUpdatedBy().getId(),
+                    projectUpdate.getUpdatedBy().getUser().getName(),
+                    projectUpdate.getTitle(),
+                    projectUpdate.getDescription(),
+                    projectUpdate.getStatus(),
+                    reviewedByMembershipId,
+                    reviewedByName
+            );
+            projectUpdateResponses.add(projectUpdateResponse);
+        }
+        return projectUpdateResponses;
+    }
+
+    @GetMapping("/{updateId}")
+    public ProjectUpdateResponse getProjectUpdateById(@PathVariable Long updateId){
+        ProjectUpdate projectUpdate= projectUpdateService.getProjectUpdateById(updateId);
+        Long reviewedByMembershipId = null;
+        String reviewedByName = null;
+
+        if (projectUpdate.getReviewedBy() != null) {
+            reviewedByMembershipId = projectUpdate.getReviewedBy().getId();
+            reviewedByName = projectUpdate.getReviewedBy().getUser().getName();
+        }
+        ProjectUpdateResponse projectUpdateResponse=new ProjectUpdateResponse(
+                projectUpdate.getId(),
+                projectUpdate.getProject().getId(),
+                projectUpdate.getProject().getName(),
+                projectUpdate.getUpdatedBy().getId(),
+                projectUpdate.getUpdatedBy().getUser().getName(),
+                projectUpdate.getTitle(),
+                projectUpdate.getDescription(),
+                projectUpdate.getStatus(),
+                reviewedByMembershipId,
+                reviewedByName
+        );
+        return projectUpdateResponse;
+    }
+
+    }
+
