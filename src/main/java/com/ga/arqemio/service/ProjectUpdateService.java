@@ -59,13 +59,30 @@ public class ProjectUpdateService {
         User currentUser= getCurrentLoggedInUser();
         Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
         boolean isPlatformAdmin= currentUser.getIsPlatformAdmin().equals(true);
-        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), project.getCompany().getId(), "ACTIVE");
+        boolean isCompanyOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isAssignedManager = projectRepository.existsByIdAndManagersUserIdAndManagersStatus(projectId, currentUser.getId(), "ACTIVE");
+        boolean isAssignedWorker = projectRepository.existsByIdAndWorkersUserIdAndWorkersStatus(projectId, currentUser.getId(), "ACTIVE");
 
-        if (!isPlatformAdmin && !isActiveMember){
+        if (!isPlatformAdmin && !isCompanyOwner && !isAssignedManager && !isAssignedWorker){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,"You're not allowed to view updates for this project.");
         }
 
         return projectUpdateRepository.findByProjectId(projectId);
+    }
+
+    public ProjectUpdate getProjectUpdateById(Long updateId){
+        User currentUser= getCurrentLoggedInUser();
+        ProjectUpdate projectUpdate= projectUpdateRepository.findById(updateId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Project update not found."));
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin().equals(true);
+        boolean isCompanyOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), projectUpdate.getProject().getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isAssignedManager = projectRepository.existsByIdAndManagersUserIdAndManagersStatus(projectUpdate.getProject().getId(), currentUser.getId(), "ACTIVE");
+        boolean isAssignedWorker = projectRepository.existsByIdAndWorkersUserIdAndWorkersStatus(projectUpdate.getProject().getId(), currentUser.getId(), "ACTIVE");
+
+        if (!isPlatformAdmin && !isCompanyOwner && !isAssignedManager && !isAssignedWorker) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this project update.");
+        }
+
+        return projectUpdate;
     }
 
     public ProjectUpdate reviewProjectUpdate(Long updateId, String status){
@@ -96,4 +113,39 @@ public class ProjectUpdateService {
         return projectUpdateRepository.save(projectUpdate);
     }
 
+    public ProjectUpdate updateProjectUpdate(Long updateId, ProjectUpdateRequest projectUpdateRequest){
+        User currentUser= getCurrentLoggedInUser();
+
+        ProjectUpdate projectUpdate= projectUpdateRepository.findById(updateId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Project update not found."));
+
+        if (!projectUpdate.getUpdatedBy().getUser().getId().equals(currentUser.getId())){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this project update.");
+        }
+
+        if (!projectUpdate.getStatus().equals("PENDING")){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only pending project updates can be updated.");
+        }
+
+        projectUpdate.setTitle(projectUpdateRequest.getTitle());
+        projectUpdate.setDescription(projectUpdateRequest.getDescription());
+
+        return projectUpdateRepository.save(projectUpdate);
+    }
+
+    public ProjectUpdate archiveProjectUpdate(Long updateId){
+        User currentUser= getCurrentLoggedInUser();
+        ProjectUpdate projectUpdate= projectUpdateRepository.findById(updateId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project update not found."));
+
+        if (!projectUpdate.getUpdatedBy().getUser().getId().equals(currentUser.getId())){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to archive this project update.");
+        }
+
+        if (!projectUpdate.getStatus().equals("PENDING")){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Only pending project updates can be archived.");
+        }
+
+        projectUpdate.setStatus("ARCHIVED");
+
+        return projectUpdateRepository.save(projectUpdate);
+    }
 }
