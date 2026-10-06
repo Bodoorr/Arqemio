@@ -13,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -134,14 +135,14 @@ public class ReservationService {
 
         List<Reservation> existingReservations= reservationRepository.findByEquipmentId(reservation.getEquipment().getId());
         int reservedQuantity=0;
-        for (Reservation exiatingReservation : existingReservations){
-            if (!exiatingReservation.getId().equals(reservation.getId())){
-                if (exiatingReservation.getStatus().equals("RESERVED") || exiatingReservation.getStatus().equals("IN_USE")){
-                    boolean overlaps= reservationRequest.getStartDateTime().isBefore(exiatingReservation.getEndDateTime()) &&
-                            reservationRequest.getEndDateTime().isAfter(exiatingReservation.getStartDateTime());
+        for (Reservation existingReservation : existingReservations){
+            if (!existingReservation.getId().equals(reservation.getId())){
+                if (existingReservation.getStatus().equals("RESERVED") || existingReservation.getStatus().equals("IN_USE")){
+                    boolean overlaps= reservationRequest.getStartDateTime().isBefore(existingReservation.getEndDateTime()) &&
+                            reservationRequest.getEndDateTime().isAfter(existingReservation.getStartDateTime());
 
                     if (overlaps){
-                        reservedQuantity+=exiatingReservation.getQuantity();
+                        reservedQuantity+=existingReservation.getQuantity();
                     }
                 }
             }
@@ -202,4 +203,26 @@ public class ReservationService {
         reservation.setStatus(status);
         return reservationRepository.save(reservation);
     }
+
+    public int getAvailableQuantity(Long equipmentId, LocalDateTime startDateTime, LocalDateTime endDateTime){
+        Equipment equipment= equipmentRepository.findById(equipmentId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
+        if (endDateTime.isBefore(startDateTime) || endDateTime.equals(startDateTime)){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End date and time must be after start date and time.");
+        }
+
+        List<Reservation> existingReservations= reservationRepository.findByEquipmentId(equipmentId);
+        int reservedQuantity= 0;
+        for (Reservation existingReservation: existingReservations){
+                if (existingReservation.getStatus().equals("RESERVED") || existingReservation.getStatus().equals("IN_USE")){
+                boolean overlaps= startDateTime.isBefore(existingReservation.getEndDateTime()) && endDateTime.isAfter(existingReservation.getStartDateTime());
+                    if (overlaps){
+                        reservedQuantity+=existingReservation.getQuantity();
+                    }
+                }
+        }
+        return equipment.getQuantity()- reservedQuantity;
+    }
+
+
+
 }
