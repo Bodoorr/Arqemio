@@ -85,7 +85,7 @@ public class ExpenseService {
         User currentUser= getCurrentLoggedInUser();
         Expense expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), expense.getProject().getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(expense.getProject().getCompany().getId(), currentUser.getId(), "ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(expense.getProject().getId(),currentUser.getId(), "ACTIVE");
 
         if (!isCompanyOwner && !isAssignedManager){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this expense.");
@@ -108,7 +108,7 @@ public class ExpenseService {
         User currentUser= getCurrentLoggedInUser();
         Expense expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), expense.getProject().getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(expense.getProject().getCompany().getId(), currentUser.getId(), "ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(expense.getProject().getId(), currentUser.getId(), "ACTIVE");
 
         if (!isCompanyOwner && !isAssignedManager){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to archive this expense.");
