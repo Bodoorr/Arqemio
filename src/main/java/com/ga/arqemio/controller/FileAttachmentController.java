@@ -6,10 +6,7 @@ import com.ga.arqemio.service.FileAttachmentService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
@@ -34,5 +31,23 @@ public class FileAttachmentController {
                 fileAttachment.getStatus()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(fileAttachmentResponse);
+    }
+
+    @GetMapping("/{attachmentId}")
+    public ResponseEntity<FileAttachmentResponse> getFileAttachment(@PathVariable Long attachmentId){
+        FileAttachment fileAttachment= fileAttachmentService.getFileAttachmentById(attachmentId);
+        FileAttachmentResponse fileAttachmentResponse=new FileAttachmentResponse(
+                fileAttachment.getId(),
+                fileAttachment.getProject().getId(),
+                fileAttachment.getExpense() != null ? fileAttachment.getExpense().getId() : null,
+                fileAttachment.getProjectUpdate() != null ? fileAttachment.getProjectUpdate().getId() : null,
+                fileAttachment.getFileUrl(),
+                fileAttachment.getFileName(),
+                fileAttachment.getFileType(),
+                fileAttachment.getUploadedBy().getId(),
+                fileAttachment.getUploadedBy().getUser().getName(),
+                fileAttachment.getStatus()
+        );
+        return ResponseEntity.ok(fileAttachmentResponse);
     }
 }
