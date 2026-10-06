@@ -99,5 +99,19 @@ public class EquipmentService {
         return equipmentRepository.save(equipment);
     }
 
+    public Equipment archiveEquipment(Long equipmentId){
+        User currentUser= getCurrentLoggedInUser();
+        Equipment equipment= equipmentRepository.findById(equipmentId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
+        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin().equals(true);
+        boolean isActiveOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(),equipment.getCompany().getId(), "OWNER", "ACTIVE");
+
+        if (!isPlatformAdmin && !isActiveOwner){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to delete this Equipment.");
+        }
+        equipment.setStatus("ARCHIVED");
+
+        return equipmentRepository.save(equipment);
+    }
+
 
 }
