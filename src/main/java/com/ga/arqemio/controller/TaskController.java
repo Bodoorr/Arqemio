@@ -124,7 +124,7 @@ public class TaskController {
         return ResponseEntity.ok(taskResponse);
     }
 
-    @PostMapping("/{taskId}/status")
+    @PatchMapping("/{taskId}/status")
     public ResponseEntity<TaskResponse> updateTaskStatus(@PathVariable Long taskId, @RequestBody TaskStatusRequest taskStatusRequest){
         Task task= taskService.updateTaskStatus(taskId, taskStatusRequest.getStatus());
         TaskResponse taskResponse= new TaskResponse(
