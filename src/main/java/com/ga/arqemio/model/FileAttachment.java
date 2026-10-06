@@ -36,6 +36,9 @@ public class FileAttachment {
     @Column
     private String fileType;
 
+    @Column
+    private String status = "ACTIVE";
+
     @ManyToOne
     @JoinColumn(name = "uploaded_by", nullable = false)
     private CompanyMembership uploadedBy;
