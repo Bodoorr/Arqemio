@@ -66,7 +66,7 @@ public class ReservationService {
         int reservedQuantity=0;
 
         for (Reservation existingReservation: existingReservations){
-            if (existingReservation.getStatus().equals("RESERVED") || existingReservation.getStatus().equals("IN_USE")){
+            if (existingReservation.getStatus().equals("RESERVED")){
                 boolean overlaps= reservationRequest.getStartDateTime().isBefore(existingReservation.getEndDateTime()) &&
                         reservationRequest.getEndDateTime().isAfter(existingReservation.getStartDateTime());
                 if (overlaps){
@@ -137,7 +137,7 @@ public class ReservationService {
         int reservedQuantity=0;
         for (Reservation existingReservation : existingReservations){
             if (!existingReservation.getId().equals(reservation.getId())){
-                if (existingReservation.getStatus().equals("RESERVED") || existingReservation.getStatus().equals("IN_USE")){
+                if (existingReservation.getStatus().equals("RESERVED")){
                     boolean overlaps= reservationRequest.getStartDateTime().isBefore(existingReservation.getEndDateTime()) &&
                             reservationRequest.getEndDateTime().isAfter(existingReservation.getStartDateTime());
 
@@ -189,17 +189,14 @@ public class ReservationService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this reservation status.");
         }
 
-        if (reservation.getStatus().equals("RESERVED")){
-            if (!status.equals("IN_USE")){
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reserved reservation can only be changed to IN_USE.");
-            } else if (reservation.getStatus().equals("IN_USE")){
-                if (!status.equals("COMPLETED")){
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "In-use reservation can only be changed to completed.");
-                }
-            } else {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This reservation status can no longer be updated.");
-            }
+        if (!reservation.getStatus().equals("RESERVED")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This reservation can no longer be updated.");
         }
+
+        if (!status.equals("COMPLETED")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Worker can only mark a reservation as COMPLETED.");
+        }
+
         reservation.setStatus(status);
         return reservationRepository.save(reservation);
     }
@@ -213,7 +210,7 @@ public class ReservationService {
         List<Reservation> existingReservations= reservationRepository.findByEquipmentId(equipmentId);
         int reservedQuantity= 0;
         for (Reservation existingReservation: existingReservations){
-                if (existingReservation.getStatus().equals("RESERVED") || existingReservation.getStatus().equals("IN_USE")){
+                if (existingReservation.getStatus().equals("RESERVED")){
                 boolean overlaps= startDateTime.isBefore(existingReservation.getEndDateTime()) && endDateTime.isAfter(existingReservation.getStartDateTime());
                     if (overlaps){
                         reservedQuantity+=existingReservation.getQuantity();
