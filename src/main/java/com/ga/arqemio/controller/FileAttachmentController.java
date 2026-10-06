@@ -9,6 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @RestController
 @RequestMapping("/company/projects/attachments")
 @AllArgsConstructor
@@ -50,4 +53,75 @@ public class FileAttachmentController {
         );
         return ResponseEntity.ok(fileAttachmentResponse);
     }
+
+    @GetMapping("/project/{projectId}")
+    public ResponseEntity<List<FileAttachmentResponse>> getAllProjectAttachments(@PathVariable Long projectId){
+        List<FileAttachment> fileAttachments= fileAttachmentService.getAllProjectAttachments(projectId);
+        List<FileAttachmentResponse> fileAttachmentResponses= new ArrayList<>();
+
+        for (FileAttachment fileAttachment : fileAttachments){
+            FileAttachmentResponse fileAttachmentResponse=new FileAttachmentResponse(
+                    fileAttachment.getId(),
+                    fileAttachment.getProject().getId(),
+                    fileAttachment.getExpense() != null ? fileAttachment.getExpense().getId() : null,
+                    fileAttachment.getProjectUpdate() != null ? fileAttachment.getProjectUpdate().getId() : null,
+                    fileAttachment.getFileUrl(),
+                    fileAttachment.getFileName(),
+                    fileAttachment.getFileType(),
+                    fileAttachment.getUploadedBy().getId(),
+                    fileAttachment.getUploadedBy().getUser().getName(),
+                    fileAttachment.getStatus()
+            );
+            fileAttachmentResponses.add(fileAttachmentResponse);
+        }
+        return ResponseEntity.ok(fileAttachmentResponses);
+    }
+
+    @GetMapping("/update/{projectUpdateId}")
+    public ResponseEntity<List<FileAttachmentResponse>> getAllProjectUpdateAttachments(@PathVariable Long projectUpdateId){
+        List<FileAttachment> fileAttachments= fileAttachmentService.getAllProjectUpdateAttachments(projectUpdateId);
+        List<FileAttachmentResponse> fileAttachmentResponses= new ArrayList<>();
+
+        for (FileAttachment fileAttachment : fileAttachments){
+            FileAttachmentResponse fileAttachmentResponse=new FileAttachmentResponse(
+                    fileAttachment.getId(),
+                    fileAttachment.getProject().getId(),
+                    fileAttachment.getExpense() != null ? fileAttachment.getExpense().getId() : null,
+                    fileAttachment.getProjectUpdate() != null ? fileAttachment.getProjectUpdate().getId() : null,
+                    fileAttachment.getFileUrl(),
+                    fileAttachment.getFileName(),
+                    fileAttachment.getFileType(),
+                    fileAttachment.getUploadedBy().getId(),
+                    fileAttachment.getUploadedBy().getUser().getName(),
+                    fileAttachment.getStatus()
+            );
+            fileAttachmentResponses.add(fileAttachmentResponse);
+        }
+        return ResponseEntity.ok(fileAttachmentResponses);
+    }
+
+    @GetMapping("/expense/{expenseId}")
+    public ResponseEntity<List<FileAttachmentResponse>> getAllProjectExpenseAttachments(@PathVariable Long expenseId){
+        List<FileAttachment> fileAttachments= fileAttachmentService.getAllProjectExpenseAttachments(expenseId);
+        List<FileAttachmentResponse> fileAttachmentResponses= new ArrayList<>();
+
+        for (FileAttachment fileAttachment : fileAttachments){
+            FileAttachmentResponse fileAttachmentResponse=new FileAttachmentResponse(
+                    fileAttachment.getId(),
+                    fileAttachment.getProject().getId(),
+                    fileAttachment.getExpense() != null ? fileAttachment.getExpense().getId() : null,
+                    fileAttachment.getProjectUpdate() != null ? fileAttachment.getProjectUpdate().getId() : null,
+                    fileAttachment.getFileUrl(),
+                    fileAttachment.getFileName(),
+                    fileAttachment.getFileType(),
+                    fileAttachment.getUploadedBy().getId(),
+                    fileAttachment.getUploadedBy().getUser().getName(),
+                    fileAttachment.getStatus()
+            );
+            fileAttachmentResponses.add(fileAttachmentResponse);
+        }
+        return ResponseEntity.ok(fileAttachmentResponses);
+    }
+
+
 }
