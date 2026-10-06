@@ -79,4 +79,46 @@ public class ExpenseController {
         );
         return ResponseEntity.ok(expenseResponse);
     }
+
+    @PutMapping("/{expenseId}")
+    public ResponseEntity<ExpenseResponse> updateExpense(@PathVariable Long expenseId, @RequestBody ExpenseRequest expenseRequest){
+        Expense expense= expenseService.updateExpense(expenseId,expenseRequest);
+        ExpenseResponse expenseResponse=new ExpenseResponse(
+                expense.getId(),
+                expense.getProject().getId(),
+                expense.getProject().getName(),
+                expense.getMember().getId(),
+                expense.getMember().getUser().getName(),
+                expense.getTitle(),
+                expense.getAmount(),
+                expense.getCategory(),
+                expense.getDescription(),
+                expense.getStatus(),
+                expense.getExpenseDateTime()
+        );
+
+        return ResponseEntity.ok(expenseResponse);
+    }
+
+    @DeleteMapping("/{expenseId}")
+    public ResponseEntity<ExpenseResponse> archiveExpense(@PathVariable Long expenseId){
+        Expense expense= expenseService.archiveExpense(expenseId);
+        ExpenseResponse expenseResponse=new ExpenseResponse(
+                expense.getId(),
+                expense.getProject().getId(),
+                expense.getProject().getName(),
+                expense.getMember().getId(),
+                expense.getMember().getUser().getName(),
+                expense.getTitle(),
+                expense.getAmount(),
+                expense.getCategory(),
+                expense.getDescription(),
+                expense.getStatus(),
+                expense.getExpenseDateTime()
+        );
+
+        return ResponseEntity.ok(expenseResponse);
+    }
+
 }
+
