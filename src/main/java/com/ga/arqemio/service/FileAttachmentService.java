@@ -1,12 +1,19 @@
 package com.ga.arqemio.service;
 
+import com.ga.arqemio.model.*;
 import com.ga.arqemio.repository.*;
+import com.ga.arqemio.security.MyUserDetails;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpRange;
+import org.springframework.http.HttpRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import com.cloudinary.*;
 import com.cloudinary.utils.ObjectUtils;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.Map;
@@ -20,6 +27,12 @@ public class FileAttachmentService {
     private ProjectUpdateRepository projectUpdateRepository;
     private ExpenseRepository expenseRepository;
     private  CompanyMembershipRepository companyMembershipRepository;
+
+    public static User getCurrentLoggedInUser(){
+        MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return userDetails.getUser();
+    }
+
     public Map uploadImage(MultipartFile file) throws IOException {
 
         if (file.isEmpty()) {
@@ -43,6 +56,47 @@ public class FileAttachmentService {
         );
 
         return uploadResult;
+    }
+
+    public FileAttachment createFileAttachment(MultipartFile file, Long projectId, Long projectUpdateId, Long expenseId){
+        User currentUser= getCurrentLoggedInUser();
+        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Project not found."));
+        CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(),project.getCompany().getId(), "ACTIVE")
+                .orElseThrow(()-> new ResponseStatusException(HttpStatus.FORBIDDEN,"You're not an active member of this company."));
+
+        ProjectUpdate projectUpdate= null;
+        if (projectUpdateId != null){
+            projectUpdate= projectUpdateRepository.findById(projectUpdateId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Project update not found."));
+
+            if (!projectUpdate.getProject().getId().equals(projectId)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Project update does not belong to this project.");
+            }
+        }
+
+        Expense expense= null;
+        if (expenseId != null){
+            expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
+
+            if (!expense.getProject().getId().equals(projectId)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Expense does not belong to this project.");
+            }
+        }
+
+        try {
+            Map uploadResult= uploadImage(file);
+            FileAttachment fileAttachment= new FileAttachment();
+            fileAttachment.setProject(project);
+            fileAttachment.setProjectUpdate(projectUpdate);
+            fileAttachment.setExpense(expense);
+            fileAttachment.setFileUrl(uploadResult.get("secure_url").toString());
+            fileAttachment.setFileName(file.getOriginalFilename());
+            fileAttachment.setFileType(file.getContentType());
+            fileAttachment.setUploadedBy(membership);
+
+            return fileAttachmentRepository.save(fileAttachment);
+        } catch (IOException e){
+            throw new RuntimeException("Failed to upload image.");
+        }
     }
 
 }
