@@ -113,4 +113,68 @@ public class ReservationService {
 
         return reservation;
     }
+
+    public Reservation updateReservation(Long reservationId, ReservationRequest reservationRequest){
+        User currentUser= getCurrentLoggedInUser();
+        Reservation reservation= reservationRepository.findById(reservationId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reservation not found."));
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(),reservation.getProject().getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(reservation.getProject().getId(), currentUser.getId(), "ACTIVE");
+
+        if (!isCompanyOwner && !isAssignedManager){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this reservation.");
+        }
+
+        if (reservationRequest.getQuantity()<=0){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation quantity must be greater than 0.");
+        }
+
+        if (reservationRequest.getEndDateTime().isBefore(reservationRequest.getStartDateTime()) || reservationRequest.getEndDateTime().equals(reservationRequest.getStartDateTime())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End date and time must be after start date and time.");
+        }
+
+        List<Reservation> existingReservations= reservationRepository.findByEquipmentId(reservation.getEquipment().getId());
+        int reservedQuantity=0;
+        for (Reservation exiatingReservation : existingReservations){
+            if (!exiatingReservation.getId().equals(reservation.getId())){
+                if (exiatingReservation.getStatus().equals("RESERVED") || exiatingReservation.getStatus().equals("IN_USE")){
+                    boolean overlaps= reservationRequest.getStartDateTime().isBefore(exiatingReservation.getEndDateTime()) &&
+                            reservationRequest.getEndDateTime().isAfter(exiatingReservation.getStartDateTime());
+
+                    if (overlaps){
+                        reservedQuantity+=exiatingReservation.getQuantity();
+                    }
+                }
+            }
+        }
+        int availableQuantity= reservation.getEquipment().getQuantity() - reservedQuantity;
+
+        if (reservationRequest.getQuantity() > availableQuantity){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");
+        }
+
+        reservation.setStartDateTime(reservationRequest.getStartDateTime());
+        reservation.setEndDateTime(reservationRequest.getEndDateTime());
+        reservation.setDescription(reservationRequest.getDescription());
+        reservation.setQuantity(reservationRequest.getQuantity());
+
+        return reservationRepository.save(reservation);
+    }
+
+    public Reservation cancelReservation(Long reservationId){
+        User currentUser= getCurrentLoggedInUser();
+        Reservation reservation= reservationRepository.findById(reservationId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reservation not found."));
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(),reservation.getProject().getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(reservation.getProject().getId(), currentUser.getId(), "ACTIVE");
+
+        if (!isCompanyOwner && !isAssignedManager){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to cancel this reservation.");
+        }
+
+        if (!reservation.getStatus().equals("RESERVED")){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only reserved reservations can be cancelled.");
+        }
+
+        reservation.setStatus("CANCELLED");
+        return reservationRepository.save(reservation);
+    }
 }
