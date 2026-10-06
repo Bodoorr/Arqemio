@@ -90,4 +90,44 @@ public class ReservationController {
         return ResponseEntity.ok(reservationResponse);
     }
 
+    @PutMapping("/{reservationId}")
+    public ResponseEntity<ReservationResponse> updateReservation(@PathVariable Long reservationId, @RequestBody ReservationRequest reservationRequest){
+        Reservation reservation= reservationService.updateReservation(reservationId,reservationRequest);
+        ReservationResponse reservationResponse=new ReservationResponse(
+                reservation.getId(),
+                reservation.getEquipment().getId(),
+                reservation.getEquipment().getName(),
+                reservation.getProject().getId(),
+                reservation.getProject().getName(),
+                reservation.getMembership().getId(),
+                reservation.getMembership().getUser().getName(),
+                reservation.getStartDateTime(),
+                reservation.getEndDateTime(),
+                reservation.getDescription(),
+                reservation.getStatus(),
+                reservation.getQuantity()
+        );
+        return ResponseEntity.ok(reservationResponse);
+    }
+
+    @DeleteMapping("/{reservationId}")
+    public ResponseEntity<ReservationResponse> cancelReservation(@PathVariable Long reservationId){
+        Reservation reservation= reservationService.cancelReservation(reservationId);
+        ReservationResponse reservationResponse=new ReservationResponse(
+                reservation.getId(),
+                reservation.getEquipment().getId(),
+                reservation.getEquipment().getName(),
+                reservation.getProject().getId(),
+                reservation.getProject().getName(),
+                reservation.getMembership().getId(),
+                reservation.getMembership().getUser().getName(),
+                reservation.getStartDateTime(),
+                reservation.getEndDateTime(),
+                reservation.getDescription(),
+                reservation.getStatus(),
+                reservation.getQuantity()
+        );
+        return ResponseEntity.ok(reservationResponse);
+    }
+
 }
