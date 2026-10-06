@@ -80,4 +80,42 @@ public class ExpenseService {
         }
         return expense;
     }
+
+    public Expense updateExpense(Long expenseId, ExpenseRequest expenseRequest){
+        User currentUser= getCurrentLoggedInUser();
+        Expense expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), expense.getProject().getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(expense.getProject().getCompany().getId(), currentUser.getId(), "ACTIVE");
+
+        if (!isCompanyOwner && !isAssignedManager){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this expense.");
+        }
+
+        if (expenseRequest.getAmount() <=0){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Expense amount must be greater than 0.");
+        }
+
+        expense.setTitle(expenseRequest.getTitle());
+        expense.setAmount(expenseRequest.getAmount());
+        expense.setCategory(expenseRequest.getCategory());
+        expense.setDescription(expenseRequest.getDescription());
+        expense.setExpenseDateTime(expenseRequest.getExpenseDateTime());
+
+        return expenseRepository.save(expense);
+    }
+
+    public Expense archiveExpense(Long expenseId){
+        User currentUser= getCurrentLoggedInUser();
+        Expense expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), expense.getProject().getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(expense.getProject().getCompany().getId(), currentUser.getId(), "ACTIVE");
+
+        if (!isCompanyOwner && !isAssignedManager){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to archive this expense.");
+        }
+        expense.setStatus("ARCHIVED");
+        return expenseRepository.save(expense);
+    }
+
+
 }
