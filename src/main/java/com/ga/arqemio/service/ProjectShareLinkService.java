@@ -25,6 +25,7 @@ public class ProjectShareLinkService {
     private CompanyMembershipRepository companyMembershipRepository;
     private EmailService emailService;
     private FileAttachmentRepository fileAttachmentRepository;
+    private AuditLogService auditLogService;
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -57,7 +58,7 @@ public class ProjectShareLinkService {
         shareLink.setToken(UUID.randomUUID().toString());
         shareLink.setExpiresAt(LocalDateTime.now().plusHours(24));
 
-        projectShareLinkRepository.save(shareLink);
+        ProjectShareLink savedShareLink = projectShareLinkRepository.save(shareLink);
 
         String link= "http://localhost:5173/project-preview/"+ shareLink.getToken();
 
@@ -75,7 +76,13 @@ public class ProjectShareLinkService {
         );
 
         emailService.sendSimpleMail(emailDetails);
-        return shareLink;
+
+        auditLogService.createAuditLog(currentUser, project.getCompany(),
+                "SHARE", "PROJECT_UPDATE", projectUpdate.getId(),
+                "Shared project update with customer " + shareLink.getCustomerEmail()
+        );
+
+        return savedShareLink;
     }
 
     public ProjectUpdateShareResponse getSharedProjectUpdate(String token){
