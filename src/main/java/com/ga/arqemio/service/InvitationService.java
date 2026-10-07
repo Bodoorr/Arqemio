@@ -25,6 +25,7 @@ public class InvitationService {
     private CompanyMembershipRepository companyMembershipRepository;
     private UserRepository userRepository;
     private UserService userService;
+    private AuditLogService auditLogService;
 
     public User getCurrentLoggedInUser(){
         MyUserDetails userDetails= (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -184,6 +185,12 @@ public class InvitationService {
         invitation.setStatus("ACCEPTED");
         invitationRepository.save(invitation);
 
+        Invitation savedInvitation = invitationRepository.save(invitation);
+
+        auditLogService.createAuditLog(savedUser, invitation.getCompany(),
+                "ACCEPT", "INVITATION", savedInvitation.getId(),
+                "Accepted invitation as " + invitation.getRole()
+        );
         return savedUser;
     }
 
@@ -212,7 +219,14 @@ public class InvitationService {
 
         invitation.setStatus("ACCEPTED");
 
-        return invitationRepository.save(invitation);
+        Invitation savedInvitation = invitationRepository.save(invitation);
+
+        auditLogService.createAuditLog(currentUser, invitation.getCompany(),
+                "ACCEPT", "INVITATION", savedInvitation.getId(),
+                "Accepted invitation as " + invitation.getRole()
+        );
+
+        return savedInvitation;
     }
 
     public Invitation cancelInvitation(Long invitationId){
