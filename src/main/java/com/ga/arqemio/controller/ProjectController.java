@@ -80,7 +80,7 @@ public class ProjectController {
         Pageable pageable= PageRequest.of(page,size,sort);
         Page<Project> projects= projectService.getProjects(pageable);
 
-        return ResponseEntity.ok(projects)
+        return ResponseEntity.ok(projects);
     }
 
     @GetMapping("/{projectId}")
