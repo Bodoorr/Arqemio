@@ -12,9 +12,10 @@ import com.ga.arqemio.security.MyUserDetails;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -77,6 +78,15 @@ public class ProjectService {
         return projectRepository.findByCompanyMembershipsUserIdAndCompanyMembershipsStatus(currentUser.getId(), "ACTIVE");
 
     }
+
+    public Page<Project> getProjects(Pageable pageable) {
+        User currentUser= getCurrentLoggedInUser();
+        if (currentUser.getIsPlatformAdmin()) {
+            return projectRepository.findAll(pageable);
+        }
+        return projectRepository.findByCompanyMembershipsUserIdAndCompanyMembershipsStatus(currentUser.getId(),"ACTIVE",pageable);
+    }
+
 
     public Project getProjectById(Long projectId){
         User currentUser= getCurrentLoggedInUser();
