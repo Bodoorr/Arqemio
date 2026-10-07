@@ -6,6 +6,7 @@ import com.ga.arqemio.model.EmailDetails;
 import com.ga.arqemio.model.User;
 import com.ga.arqemio.model.request.ForgetPasswordRequest;
 import com.ga.arqemio.model.request.LoginRequest;
+import com.ga.arqemio.model.request.ResetPasswordRequest;
 import com.ga.arqemio.model.request.UpdateProfileRequest;
 import com.ga.arqemio.model.response.ChangePasswordRequest;
 import com.ga.arqemio.model.response.LoginResponse;
@@ -146,7 +147,37 @@ public class UserService {
         return "Password reset email sent successfully.";
     }
 
+    public String resetPassword(ResetPasswordRequest resetPasswordRequest){
+        User user= userRepository.findByResetPasswordToken(resetPasswordRequest.getToken()).orElseThrow(()->new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid reset password token."));
 
+        if (user.getResetPasswordTokenExpiresAt().isBefore(LocalDateTime.now())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Reset password link has expired.");
+        }
+        if (resetPasswordRequest.getNewPassword() == null || resetPasswordRequest.getNewPassword().isBlank()){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"New password cannot be empty.");
+        }
+        if (!resetPasswordRequest.getNewPassword().equals(resetPasswordRequest.getConfirmPassword())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Passwords do not match.");
+        }
+
+        user.setPassword(passwordEncoder.encode(resetPasswordRequest.getNewPassword()));
+        user.setResetPasswordToken(null);
+        user.setResetPasswordTokenExpiresAt(null);
+
+        userRepository.save(user);
+
+        EmailDetails emailDetails = new EmailDetails(
+                user.getEmail(),
+                "Hello " + user.getName() +
+                        ",\n\nYour Arqemio password has been reset successfully." +
+                        "\n\nIf you did not make this change, please contact support.",
+                "Arqemio - Password Reset Successful",
+                null
+        );
+
+        emailService.sendSimpleMail(emailDetails);
+        return "Password reset successfully.";
+    }
 
     public UserProfileResponse getProfile() {
         User currentUser = getCurrentLoggedInUser();
