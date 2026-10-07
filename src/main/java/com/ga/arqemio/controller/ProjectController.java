@@ -69,7 +69,8 @@ public class ProjectController {
 
 
     @GetMapping("/search")
-    public ResponseEntity<?> getProjects(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "5") int size, @RequestParam(defaultValue = "id") String sortBy, @RequestParam(defaultValue = "true") boolean ascending){
+    public ResponseEntity<?> getProjects(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "5") int size, @RequestParam(defaultValue = "id") String sortBy,
+                                         @RequestParam(defaultValue = "true") boolean ascending, @RequestParam(required = false) String name, @RequestParam(required = false) String status){
         Sort sort;
         if (ascending){
             sort= Sort.by(sortBy).ascending();
@@ -78,7 +79,7 @@ public class ProjectController {
         }
 
         Pageable pageable= PageRequest.of(page,size,sort);
-        Page<Project> projects= projectService.getProjects(pageable);
+        Page<Project> projects= projectService.getProjects(pageable,name,status);
 
         return ResponseEntity.ok(projects);
     }
