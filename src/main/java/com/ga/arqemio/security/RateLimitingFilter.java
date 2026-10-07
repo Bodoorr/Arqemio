@@ -4,6 +4,7 @@ import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
 import java.util.Map;
@@ -13,7 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class RateLimitingFilter implements Filter {
 
-    private static final int MAX_REQUESTS_PER_MINUTE = 5;
+    private static final int MAX_REQUESTS_PER_MINUTE = 10;
     private final Map<String, AtomicInteger> requestCounts = new ConcurrentHashMap<>();
 
     @Override
@@ -36,4 +37,6 @@ public class RateLimitingFilter implements Filter {
 
         chain.doFilter(request, response);
     }
+
+
 }
