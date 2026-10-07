@@ -90,7 +90,9 @@ public class UserService {
         User currentUser = getCurrentLoggedInUser();
         List<UserMembershipResponse> membershipResponses = new ArrayList<>();
 
-        for (CompanyMembership membership : currentUser.getMemberships()) {
+        List<CompanyMembership> memberships = companyMembershipRepository.findByUserIdAndStatus(currentUser.getId(), "ACTIVE");
+
+        for (CompanyMembership membership : memberships) {
             UserMembershipResponse membershipResponse = new UserMembershipResponse(
                     membership.getId(),
                     membership.getCompany().getId(),
@@ -135,8 +137,9 @@ public class UserService {
         User employee = employeeMembership.getUser();
         employee.setName(name);
         employee.setMobileNumber(mobileNumber);
+        if (email!=null && !email.isBlank()){
         if (!employee.getEmail().equals(email) && userRepository.existsByEmail(email)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");}
         }
         employee.setEmail(email);
         if (profilePicture != null && !profilePicture.isEmpty()) {
