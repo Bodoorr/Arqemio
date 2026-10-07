@@ -6,11 +6,14 @@ import com.ga.arqemio.model.response.ProjectUpdateShareResponse;
 import com.ga.arqemio.repository.*;
 import com.ga.arqemio.security.MyUserDetails;
 import lombok.AllArgsConstructor;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +33,26 @@ public class ProjectShareLinkService {
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return userDetails.getUser();
+    }
+
+    public String getProjectShareEmail(String projectName, String message, String companyName, String shareLink) {
+        try {
+            ClassPathResource resource =
+                    new ClassPathResource("templates/project-share-email.html");
+
+            String html = new String(
+                    resource.getInputStream().readAllBytes(),
+                    StandardCharsets.UTF_8);
+            html = html.replace("{{projectName}}", projectName);
+            html = html.replace("{{message}}", message);
+            html = html.replace("{{companyName}}", companyName);
+            html = html.replace("{{shareLink}}", shareLink);
+
+            return html;
+
+        } catch (IOException e) {
+            throw new RuntimeException("Could not load project share email.");
+        }
     }
 
     public ProjectShareLink shareProjectUpdate(Long updateId, ProjectUpdateShareRequest projectUpdateShareRequest){
@@ -62,20 +85,16 @@ public class ProjectShareLinkService {
 
         String link= "http://localhost:5173/project-preview/"+ shareLink.getToken();
 
+        String emailBody = getProjectShareEmail(project.getName(), shareLink.getMessage(), project.getCompany().getName(), link);
+
         EmailDetails emailDetails = new EmailDetails(
                 shareLink.getCustomerEmail(),
-                shareLink.getMessage()
-                        + "\n\nView Project Update:\n"
-                        + link
-                        + "\n\nThis link will expire after 24 hours."
-                        + "\n\nRegards,\n"
-                        + project.getCompany().getName()
-                        + "\nArqemio",
+                emailBody,
                 shareLink.getSubject(),
                 null
         );
 
-        emailService.sendSimpleMail(emailDetails);
+        emailService.sendHtmlMail(emailDetails);
 
         auditLogService.createAuditLog(currentUser, project.getCompany(),
                 "SHARE", "PROJECT_UPDATE", projectUpdate.getId(),

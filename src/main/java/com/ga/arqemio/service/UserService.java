@@ -18,6 +18,7 @@ import com.ga.arqemio.security.JWTUtils;
 import com.ga.arqemio.security.MyUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -30,6 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -122,6 +124,23 @@ public class UserService {
         return "Password changed successfully.";
     }
 
+    public String getPasswordResetEmail(String resetLink) {
+
+        try {
+            ClassPathResource resource =
+                    new ClassPathResource("templates/password-reset-email.html");
+
+            String html = new String(
+                    resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+
+            html = html.replace("{{resetLink}}", resetLink);
+            return html;
+
+        } catch (IOException e) {
+            throw new RuntimeException("Could not load password reset email.");
+        }
+    }
+
     public String forgetPassword(ForgetPasswordRequest forgetPasswordRequest){
         User user= userRepository.findUserByEmail(forgetPasswordRequest.getEmail()).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found."));
         String token= UUID.randomUUID().toString();
@@ -132,18 +151,16 @@ public class UserService {
 
         String resetLink = "http://localhost:5173/reset-password/" + token;
 
+        String emailBody= getPasswordResetEmail(resetLink);
+
         EmailDetails emailDetails = new EmailDetails(
                 user.getEmail(),
-                "Hello " + user.getName() +
-                        ",\n\nWe received a request to reset your Arqemio password." +
-                        "\n\nReset your password here:\n" + resetLink +
-                        "\n\nThis link will expire in 30 minutes." +
-                        "\n\nIf you did not request this, you can ignore this email.",
+                emailBody,
                 "Arqemio - Reset Your Password",
                 null
         );
 
-        emailService.sendSimpleMail(emailDetails);
+        emailService.sendHtmlMail(emailDetails);
         return "Password reset email sent successfully.";
     }
 
