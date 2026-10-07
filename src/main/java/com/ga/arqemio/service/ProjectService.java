@@ -19,10 +19,13 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Service
 @AllArgsConstructor
 public class ProjectService {
+    Logger logger= Logger.getLogger(ProjectService.class.getName());
     private ProjectRepository projectRepository;
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
@@ -66,6 +69,8 @@ public class ProjectService {
         project.setStatus(projectRequest.getStatus());
 
         Project savedProject = projectRepository.save(project);
+
+        logger.log(Level.INFO,"Project {0} created successfully", savedProject.getId());
         auditLogService.createAuditLog(currentUser, company,
                 "CREATE", "PROJECT",
                 savedProject.getId(), "Created project " + savedProject.getName());
