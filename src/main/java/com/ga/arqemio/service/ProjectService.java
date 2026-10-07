@@ -25,7 +25,7 @@ import java.util.logging.Logger;
 @Service
 @AllArgsConstructor
 public class ProjectService {
-    Logger logger= Logger.getLogger(ProjectService.class.getName());
+    private final Logger logger= Logger.getLogger(ProjectService.class.getName());
     private ProjectRepository projectRepository;
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
@@ -71,9 +71,11 @@ public class ProjectService {
         Project savedProject = projectRepository.save(project);
 
         logger.log(Level.INFO,"Project {0} created successfully", savedProject.getId());
+
         auditLogService.createAuditLog(currentUser, company,
                 "CREATE", "PROJECT",
                 savedProject.getId(), "Created project " + savedProject.getName());
+
 
         return savedProject;
 
