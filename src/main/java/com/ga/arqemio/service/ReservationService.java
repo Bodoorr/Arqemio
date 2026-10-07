@@ -23,6 +23,7 @@ public class ReservationService {
     private EquipmentRepository equipmentRepository;
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
+    private AuditLogService auditLogService;
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -90,7 +91,13 @@ public class ReservationService {
         reservation.setQuantity(reservationRequest.getQuantity());
         reservation.setStatus("RESERVED");
 
-        return reservationRepository.save(reservation);
+        Reservation savedReservation = reservationRepository.save(reservation);
+        auditLogService.createAuditLog(currentUser, project.getCompany(),
+                "CREATE", "RESERVATION", savedReservation.getId(),
+                "Created equipment reservation for " + equipment.getName()
+        );
+
+        return savedReservation;
     }
 
     public List<Reservation> getAllReservation(){
@@ -176,7 +183,14 @@ public class ReservationService {
         }
 
         reservation.setStatus("CANCELLED");
-        return reservationRepository.save(reservation);
+
+        Reservation savedReservation = reservationRepository.save(reservation);
+        auditLogService.createAuditLog(currentUser, reservation.getProject().getCompany(),
+                "CANCEL", "RESERVATION", savedReservation.getId(),
+                "Cancelled equipment reservation for " + reservation.getEquipment().getName()
+        );
+
+        return savedReservation;
     }
 
     public Reservation updateReservationStatus(Long reservationId, String status){
