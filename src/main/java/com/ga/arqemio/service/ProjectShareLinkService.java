@@ -2,10 +2,8 @@ package com.ga.arqemio.service;
 
 import com.ga.arqemio.model.*;
 import com.ga.arqemio.model.request.ProjectUpdateShareRequest;
-import com.ga.arqemio.repository.CompanyMembershipRepository;
-import com.ga.arqemio.repository.ProjectRepository;
-import com.ga.arqemio.repository.ProjectShareLinkRepository;
-import com.ga.arqemio.repository.ProjectUpdateRepository;
+import com.ga.arqemio.model.response.ProjectUpdateShareResponse;
+import com.ga.arqemio.repository.*;
 import com.ga.arqemio.security.MyUserDetails;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -14,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -24,6 +24,7 @@ public class ProjectShareLinkService {
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private EmailService emailService;
+    private FileAttachmentRepository fileAttachmentRepository;
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -75,6 +76,38 @@ public class ProjectShareLinkService {
 
         emailService.sendSimpleMail(emailDetails);
         return shareLink;
+    }
+
+    public ProjectUpdateShareResponse getSharedProjectUpdate(String token){
+        ProjectShareLink shareLink= projectShareLinkRepository.findByToken(token).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project share link not found."));
+
+        if (shareLink.getRevokedAt() !=null){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This project share link has been revoked.");
+        }
+
+        if (shareLink.getExpiresAt().isBefore(LocalDateTime.now())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This project share link has expired.");
+        }
+
+        ProjectUpdate projectUpdate= shareLink.getProjectUpdate();
+
+        List<FileAttachment> attachments= fileAttachmentRepository.findByProjectUpdateIdAndStatus(projectUpdate.getId(),"ACTIVE");
+        List<String> images= new ArrayList<>();
+
+        for (FileAttachment attachment: attachments){
+            images.add(attachment.getFileUrl());
+        }
+
+        ProjectUpdateShareResponse projectUpdateShareResponse=new ProjectUpdateShareResponse(
+                projectUpdate.getProject().getCompany().getName(),
+                projectUpdate.getProject().getName(),
+                projectUpdate.getTitle(),
+                projectUpdate.getDescription(),
+                projectUpdate.getCreatedAt(),
+                images,
+                shareLink.getExpiresAt()
+        );
+        return projectUpdateShareResponse;
     }
 
 }
