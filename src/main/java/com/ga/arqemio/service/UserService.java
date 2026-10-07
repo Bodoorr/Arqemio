@@ -2,6 +2,7 @@ package com.ga.arqemio.service;
 
 
 import com.ga.arqemio.model.CompanyMembership;
+import com.ga.arqemio.model.EmailDetails;
 import com.ga.arqemio.model.User;
 import com.ga.arqemio.model.request.LoginRequest;
 import com.ga.arqemio.model.request.UpdateProfileRequest;
@@ -37,17 +38,19 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JWTUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
-    private CompanyMembershipRepository companyMembershipRepository;
-    private FileAttachmentService fileAttachmentService;
+    private final CompanyMembershipRepository companyMembershipRepository;
+    private final FileAttachmentService fileAttachmentService;
+    private EmailService emailService;
 
     @Autowired
-    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, CompanyMembershipRepository companyMembershipRepository, FileAttachmentService fileAttachmentService) {
+    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, CompanyMembershipRepository companyMembershipRepository, FileAttachmentService fileAttachmentService, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
         this.authenticationManager = authenticationManager;
         this.companyMembershipRepository = companyMembershipRepository;
         this.fileAttachmentService = fileAttachmentService;
+        this.emailService= emailService;
     }
 
     public User createUser(User userObject) {
@@ -100,6 +103,17 @@ public class UserService {
 
         currentUser.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
         userRepository.save(currentUser);
+
+        EmailDetails emailDetails = new EmailDetails(
+                currentUser.getEmail(),
+                "Hello " + currentUser.getName() +
+                        ",\n\nYour Arqemio password has been changed successfully." +
+                        "\n\nIf you did not make this change, please reset your password immediately.",
+                "Arqemio - Password Changed",
+                null
+        );
+
+        emailService.sendSimpleMail(emailDetails);
 
         return "Password changed successfully.";
     }
@@ -157,9 +171,10 @@ public class UserService {
         employee.setMobileNumber(mobileNumber);
         if (email!=null && !email.isBlank()){
         if (!employee.getEmail().equals(email) && userRepository.existsByEmail(email)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");}
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
         }
-        employee.setEmail(email);
+            employee.setEmail(email);
+        }
         if (profilePicture != null && !profilePicture.isEmpty()) {
             Map uploadResult = fileAttachmentService.uploadImage(profilePicture);
             employee.setProfilePicture(uploadResult.get("secure_url").toString());

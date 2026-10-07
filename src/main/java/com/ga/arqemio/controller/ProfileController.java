@@ -2,6 +2,7 @@ package com.ga.arqemio.controller;
 
 import com.ga.arqemio.model.User;
 import com.ga.arqemio.model.request.UpdateProfileRequest;
+import com.ga.arqemio.model.response.ChangePasswordRequest;
 import com.ga.arqemio.model.response.UserProfileResponse;
 import com.ga.arqemio.service.UserService;
 import lombok.AllArgsConstructor;
@@ -37,5 +38,10 @@ public class ProfileController {
     @PatchMapping(path = "/companies/{companyId}/employees/{employeeId}/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<UserProfileResponse> updateEmployeeProfile(@PathVariable Long companyId, @PathVariable Long employeeId, @RequestParam String name, @RequestParam String mobileNumber, @RequestParam String email, @RequestParam(required = false)MultipartFile profilePicture) throws IOException {
         return ResponseEntity.ok(userService.updateEmployeeProfile(companyId, employeeId, name, mobileNumber, email, profilePicture));
+    }
+
+    @PatchMapping("/change-password")
+    public ResponseEntity<String> changePassword(@RequestBody ChangePasswordRequest changePasswordRequest){
+        return ResponseEntity.ok(userService.changePassword(changePasswordRequest));
     }
 }
