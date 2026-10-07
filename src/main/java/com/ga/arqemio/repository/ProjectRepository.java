@@ -1,6 +1,8 @@
 package com.ga.arqemio.repository;
 
 import com.ga.arqemio.model.Project;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -9,6 +11,12 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     List<Project> findByCompanyMembershipsUserIdAndCompanyMembershipsStatus(
             Long userId,
             String status
+    );
+
+    Page<Project> findByCompanyMembershipsUserIdAndCompanyMembershipsStatus(
+            Long userId,
+            String status,
+            Pageable pageable
     );
 
     boolean existsByIdAndManagersUserIdAndManagersStatus(
@@ -27,4 +35,23 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
             Long userId,
             String status
     );
+
+    Page<Project> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+    Page<Project> findByStatus(String status, Pageable pageable);
+
+    Page<Project> findByCompanyMembershipsUserIdAndCompanyMembershipsStatusAndNameContainingIgnoreCase(
+            Long userId,
+            String membershipStatus,
+            String name,
+            Pageable pageable
+    );
+
+    Page<Project> findByCompanyMembershipsUserIdAndCompanyMembershipsStatusAndStatus(
+            Long userId,
+            String membershipStatus,
+            String projectStatus,
+            Pageable pageable
+    );
+
 }
