@@ -93,92 +93,71 @@ The planning board includes:
 
 [View Trello Planning Board](https://trello.com/b/RXTdTXRk/arqemio)
 
-## Installation
+## API Endpoint Reference
 
-### 1. Clone the Repository
+The following table provides an overview of the Arqemio REST API.  
+For detailed request bodies, responses, parameters, and testing, see the Swagger/OpenAPI documentation.
 
-```bash
-git clone <BACKEND_REPOSITORY_URL>
-cd arqemio
-```
+| Request Type | URL | Functionality | Access |
+| ------------ | --- | ------------- | ------ |
+| POST | `/auth/users/login` | User login | Public |
+| POST | `/invitation` | Send company invitation | Admin / Owner |
+| GET | `/invitation/validate/{token}` | Validate invitation token | Public |
+| POST | `/auth/users/register` | Register using invitation | Public |
+| PUT | `/auth/api/profile` | Update current user profile | Private |
+| POST | `/auth/api/change-password` | Change password | Private |
+| POST | `/auth/users/forgot-password` | Request password reset | Public |
+| POST | `/auth/users/reset-password` | Reset password | Public |
+| POST | `/company` | Create company | Platform Admin |
+| GET | `/company` | Get companies | Private |
+| GET | `/company/{companyId}` | Get company details | Private |
+| PUT | `/company/{companyId}` | Update company | Admin / Owner |
+| DELETE | `/company/{companyId}` | Archive company | Admin / Owner |
+| GET | `/company/members` | Get company members | Private |
+| PUT | `/company/members/{membershipId}` | Update company member | Owner |
+| DELETE | `/company/members/{membershipId}` | Remove company member | Owner |
+| POST | `/company/projects` | Create project | Admin / Owner |
+| GET | `/company/projects` | Get accessible projects | Private |
+| GET | `/company/projects/{projectId}` | Get project details | Private |
+| PUT | `/company/projects/{projectId}` | Update project | Admin / Owner |
+| DELETE | `/company/projects/{projectId}` | Archive project | Admin / Owner |
+| POST | `/company/projects/{projectId}/managers/{membershipId}` | Assign manager to project | Admin / Owner |
+| DELETE | `/company/projects/{projectId}/managers/{membershipId}` | Remove manager from project | Admin / Owner |
+| POST | `/company/projects/{projectId}/workers/{membershipId}` | Assign worker to project | Admin / Owner |
+| DELETE | `/company/projects/{projectId}/workers/{membershipId}` | Remove worker from project | Admin / Owner |
+| GET | `/company/projects/search` | Search, filter, paginate and sort projects | Private |
+| POST | `/tasks` | Create project task | Admin / Manager |
+| GET | `/tasks` | Get project tasks | Private |
+| GET | `/tasks/{taskId}` | Get task details | Private |
+| PUT | `/tasks/{taskId}` | Update task | Admin / Manager |
+| DELETE | `/tasks/{taskId}` | Delete task | Admin / Manager |
+| POST | `/tasks/{taskId}/workers/{membershipId}` | Assign worker to task | Admin / Manager |
+| DELETE | `/tasks/{taskId}/workers/{membershipId}` | Remove worker from task | Admin / Manager |
+| POST | `/equipment` | Create equipment | Admin / Owner |
+| GET | `/equipment` | Get equipment | Private |
+| PUT | `/equipment/{equipmentId}` | Update equipment | Admin / Owner |
+| DELETE | `/equipment/{equipmentId}` | Archive equipment | Admin / Owner |
+| POST | `/reservations` | Reserve equipment | Private |
+| GET | `/reservations` | Get equipment reservations | Private |
+| PUT | `/reservations/{reservationId}` | Update reservation | Private |
+| DELETE | `/reservations/{reservationId}` | Cancel reservation | Private |
+| POST | `/expenses` | Create project expense | Admin / Owner / Manager |
+| GET | `/expenses` | Get project expenses | Private |
+| PUT | `/expenses/{expenseId}` | Update expense | Admin / Owner / Manager |
+| DELETE | `/expenses/{expenseId}` | Archive expense | Admin / Owner |
+| POST | `/project-updates` | Create project progress update | Worker |
+| GET | `/project-updates` | Get project updates | Private |
+| PUT | `/project-updates/{updateId}` | Update project progress | Private |
+| POST | `/project-updates/{updateId}/approve` | Approve project update | Owner / Manager |
+| POST | `/project-share/{updateId}` | Generate customer sharing link | Owner / Manager |
+| GET | `/project-share/customer/{token}` | View shared project progress | Public |
+| POST | `/attachments` | Upload project file/image | Private |
+| GET | `/attachments/{attachmentId}` | Get attachment | Private |
+| DELETE | `/attachments/{attachmentId}` | Archive attachment | Private |
+| GET | `/notifications/subscribe` | Subscribe to real-time SSE notifications | Private |
+| GET | `/audit-logs` | View audit logs | Platform Admin |
 
-### 2. Configure PostgreSQL
-
-Create the development database:
-
-```sql
-CREATE DATABASE arqemio;
-```
-
-A separate test database can also be created:
-
-```sql
-CREATE DATABASE arqemio_test;
-```
-
-### 3. Configure Environment Variables
-
-Configure the required environment variables:
-
-```text
-DB_URL=jdbc:postgresql://localhost:5432/arqemio
-DB_USERNAME=your_username
-DB_PASSWORD=your_password
-
-JWT_SECRET=your_secret
-JWT_EXPIRATION_MS=your_expiration
-
-MAIL_USERNAME=your_email
-MAIL_PASSWORD=your_app_password
-```
-
-Configure the required Cloudinary credentials according to the application configuration.
-
-> Do not commit passwords, JWT secrets, email credentials, or Cloudinary secrets to GitHub.
-
-### 4. Seed the Database
-
-Initial data is provided through:
-
-```text
-src/main/resources/data.sql
-```
-
-The seed creates the initial Platform Administrator if the account does not already exist.
-
-### 5. Start the Application
-
-Run the application through IntelliJ IDEA or Maven:
-
-```bash
-./mvnw spring-boot:run
-```
-
-The backend will run at:
-
-```text
-http://localhost:8080
-```
-
-### 6. Access the API
-
-The REST API is available at:
-
-```text
-http://localhost:8080
-```
-
-Protected endpoints require JWT authentication.
-
-### 7. Access Swagger/OpenAPI
-
-Open:
-
-```text
-http://localhost:8080/swagger-ui/index.html
-```
-
-Use the **Authorize** button with a valid JWT to test protected endpoints.
+> This table provides a quick reference to the main Arqemio API endpoints. Full interactive documentation, including request bodies, parameters, response models, and available endpoints, is available through Swagger/OpenAPI.
 
 ## Major Challenges
 
@@ -252,9 +231,6 @@ The following documentation and learning resources were referenced during the de
 
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - [Baeldung - Spring Boot data.sql and schema.sql](https://www.baeldung.com/spring-boot-data-sql-and-schema-sql)
-
-
-
 
 ## Acknowledgements
 
