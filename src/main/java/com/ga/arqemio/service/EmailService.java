@@ -8,4 +8,6 @@ public interface EmailService {
 
     //to send email with attachment
     boolean sendMailWithAttachment(EmailDetails details);
+
+    boolean sendHtmlMail(EmailDetails emailDetails);
 }

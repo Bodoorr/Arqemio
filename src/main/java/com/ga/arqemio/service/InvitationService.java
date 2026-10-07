@@ -8,11 +8,14 @@ import com.ga.arqemio.repository.InvitationRepository;
 import com.ga.arqemio.repository.UserRepository;
 import com.ga.arqemio.security.MyUserDetails;
 import lombok.AllArgsConstructor;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -30,6 +33,26 @@ public class InvitationService {
     public User getCurrentLoggedInUser(){
         MyUserDetails userDetails= (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return userDetails.getUser();
+    }
+
+    public String getInvitationEmail(
+            String companyName,
+            String role,
+            String invitationLink
+    ) {
+
+        try {
+            ClassPathResource resource = new ClassPathResource("templates/invitation-email.html");
+            String html = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+
+            html = html.replace("{{companyName}}", companyName);
+            html = html.replace("{{role}}", role);
+            html = html.replace("{{invitationLink}}", invitationLink);
+            return html;
+
+        } catch (IOException e) {
+            throw new RuntimeException("Could not load invitation email.");
+        }
     }
 
     public Invitation createInvitation(String email, String role, Long companyId) {
@@ -110,21 +133,16 @@ public class InvitationService {
 
         Invitation savedInvitation = invitationRepository.save(invitation);
 
+        String invitationLink = "http://localhost:5173/invitation/" + savedInvitation.getToken();
+
+        String emailBody = getInvitationEmail(company.getName(), role, invitationLink);
+
         EmailDetails emailDetails = new EmailDetails();
         emailDetails.setRecipient(email);
         emailDetails.setSubject("You're invited to join Arqemio!");
-        emailDetails.setMsgBody(
-                "Hello!\n\n" +
-                        "You have been invited to join " +
-                        company.getName() +
-                        " on Arqemio as a "+role+".\n\n" +
-                        "Your invitation token is:\n" +
-                        savedInvitation.getToken() + "\n\n" +
-                        "This invitation expires in 48 hours.\n\n" +
-                        "Arqemio Team"
-        );
+        emailDetails.setMsgBody(emailBody);
 
-        boolean isEmailSent = emailService.sendSimpleMail(emailDetails);
+        boolean isEmailSent = emailService.sendHtmlMail(emailDetails);
 
         if (!isEmailSent) {
             throw new RuntimeException("Invitation saved, but email could not be sent.");
@@ -263,20 +281,15 @@ public class InvitationService {
         invitation.setExpiresAt(LocalDateTime.now().plusHours(48));
         invitationRepository.save(invitation);
 
+        String invitationLink = "http://localhost:5173/invitation/" + invitation.getToken();
+
+        String emailBody = getInvitationEmail(invitation.getCompany().getName(), invitation.getRole(), invitationLink);
 
         EmailDetails emailDetails = new EmailDetails();
+
         emailDetails.setRecipient(invitation.getEmail());
         emailDetails.setSubject("You're invited to join Arqemio!");
-        emailDetails.setMsgBody(
-                "Hello!\n\n" +
-                        "You have been invited to join " +
-                        invitation.getCompany().getName() +
-                        " on Arqemio as a "+invitation.getRole()+".\n\n" +
-                        "Your invitation token is:\n" +
-                        invitation.getToken() + "\n\n" +
-                        "This invitation expires in 48 hours.\n\n" +
-                        "Arqemio Team"
-        );
+        emailDetails.setMsgBody(emailBody);
         emailService.sendSimpleMail(emailDetails);
 
         return invitation;

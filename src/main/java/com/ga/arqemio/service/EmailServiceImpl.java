@@ -81,4 +81,29 @@ public class EmailServiceImpl implements EmailService {
 
         }
     }
+
+    @Override
+    public boolean sendHtmlMail(EmailDetails details) {
+
+        MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+
+        try {
+
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
+
+            helper.setFrom(sender);
+            helper.setTo(details.getRecipient());
+            helper.setSubject(details.getSubject());
+
+            helper.setText(details.getMsgBody(), true);
+
+            javaMailSender.send(mimeMessage);
+
+            return true;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
