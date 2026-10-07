@@ -208,8 +208,6 @@ Equipment reservation conflicts and project-level permissions also required addi
 
 ## Resources & Credits
 
-Resources and documentation used during development:
-
 The following documentation and learning resources were referenced during the development of Arqemio:
 
 #### Spring Boot & API Development
