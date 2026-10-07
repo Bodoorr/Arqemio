@@ -27,6 +27,15 @@ public class ProjectShareLink {
     @JoinColumn(name = "created_by", nullable = false)
     private CompanyMembership createdBy;
 
+    @Column(nullable = false)
+    private String customerEmail;
+
+    @Column(nullable = false)
+    private String subject;
+
+    @Column(columnDefinition = "TEXT")
+    private String message;
+
     @Column(nullable = false, unique = true)
     private String token;
 
