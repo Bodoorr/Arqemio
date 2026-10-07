@@ -8,11 +8,13 @@ import com.ga.arqemio.model.request.UpdateProfileRequest;
 import com.ga.arqemio.model.response.LoginResponse;
 import com.ga.arqemio.model.response.UserMembershipResponse;
 import com.ga.arqemio.model.response.UserProfileResponse;
+import com.ga.arqemio.repository.CompanyMembershipRepository;
 import com.ga.arqemio.repository.UserRepository;
 import com.ga.arqemio.security.JWTUtils;
 import com.ga.arqemio.security.MyUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,9 +22,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class UserService {
@@ -30,13 +36,17 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JWTUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
+    private CompanyMembershipRepository companyMembershipRepository;
+    private FileAttachmentService fileAttachmentService;
 
     @Autowired
-    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager){
+    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, CompanyMembershipRepository companyMembershipRepository, FileAttachmentService fileAttachmentService){
         this.userRepository= userRepository;
         this.passwordEncoder= passwordEncoder;
         this.jwtUtils= jwtUtils;
         this.authenticationManager= authenticationManager;
+        this.companyMembershipRepository= companyMembershipRepository;
+        this.fileAttachmentService= fileAttachmentService;
     }
 
     public User createUser(User userObject){
@@ -110,6 +120,31 @@ public class UserService {
         currentUser.setMobileNumber(updateProfileRequest.getMobileNumber());
 
         return userRepository.save(currentUser);
+    }
+
+    public User updateEmployeeProfile(Long companyId, Long employeeId, String name, String mobileNumber, String email,MultipartFile profilePicture) throws IOException {
+        User currentUser=getCurrentLoggedInUser();
+        boolean isOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId, "OWNER","ACTIVE");
+        if (!isOwner){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update employees in this company.");
+        }
+
+        CompanyMembership employeeMembership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(employeeId,companyId,"ACTIVE").
+                orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found in this company."));
+
+        User employee= employeeMembership.getUser();
+        employee.setName(name);
+        employee.setMobileNumber(mobileNumber);
+        if (!employee.getEmail().equals(email) && userRepository.existsByEmail(email)){
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"Email is already in use.");
+        }
+        employee.setEmail(email);
+        if (profilePicture!=null && !profilePicture.isEmpty()){
+            Map uploadResult= fileAttachmentService.uploadImage(profilePicture);
+            employee.setProfilePicture(uploadResult.get("secure_url").toString());
+        }
+        return userRepository.save(employee);
+
     }
 
 }
