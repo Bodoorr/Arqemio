@@ -1,9 +1,12 @@
 package com.ga.arqemio.service;
 
 
+import com.ga.arqemio.model.CompanyMembership;
 import com.ga.arqemio.model.User;
 import com.ga.arqemio.model.request.LoginRequest;
 import com.ga.arqemio.model.response.LoginResponse;
+import com.ga.arqemio.model.response.UserMembershipResponse;
+import com.ga.arqemio.model.response.UserProfileResponse;
 import com.ga.arqemio.repository.UserRepository;
 import com.ga.arqemio.security.JWTUtils;
 import com.ga.arqemio.security.MyUserDetails;
@@ -16,6 +19,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class UserService {
@@ -60,6 +66,43 @@ public class UserService {
         }
     }
 
+    public User getCurrentLoggedInUser() {
+        MyUserDetails myUserDetails =
+                (MyUserDetails) SecurityContextHolder
+                        .getContext()
+                        .getAuthentication()
+                        .getPrincipal();
+
+        return myUserDetails.getUser();
+    }
+
+    public UserProfileResponse getProfile() {
+        User currentUser = getCurrentLoggedInUser();
+        List<UserMembershipResponse> membershipResponses = new ArrayList<>();
+
+        for (CompanyMembership membership : currentUser.getMemberships()) {
+            UserMembershipResponse membershipResponse = new UserMembershipResponse(
+                            membership.getId(),
+                            membership.getCompany().getId(),
+                            membership.getCompany().getName(),
+                            membership.getRole(),
+                            membership.getStatus()
+                    );
+
+            membershipResponses.add(membershipResponse);
+        }
+
+        UserProfileResponse userProfileResponse=new UserProfileResponse(
+                currentUser.getId(),
+                currentUser.getName(),
+                currentUser.getEmail(),
+                currentUser.getMobileNumber(),
+                currentUser.getProfilePicture(),
+                membershipResponses
+        );
+
+        return userProfileResponse;
+    }
 
 }
 
