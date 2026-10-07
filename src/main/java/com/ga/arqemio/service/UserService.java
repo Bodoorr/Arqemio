@@ -4,6 +4,7 @@ package com.ga.arqemio.service;
 import com.ga.arqemio.model.CompanyMembership;
 import com.ga.arqemio.model.EmailDetails;
 import com.ga.arqemio.model.User;
+import com.ga.arqemio.model.request.ForgetPasswordRequest;
 import com.ga.arqemio.model.request.LoginRequest;
 import com.ga.arqemio.model.request.UpdateProfileRequest;
 import com.ga.arqemio.model.response.ChangePasswordRequest;
@@ -28,9 +29,11 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -117,6 +120,33 @@ public class UserService {
 
         return "Password changed successfully.";
     }
+
+    public String forgetPassword(ForgetPasswordRequest forgetPasswordRequest){
+        User user= userRepository.findUserByEmail(forgetPasswordRequest.getEmail()).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found."));
+        String token= UUID.randomUUID().toString();
+
+        user.setResetPasswordToken(token);
+        user.setResetPasswordTokenExpiresAt(LocalDateTime.now().plusMinutes(30));
+        userRepository.save(user);
+
+        String resetLink = "http://localhost:5173/reset-password/" + token;
+
+        EmailDetails emailDetails = new EmailDetails(
+                user.getEmail(),
+                "Hello " + user.getName() +
+                        ",\n\nWe received a request to reset your Arqemio password." +
+                        "\n\nReset your password here:\n" + resetLink +
+                        "\n\nThis link will expire in 30 minutes." +
+                        "\n\nIf you did not request this, you can ignore this email.",
+                "Arqemio - Reset Your Password",
+                null
+        );
+
+        emailService.sendSimpleMail(emailDetails);
+        return "Password reset email sent successfully.";
+    }
+
+
 
     public UserProfileResponse getProfile() {
         User currentUser = getCurrentLoggedInUser();
