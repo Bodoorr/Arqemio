@@ -4,6 +4,7 @@ package com.ga.arqemio.service;
 import com.ga.arqemio.model.CompanyMembership;
 import com.ga.arqemio.model.User;
 import com.ga.arqemio.model.request.LoginRequest;
+import com.ga.arqemio.model.request.UpdateProfileRequest;
 import com.ga.arqemio.model.response.LoginResponse;
 import com.ga.arqemio.model.response.UserMembershipResponse;
 import com.ga.arqemio.model.response.UserProfileResponse;
@@ -102,6 +103,13 @@ public class UserService {
         );
 
         return userProfileResponse;
+    }
+
+    public User updateProfile(UpdateProfileRequest updateProfileRequest){
+        User currentUser= getCurrentLoggedInUser();
+        currentUser.setMobileNumber(updateProfileRequest.getMobileNumber());
+
+        return userRepository.save(currentUser);
     }
 
 }
