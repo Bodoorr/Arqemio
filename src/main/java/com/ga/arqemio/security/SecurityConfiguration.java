@@ -40,7 +40,9 @@ public class SecurityConfiguration {
                         "/auth/users/reset-password",
                         "/invitation/validate/**",
                         "/invitation/register",
-                        "/project-share/customer/**"
+                        "/project-share/customer/**",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**"
                 ).permitAll().anyRequest().authenticated());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
