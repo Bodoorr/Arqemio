@@ -39,7 +39,8 @@ public class SecurityConfiguration {
                         "/auth/users/forget-password",
                         "/auth/users/reset-password",
                         "/invitation/validate/**",
-                        "/invitation/register"
+                        "/invitation/register",
+                        "/project-share/customer/**"
                 ).permitAll().anyRequest().authenticated());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
