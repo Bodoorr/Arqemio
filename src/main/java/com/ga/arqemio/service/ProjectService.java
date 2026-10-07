@@ -26,6 +26,7 @@ public class ProjectService {
     private ProjectRepository projectRepository;
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
+    private AuditLogService auditLogService;
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -64,8 +65,12 @@ public class ProjectService {
         project.setBudget(projectRequest.getBudget());
         project.setStatus(projectRequest.getStatus());
 
+        Project savedProject = projectRepository.save(project);
+        auditLogService.createAuditLog(currentUser, company,
+                "CREATE", "PROJECT",
+                savedProject.getId(), "Created project " + savedProject.getName());
 
-        return projectRepository.save(project);
+        return savedProject;
 
     }
 
