@@ -27,4 +27,9 @@ public interface CompanyMembershipRepository extends JpaRepository<CompanyMember
             Long companyId,
             String status
     );
+
+    List<CompanyMembership> findByCompanyIdAndStatus(
+            Long companyId,
+            String status
+    );
 }

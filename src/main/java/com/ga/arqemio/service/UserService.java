@@ -147,5 +147,41 @@ public class UserService {
 
     }
 
+    public List<UserProfileResponse> getEmployeeProfiles(Long companyId){
+        User currentUser= getCurrentLoggedInUser();
+        boolean isOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId, "OWNER","ACTIVE");
+        if (!isOwner){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view employees in this company.");
+        }
+
+        List<CompanyMembership> memberships= companyMembershipRepository.findByCompanyIdAndStatus(companyId,"ACTIVE");
+        List<UserProfileResponse> employeeProfiles= new ArrayList<>();
+
+        for (CompanyMembership membership: memberships){
+            User employee= membership.getUser();
+            List<UserMembershipResponse> membershipResponses= new ArrayList<>();
+                    UserMembershipResponse membershipResponse=new UserMembershipResponse(
+                    membership.getId(),
+                    membership.getCompany().getId(),
+                    membership.getCompany().getName(),
+                    membership.getRole(),
+                    membership.getStatus()
+            );
+
+            membershipResponses.add(membershipResponse);
+
+            UserProfileResponse employeeProfile= new UserProfileResponse(
+                    employee.getId(),
+                    employee.getName(),
+                    employee.getEmail(),
+                    employee.getMobileNumber(),
+                    employee.getProfilePicture(),
+                    membershipResponses
+            );
+            employeeProfiles.add(employeeProfile);
+        }
+        return employeeProfiles;
+    }
+
 }
 
