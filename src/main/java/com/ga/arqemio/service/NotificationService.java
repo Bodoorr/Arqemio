@@ -12,7 +12,7 @@ public class NotificationService {
     private Map<Long, SseEmitter> emitterMap=new HashMap<>();
 
     public SseEmitter subscribe(Long userId){
-        SseEmitter emitter=new SseEmitter();
+        SseEmitter emitter=new SseEmitter(30 * 60 * 1000L);
         emitterMap.put(userId,emitter);
         emitter.onCompletion(()->emitterMap.remove(userId));
         emitter.onTimeout(()->emitterMap.remove(userId));

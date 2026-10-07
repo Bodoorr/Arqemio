@@ -23,6 +23,7 @@ public class ProjectUpdateService {
     private ProjectUpdateRepository projectUpdateRepository;
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
+    private NotificationService notificationService;
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -52,7 +53,11 @@ public class ProjectUpdateService {
         projectUpdate.setDescription(projectUpdateRequest.getDescription());
         projectUpdate.setStatus("PENDING");
 
-        return projectUpdateRepository.save(projectUpdate);
+        ProjectUpdate savedProjectUpdate = projectUpdateRepository.save(projectUpdate);
+        for (CompanyMembership manager: project.getManagers()){
+            notificationService.sendNotification(manager.getUser().getId(), "New project update submitted for "+ project.getName());
+        }
+        return savedProjectUpdate;
     }
 
     public List<ProjectUpdate> getProjectUpdates(Long projectId){
