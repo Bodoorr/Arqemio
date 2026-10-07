@@ -79,11 +79,27 @@ public class ProjectService {
 
     }
 
-    public Page<Project> getProjects(Pageable pageable) {
+    public Page<Project> getProjects(Pageable pageable, String name, String status) {
         User currentUser= getCurrentLoggedInUser();
         if (currentUser.getIsPlatformAdmin()) {
+            if (name!=null && !name.isBlank()){
+                return projectRepository.findByNameContainingIgnoreCase(name, pageable);
+            }
+            if (status!=null && !status.isBlank()){
+                return projectRepository.findByStatus(status,pageable);
+            }
             return projectRepository.findAll(pageable);
         }
+
+        if (name!=null && !name.isBlank()){
+            return projectRepository.findByCompanyMembershipsUserIdAndCompanyMembershipsStatusAndNameContainingIgnoreCase
+                    (currentUser.getId(), "ACTIVE", name, pageable);
+        }
+        if (status!=null && !status.isBlank()){
+            return projectRepository.findByCompanyMembershipsUserIdAndCompanyMembershipsStatusAndStatus
+                    (currentUser.getId(), "ACTIVE", status, pageable);
+        }
+
         return projectRepository.findByCompanyMembershipsUserIdAndCompanyMembershipsStatus(currentUser.getId(),"ACTIVE",pageable);
     }
 

@@ -36,5 +36,22 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
             String status
     );
 
+    Page<Project> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+    Page<Project> findByStatus(String status, Pageable pageable);
+
+    Page<Project> findByCompanyMembershipsUserIdAndCompanyMembershipsStatusAndNameContainingIgnoreCase(
+            Long userId,
+            String membershipStatus,
+            String name,
+            Pageable pageable
+    );
+
+    Page<Project> findByCompanyMembershipsUserIdAndCompanyMembershipsStatusAndStatus(
+            Long userId,
+            String membershipStatus,
+            String projectStatus,
+            Pageable pageable
+    );
 
 }
