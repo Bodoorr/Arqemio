@@ -2,9 +2,13 @@ package com.ga.arqemio.service;
 
 
 import com.ga.arqemio.model.CompanyMembership;
+import com.ga.arqemio.model.EmailDetails;
 import com.ga.arqemio.model.User;
+import com.ga.arqemio.model.request.ForgetPasswordRequest;
 import com.ga.arqemio.model.request.LoginRequest;
+import com.ga.arqemio.model.request.ResetPasswordRequest;
 import com.ga.arqemio.model.request.UpdateProfileRequest;
+import com.ga.arqemio.model.response.ChangePasswordRequest;
 import com.ga.arqemio.model.response.LoginResponse;
 import com.ga.arqemio.model.response.UserMembershipResponse;
 import com.ga.arqemio.model.response.UserProfileResponse;
@@ -26,9 +30,11 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -36,17 +42,19 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JWTUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
-    private CompanyMembershipRepository companyMembershipRepository;
-    private FileAttachmentService fileAttachmentService;
+    private final CompanyMembershipRepository companyMembershipRepository;
+    private final FileAttachmentService fileAttachmentService;
+    private EmailService emailService;
 
     @Autowired
-    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, CompanyMembershipRepository companyMembershipRepository, FileAttachmentService fileAttachmentService) {
+    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, CompanyMembershipRepository companyMembershipRepository, FileAttachmentService fileAttachmentService, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
         this.authenticationManager = authenticationManager;
         this.companyMembershipRepository = companyMembershipRepository;
         this.fileAttachmentService = fileAttachmentService;
+        this.emailService= emailService;
     }
 
     public User createUser(User userObject) {
@@ -84,6 +92,91 @@ public class UserService {
                         .getPrincipal();
 
         return myUserDetails.getUser();
+    }
+
+    public String changePassword(ChangePasswordRequest changePasswordRequest){
+        User currentUser= getCurrentLoggedInUser();
+
+        if (!passwordEncoder.matches(changePasswordRequest.getCurrentPassword(), currentUser.getPassword())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,("Current password is incorrect."));
+        }
+
+        if (changePasswordRequest.getNewPassword() == null || changePasswordRequest.getNewPassword().isBlank()){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"New password cannot be empty.");
+        }
+
+        currentUser.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
+        userRepository.save(currentUser);
+
+        EmailDetails emailDetails = new EmailDetails(
+                currentUser.getEmail(),
+                "Hello " + currentUser.getName() +
+                        ",\n\nYour Arqemio password has been changed successfully." +
+                        "\n\nIf you did not make this change, please reset your password immediately.",
+                "Arqemio - Password Changed",
+                null
+        );
+
+        emailService.sendSimpleMail(emailDetails);
+
+        return "Password changed successfully.";
+    }
+
+    public String forgetPassword(ForgetPasswordRequest forgetPasswordRequest){
+        User user= userRepository.findUserByEmail(forgetPasswordRequest.getEmail()).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found."));
+        String token= UUID.randomUUID().toString();
+
+        user.setResetPasswordToken(token);
+        user.setResetPasswordTokenExpiresAt(LocalDateTime.now().plusMinutes(30));
+        userRepository.save(user);
+
+        String resetLink = "http://localhost:5173/reset-password/" + token;
+
+        EmailDetails emailDetails = new EmailDetails(
+                user.getEmail(),
+                "Hello " + user.getName() +
+                        ",\n\nWe received a request to reset your Arqemio password." +
+                        "\n\nReset your password here:\n" + resetLink +
+                        "\n\nThis link will expire in 30 minutes." +
+                        "\n\nIf you did not request this, you can ignore this email.",
+                "Arqemio - Reset Your Password",
+                null
+        );
+
+        emailService.sendSimpleMail(emailDetails);
+        return "Password reset email sent successfully.";
+    }
+
+    public String resetPassword(ResetPasswordRequest resetPasswordRequest){
+        User user= userRepository.findByResetPasswordToken(resetPasswordRequest.getToken()).orElseThrow(()->new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid reset password token."));
+
+        if (user.getResetPasswordTokenExpiresAt().isBefore(LocalDateTime.now())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Reset password link has expired.");
+        }
+        if (resetPasswordRequest.getNewPassword() == null || resetPasswordRequest.getNewPassword().isBlank()){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"New password cannot be empty.");
+        }
+        if (!resetPasswordRequest.getNewPassword().equals(resetPasswordRequest.getConfirmPassword())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Passwords do not match.");
+        }
+
+        user.setPassword(passwordEncoder.encode(resetPasswordRequest.getNewPassword()));
+        user.setResetPasswordToken(null);
+        user.setResetPasswordTokenExpiresAt(null);
+
+        userRepository.save(user);
+
+        EmailDetails emailDetails = new EmailDetails(
+                user.getEmail(),
+                "Hello " + user.getName() +
+                        ",\n\nYour Arqemio password has been reset successfully." +
+                        "\n\nIf you did not make this change, please contact support.",
+                "Arqemio - Password Reset Successful",
+                null
+        );
+
+        emailService.sendSimpleMail(emailDetails);
+        return "Password reset successfully.";
     }
 
     public UserProfileResponse getProfile() {
@@ -139,9 +232,10 @@ public class UserService {
         employee.setMobileNumber(mobileNumber);
         if (email!=null && !email.isBlank()){
         if (!employee.getEmail().equals(email) && userRepository.existsByEmail(email)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");}
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
         }
-        employee.setEmail(email);
+            employee.setEmail(email);
+        }
         if (profilePicture != null && !profilePicture.isEmpty()) {
             Map uploadResult = fileAttachmentService.uploadImage(profilePicture);
             employee.setProfilePicture(uploadResult.get("secure_url").toString());
