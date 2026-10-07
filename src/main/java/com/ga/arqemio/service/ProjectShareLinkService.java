@@ -59,7 +59,7 @@ public class ProjectShareLinkService {
 
         projectShareLinkRepository.save(shareLink);
 
-        String link="http://localhost:5173/project-preview/"+ shareLink.getToken();
+        String link= "http://localhost:5173/project-preview/"+ shareLink.getToken();
 
         EmailDetails emailDetails = new EmailDetails(
                 shareLink.getCustomerEmail(),
