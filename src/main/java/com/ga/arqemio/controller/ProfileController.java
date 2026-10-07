@@ -25,7 +25,7 @@ public class ProfileController {
     }
 
     @PatchMapping("/profile")
-    public ResponseEntity<User> updateProfile(@RequestBody UpdateProfileRequest updateProfileRequest){
+    public ResponseEntity<UserProfileResponse> updateProfile(@RequestBody UpdateProfileRequest updateProfileRequest){
         return ResponseEntity.ok(userService.updateProfile(updateProfileRequest));
     }
 
@@ -35,7 +35,7 @@ public class ProfileController {
     }
 
     @PatchMapping(path = "/companies/{companyId}/employees/{employeeId}/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<User> updateEmployeeProfile(@PathVariable Long companyId, @PathVariable Long employeeId, @RequestParam String name, @RequestParam String mobileNumber, @RequestParam String email, @RequestParam(required = false)MultipartFile profilePicture) throws IOException {
+    public ResponseEntity<UserProfileResponse> updateEmployeeProfile(@PathVariable Long companyId, @PathVariable Long employeeId, @RequestParam String name, @RequestParam String mobileNumber, @RequestParam String email, @RequestParam(required = false)MultipartFile profilePicture) throws IOException {
         return ResponseEntity.ok(userService.updateEmployeeProfile(companyId, employeeId, name, mobileNumber, email, profilePicture));
     }
 }

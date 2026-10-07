@@ -40,39 +40,38 @@ public class UserService {
     private FileAttachmentService fileAttachmentService;
 
     @Autowired
-    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, CompanyMembershipRepository companyMembershipRepository, FileAttachmentService fileAttachmentService){
-        this.userRepository= userRepository;
-        this.passwordEncoder= passwordEncoder;
-        this.jwtUtils= jwtUtils;
-        this.authenticationManager= authenticationManager;
-        this.companyMembershipRepository= companyMembershipRepository;
-        this.fileAttachmentService= fileAttachmentService;
+    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, CompanyMembershipRepository companyMembershipRepository, FileAttachmentService fileAttachmentService) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtils = jwtUtils;
+        this.authenticationManager = authenticationManager;
+        this.companyMembershipRepository = companyMembershipRepository;
+        this.fileAttachmentService = fileAttachmentService;
     }
 
-    public User createUser(User userObject){
+    public User createUser(User userObject) {
         System.out.println("Service Calling createUser ==>");
-        if (!userRepository.existsByEmail(userObject.getEmail())){
+        if (!userRepository.existsByEmail(userObject.getEmail())) {
             userObject.setPassword(passwordEncoder.encode(userObject.getPassword()));
             return userRepository.save(userObject);
-        } else{
-            throw new RuntimeException("User with email address "+userObject.getEmail()+" already"+" exists.");
+        } else {
+            throw new RuntimeException("User with email address " + userObject.getEmail() + " already" + " exists.");
         }
     }
 
-    public User findUserByEmail(String email){
-        return userRepository.findUserByEmail(email).orElseThrow(()->new RuntimeException("User not found."));
+    public User findUserByEmail(String email) {
+        return userRepository.findUserByEmail(email).orElseThrow(() -> new RuntimeException("User not found."));
     }
 
-    public ResponseEntity<?> loginUser(LoginRequest loginRequest){
+    public ResponseEntity<?> loginUser(LoginRequest loginRequest) {
         try {
-            Authentication authentication= authenticationManager
+            Authentication authentication = authenticationManager
                     .authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            MyUserDetails myUserDetails=(MyUserDetails) authentication.getPrincipal();
-            final String JWT= jwtUtils.generateJwtToken(myUserDetails);
-            return ResponseEntity.ok(new LoginResponse("Login successful",JWT));
-        }
-        catch (Exception e){
+            MyUserDetails myUserDetails = (MyUserDetails) authentication.getPrincipal();
+            final String JWT = jwtUtils.generateJwtToken(myUserDetails);
+            return ResponseEntity.ok(new LoginResponse("Login successful", JWT));
+        } catch (Exception e) {
             return ResponseEntity.ok(new LoginResponse("Error: username or email is incorrect.", null));
         }
     }
@@ -93,17 +92,17 @@ public class UserService {
 
         for (CompanyMembership membership : currentUser.getMemberships()) {
             UserMembershipResponse membershipResponse = new UserMembershipResponse(
-                            membership.getId(),
-                            membership.getCompany().getId(),
-                            membership.getCompany().getName(),
-                            membership.getRole(),
-                            membership.getStatus()
-                    );
+                    membership.getId(),
+                    membership.getCompany().getId(),
+                    membership.getCompany().getName(),
+                    membership.getRole(),
+                    membership.getStatus()
+            );
 
             membershipResponses.add(membershipResponse);
         }
 
-        UserProfileResponse userProfileResponse=new UserProfileResponse(
+        UserProfileResponse userProfileResponse = new UserProfileResponse(
                 currentUser.getId(),
                 currentUser.getName(),
                 currentUser.getEmail(),
@@ -115,36 +114,57 @@ public class UserService {
         return userProfileResponse;
     }
 
-    public User updateProfile(UpdateProfileRequest updateProfileRequest){
-        User currentUser= getCurrentLoggedInUser();
+    public UserProfileResponse updateProfile(UpdateProfileRequest updateProfileRequest) {
+        User currentUser = getCurrentLoggedInUser();
         currentUser.setMobileNumber(updateProfileRequest.getMobileNumber());
 
-        return userRepository.save(currentUser);
+        userRepository.save(currentUser);
+        return getProfile();
     }
 
-    public User updateEmployeeProfile(Long companyId, Long employeeId, String name, String mobileNumber, String email,MultipartFile profilePicture) throws IOException {
-        User currentUser=getCurrentLoggedInUser();
-        boolean isOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId, "OWNER","ACTIVE");
-        if (!isOwner){
+    public UserProfileResponse updateEmployeeProfile(Long companyId, Long employeeId, String name, String mobileNumber, String email, MultipartFile profilePicture) throws IOException {
+        User currentUser = getCurrentLoggedInUser();
+        boolean isOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId, "OWNER", "ACTIVE");
+        if (!isOwner) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update employees in this company.");
         }
 
-        CompanyMembership employeeMembership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(employeeId,companyId,"ACTIVE").
-                orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found in this company."));
+        CompanyMembership employeeMembership = companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(employeeId, companyId, "ACTIVE").
+                orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found in this company."));
 
-        User employee= employeeMembership.getUser();
+        User employee = employeeMembership.getUser();
         employee.setName(name);
         employee.setMobileNumber(mobileNumber);
-        if (!employee.getEmail().equals(email) && userRepository.existsByEmail(email)){
-            throw new ResponseStatusException(HttpStatus.CONFLICT,"Email is already in use.");
+        if (!employee.getEmail().equals(email) && userRepository.existsByEmail(email)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
         }
         employee.setEmail(email);
-        if (profilePicture!=null && !profilePicture.isEmpty()){
-            Map uploadResult= fileAttachmentService.uploadImage(profilePicture);
+        if (profilePicture != null && !profilePicture.isEmpty()) {
+            Map uploadResult = fileAttachmentService.uploadImage(profilePicture);
             employee.setProfilePicture(uploadResult.get("secure_url").toString());
         }
-        return userRepository.save(employee);
+        userRepository.save(employee);
 
+        List<UserMembershipResponse> membershipResponses = new ArrayList<>();
+        UserMembershipResponse membershipResponse = new UserMembershipResponse(
+                employeeMembership.getId(),
+                employeeMembership.getCompany().getId(),
+                employeeMembership.getCompany().getName(),
+                employeeMembership.getRole(),
+                employeeMembership.getStatus()
+        );
+
+        membershipResponses.add(membershipResponse);
+
+        UserProfileResponse employeeProfile = new UserProfileResponse(
+                employee.getId(),
+                employee.getName(),
+                employee.getEmail(),
+                employee.getMobileNumber(),
+                employee.getProfilePicture(),
+                membershipResponses
+        );
+        return employeeProfile;
     }
 
     public List<UserProfileResponse> getEmployeeProfiles(Long companyId){
