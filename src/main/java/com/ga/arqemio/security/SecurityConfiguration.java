@@ -36,6 +36,8 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(auth-> auth.requestMatchers(
                         "/auth/users/login",
                         "/auth/users/register",
+                        "/auth/users/forget-password",
+                        "/auth/users/reset-password",
                         "/invitation/validate/**",
                         "/invitation/register"
                 ).permitAll().anyRequest().authenticated());
