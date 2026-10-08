@@ -8,7 +8,7 @@ The application focuses on improving coordination, transparency, and resource ma
 
 Arqemio includes a separate frontend application connected to the backend API.
 
-**Frontend Repository:** [View Frontend Repository](FRONTEND_REPO_LINK)  
+**Frontend Repository:** [View Frontend Repository](https://github.com/Bodoorr/Arqemio-frontend)  
 **Deployed Application:** [Open Arqemio](DEPLOYED_LINK)
 
 ## Main Features
