@@ -13,5 +13,6 @@ public class UserProfileResponse {
     private String email;
     private String mobileNumber;
     private String profilePicture;
+    private boolean isPlatformAdmin;
     private List<UserMembershipResponse> memberships;
 }

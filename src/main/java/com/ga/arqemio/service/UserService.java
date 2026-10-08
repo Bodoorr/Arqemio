@@ -220,6 +220,7 @@ public class UserService {
                 currentUser.getEmail(),
                 currentUser.getMobileNumber(),
                 currentUser.getProfilePicture(),
+                currentUser.getIsPlatformAdmin(),
                 membershipResponses
         );
 
@@ -276,6 +277,7 @@ public class UserService {
                 employee.getEmail(),
                 employee.getMobileNumber(),
                 employee.getProfilePicture(),
+                currentUser.getIsPlatformAdmin(),
                 membershipResponses
         );
         return employeeProfile;
@@ -310,6 +312,7 @@ public class UserService {
                     employee.getEmail(),
                     employee.getMobileNumber(),
                     employee.getProfilePicture(),
+                    currentUser.getIsPlatformAdmin(),
                     membershipResponses
             );
             employeeProfiles.add(employeeProfile);
