@@ -21,19 +21,7 @@ public class EquipmentController {
     @PostMapping
     public ResponseEntity<EquipmentResponse> createEquipment(@RequestBody EquipmentRequest equipmentRequest){
         Equipment equipment= equipmentService.createEquipment(equipmentRequest);
-        EquipmentResponse equipmentResponse=new EquipmentResponse(
-                equipment.getId(),
-                equipment.getCompany().getId(),
-                equipment.getCompany().getName(),
-                equipment.getName(),
-                equipment.getDescription(),
-                equipment.getImageUrl(),
-                equipment.getStatus(),
-                equipment.getQuantity(),
-                equipment.getCreatedAt(),
-                equipment.getUpdatedAt()
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(equipmentResponse);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(equipment));
     }
 
     @GetMapping
@@ -41,19 +29,7 @@ public class EquipmentController {
         List<Equipment> equipments= equipmentService.getAllEquipment();
         List<EquipmentResponse> equipmentResponses=new ArrayList<>();
         for (Equipment equipment: equipments){
-            EquipmentResponse equipmentResponse= new EquipmentResponse(
-                    equipment.getId(),
-                    equipment.getCompany().getId(),
-                    equipment.getCompany().getName(),
-                    equipment.getName(),
-                    equipment.getDescription(),
-                    equipment.getImageUrl(),
-                    equipment.getStatus(),
-                    equipment.getQuantity(),
-                    equipment.getCreatedAt(),
-                    equipment.getUpdatedAt()
-            );
-            equipmentResponses.add(equipmentResponse);
+            equipmentResponses.add(toResponse(equipment));
         }
         return ResponseEntity.ok(equipmentResponses);
     }
@@ -61,46 +37,23 @@ public class EquipmentController {
     @GetMapping("/{equipmentId}")
     public ResponseEntity<EquipmentResponse> getEquipment(@PathVariable Long equipmentId){
         Equipment equipment= equipmentService.getEquipmentById(equipmentId);
-
-        EquipmentResponse equipmentResponse=new EquipmentResponse(
-                equipment.getId(),
-                equipment.getCompany().getId(),
-                equipment.getCompany().getName(),
-                equipment.getName(),
-                equipment.getDescription(),
-                equipment.getImageUrl(),
-                equipment.getStatus(),
-                equipment.getQuantity(),
-                equipment.getCreatedAt(),
-                equipment.getUpdatedAt()
-        );
-        return ResponseEntity.ok(equipmentResponse);
+        return ResponseEntity.ok(toResponse(equipment));
     }
 
     @PutMapping("/{equipmentId}")
     public ResponseEntity<EquipmentResponse> updateEquipment(@PathVariable Long equipmentId, @RequestBody EquipmentRequest equipmentRequest){
         Equipment equipment= equipmentService.updateEquipment(equipmentId,equipmentRequest);
-
-        EquipmentResponse equipmentResponse=new EquipmentResponse(
-                equipment.getId(),
-                equipment.getCompany().getId(),
-                equipment.getCompany().getName(),
-                equipment.getName(),
-                equipment.getDescription(),
-                equipment.getImageUrl(),
-                equipment.getStatus(),
-                equipment.getQuantity(),
-                equipment.getCreatedAt(),
-                equipment.getUpdatedAt()
-        );
-        return ResponseEntity.ok(equipmentResponse);
+        return ResponseEntity.ok(toResponse(equipment));
     }
 
     @DeleteMapping("/{equipmentId}")
     public ResponseEntity<EquipmentResponse> archiveEquipment(@PathVariable Long equipmentId){
         Equipment equipment= equipmentService.archiveEquipment(equipmentId);
+        return ResponseEntity.ok(toResponse(equipment));
+    }
 
-        EquipmentResponse equipmentResponse=new EquipmentResponse(
+    private EquipmentResponse toResponse(Equipment equipment){
+        return new EquipmentResponse(
                 equipment.getId(),
                 equipment.getCompany().getId(),
                 equipment.getCompany().getName(),
@@ -112,6 +65,5 @@ public class EquipmentController {
                 equipment.getCreatedAt(),
                 equipment.getUpdatedAt()
         );
-        return ResponseEntity.ok(equipmentResponse);
     }
 }
