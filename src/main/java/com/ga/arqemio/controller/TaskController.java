@@ -22,20 +22,7 @@ public class TaskController {
     @PostMapping
     public ResponseEntity<TaskResponse> createTask(@RequestBody TaskRequest taskRequest){
         Task task= taskService.createTask(taskRequest);
-        TaskResponse taskResponse=new TaskResponse(
-                task.getId(),
-                task.getProject().getId(),
-                task.getProject().getName(),
-                task.getTitle(),
-                task.getDescription(),
-                task.getStatus(),
-                task.getPriority(),
-                task.getDueDateTime(),
-                task.getCreatedAt(),
-                task.getUpdatedAt()
-        );
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(taskResponse);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(task));
     }
 
     @GetMapping
@@ -44,20 +31,7 @@ public class TaskController {
         List<TaskResponse> taskResponses = new ArrayList<>();
 
         for (Task task: tasks){
-            TaskResponse taskResponse= new TaskResponse(
-                    task.getId(),
-                    task.getProject().getId(),
-                    task.getProject().getName(),
-                    task.getTitle(),
-                    task.getDescription(),
-                    task.getStatus(),
-                    task.getPriority(),
-                    task.getDueDateTime(),
-                    task.getCreatedAt(),
-                    task.getUpdatedAt()
-            );
-
-            taskResponses.add(taskResponse);
+            taskResponses.add(toResponse(task));
         }
         return ResponseEntity.ok(taskResponses);
     }
@@ -65,69 +39,31 @@ public class TaskController {
     @GetMapping("/{taskId}")
     public ResponseEntity<TaskResponse> getTaskById(@PathVariable Long taskId) {
         Task task = taskService.getTaskById(taskId);
-
-        TaskResponse taskResponse = new TaskResponse(
-                task.getId(),
-                task.getProject().getId(),
-                task.getProject().getName(),
-                task.getTitle(),
-                task.getDescription(),
-                task.getStatus(),
-                task.getPriority(),
-                task.getDueDateTime(),
-                task.getCreatedAt(),
-                task.getUpdatedAt()
-        );
-
-        return ResponseEntity.ok(taskResponse);
+        return ResponseEntity.ok(toResponse(task));
     }
 
 
     @PutMapping("/{taskId}")
     public ResponseEntity<TaskResponse> updateTask(@PathVariable Long taskId, @RequestBody TaskRequest taskRequest) {
-
         Task task = taskService.updateTask(taskId, taskRequest);
-        TaskResponse taskResponse = new TaskResponse(
-                task.getId(),
-                task.getProject().getId(),
-                task.getProject().getName(),
-                task.getTitle(),
-                task.getDescription(),
-                task.getStatus(),
-                task.getPriority(),
-                task.getDueDateTime(),
-                task.getCreatedAt(),
-                task.getUpdatedAt()
-        );
-
-        return ResponseEntity.ok(taskResponse);
+        return ResponseEntity.ok(toResponse(task));
     }
 
 
     @DeleteMapping("/{taskId}")
     public ResponseEntity<TaskResponse> archiveTask(@PathVariable Long taskId) {
-
         Task task = taskService.archiveTask(taskId);
-        TaskResponse taskResponse = new TaskResponse(
-                task.getId(),
-                task.getProject().getId(),
-                task.getProject().getName(),
-                task.getTitle(),
-                task.getDescription(),
-                task.getStatus(),
-                task.getPriority(),
-                task.getDueDateTime(),
-                task.getCreatedAt(),
-                task.getUpdatedAt()
-        );
-
-        return ResponseEntity.ok(taskResponse);
+        return ResponseEntity.ok(toResponse(task));
     }
 
     @PatchMapping("/{taskId}/status")
     public ResponseEntity<TaskResponse> updateTaskStatus(@PathVariable Long taskId, @RequestBody TaskStatusRequest taskStatusRequest){
         Task task= taskService.updateTaskStatus(taskId, taskStatusRequest.getStatus());
-        TaskResponse taskResponse= new TaskResponse(
+        return ResponseEntity.ok(toResponse(task));
+    }
+
+    private TaskResponse toResponse(Task task){
+        return new TaskResponse(
                 task.getId(),
                 task.getProject().getId(),
                 task.getProject().getName(),
@@ -139,8 +75,5 @@ public class TaskController {
                 task.getCreatedAt(),
                 task.getUpdatedAt()
         );
-
-        return ResponseEntity.ok(taskResponse);
     }
-
 }
