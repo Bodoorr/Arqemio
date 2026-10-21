@@ -59,10 +59,8 @@ public class ProjectShareLinkService {
         User currentUser= getCurrentLoggedInUser();
         ProjectUpdate projectUpdate= projectUpdateRepository.findById(updateId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project Update not found."));
         Project project= projectUpdate.getProject();
-        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(),"OWNER","ACTIVE");
-        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), currentUser.getId(), "ACTIVE");
 
-        if (!isCompanyOwner && !isAssignedManager){
+        if (!canShareProjectUpdate(currentUser, project)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to share this project update");
         }
 
@@ -124,7 +122,7 @@ public class ProjectShareLinkService {
             images.add(attachment.getFileUrl());
         }
 
-        ProjectUpdateShareResponse projectUpdateShareResponse=new ProjectUpdateShareResponse(
+        return new ProjectUpdateShareResponse(
                 projectUpdate.getProject().getCompany().getName(),
                 projectUpdate.getProject().getName(),
                 projectUpdate.getTitle(),
@@ -133,7 +131,13 @@ public class ProjectShareLinkService {
                 images,
                 shareLink.getExpiresAt()
         );
-        return projectUpdateShareResponse;
+    }
+
+    private boolean canShareProjectUpdate(User user, Project project){
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), project.getCompany().getId(),"OWNER","ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
+
+        return isCompanyOwner || isAssignedManager;
     }
 
 }
