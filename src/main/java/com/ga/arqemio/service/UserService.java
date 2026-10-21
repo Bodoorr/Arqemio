@@ -46,7 +46,7 @@ public class UserService {
     private final AuthenticationManager authenticationManager;
     private final CompanyMembershipRepository companyMembershipRepository;
     private final FileAttachmentService fileAttachmentService;
-    private EmailService emailService;
+    private final EmailService emailService;
 
     @Autowired
     public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, CompanyMembershipRepository companyMembershipRepository, FileAttachmentService fileAttachmentService, EmailService emailService) {
@@ -67,10 +67,6 @@ public class UserService {
         } else {
             throw new RuntimeException("User with email address " + userObject.getEmail() + " already" + " exists.");
         }
-    }
-
-    public User findUserByEmail(String email) {
-        return userRepository.findUserByEmail(email).orElseThrow(() -> new RuntimeException("User not found."));
     }
 
     public ResponseEntity<?> loginUser(LoginRequest loginRequest) {
