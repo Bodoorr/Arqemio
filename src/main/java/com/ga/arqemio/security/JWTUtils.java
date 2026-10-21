@@ -1,15 +1,5 @@
 package com.ga.arqemio.security;
 
-//1.JWTUtils create this file
-//2. we need methods in the previous class.
-//generateJwtToken, getUserNameFromJwtToken, validateJwtToken
-
-//3. JwtRequestFilter
-//4. we need methods in the previous class.
-//parseJwt, doFilterInternal
-
-//5. JwtRequestFilter -> SecurityConfiguration
-
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Value;

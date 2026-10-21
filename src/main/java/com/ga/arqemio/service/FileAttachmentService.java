@@ -4,8 +4,6 @@ import com.ga.arqemio.model.*;
 import com.ga.arqemio.repository.*;
 import com.ga.arqemio.security.MyUserDetails;
 import lombok.AllArgsConstructor;
-import org.springframework.http.HttpRange;
-import org.springframework.http.HttpRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
