@@ -28,17 +28,7 @@ public class InvitationController {
                 request.getCompanyId()
         );
 
-        InvitationResponse response=new InvitationResponse(
-                true,
-                "Invitation sent successfully.",
-                invitation.getId(),
-                invitation.getEmail(),
-                invitation.getRole(),
-                invitation.getStatus(),
-                invitation.getUser().getName(),
-                invitation.getUser().getId()
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(invitation,"Invitation sent successfully."));
     }
 
     @GetMapping("/validate/{token}")
@@ -64,42 +54,25 @@ public class InvitationController {
     @PostMapping("/accept/{token}")
     public ResponseEntity<?> acceptInvitation(@PathVariable String token){
         Invitation invitation= invitationService.acceptInvitation(token);
-        InvitationResponse invitationResponse=new InvitationResponse(
-                true,
-                "Invitation accepted successfully.",
-                invitation.getId(),
-                invitation.getEmail(),
-                invitation.getRole(),
-                invitation.getStatus(),
-                invitation.getUser().getName(),
-                invitation.getUser().getId()
-        );
-        return ResponseEntity.status(HttpStatus.OK).body(invitationResponse);
+        return ResponseEntity.status(HttpStatus.OK).body(toResponse(invitation,"Invitation accepted successfully."));
     }
 
     @DeleteMapping("/cancel/{invitationId}")
     public ResponseEntity<?> cancelInvitation(@PathVariable Long invitationId){
         Invitation invitation= invitationService.cancelInvitation(invitationId);
-        InvitationResponse invitationResponse=new InvitationResponse(
-                true,
-                "Invitation cancelled successfully.",
-                invitation.getId(),
-                invitation.getEmail(),
-                invitation.getRole(),
-                invitation.getStatus(),
-                invitation.getUser().getName(),
-                invitation.getUser().getId()
-        );
-        return ResponseEntity.status(HttpStatus.OK).body(invitationResponse);
+        return ResponseEntity.status(HttpStatus.OK).body(toResponse(invitation,"Invitation cancelled successfully."));
 
     }
 
     @PutMapping("/resend/{invitationId}")
     public ResponseEntity<?> resendInvitation(@PathVariable Long invitationId){
         Invitation invitation= invitationService.resendInvitation(invitationId);
-        InvitationResponse invitationResponse=new InvitationResponse(
-                true,
-                "Invitation sent again successfully.",
+        return ResponseEntity.status(HttpStatus.OK).body(toResponse(invitation, "Invitation sent again successfully."));
+    }
+
+    private InvitationResponse toResponse(Invitation invitation, String message){
+        return new InvitationResponse( true,
+                message,
                 invitation.getId(),
                 invitation.getEmail(),
                 invitation.getRole(),
@@ -107,6 +80,5 @@ public class InvitationController {
                 invitation.getUser().getName(),
                 invitation.getUser().getId()
         );
-        return ResponseEntity.status(HttpStatus.OK).body(invitationResponse);
     }
 }
