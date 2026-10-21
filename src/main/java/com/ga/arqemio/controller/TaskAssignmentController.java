@@ -23,25 +23,17 @@ public class TaskAssignmentController {
                 taskAssignmentRequest.getAssignedAt(),
                 taskAssignmentRequest.getDueAt()
         );
-        TaskAssignmentResponse taskAssignmentResponse = new TaskAssignmentResponse(
-                taskAssignment.getId(),
-                taskAssignment.getTask().getId(),
-                taskAssignment.getTask().getTitle(),
-                taskAssignment.getAssignedTo().getId(),
-                taskAssignment.getAssignedTo().getUser().getName(),
-                taskAssignment.getAssignedBy().getId(),
-                taskAssignment.getAssignedBy().getUser().getName(),
-                taskAssignment.getAssignedAt(),
-                taskAssignment.getDueAt()
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(taskAssignmentResponse);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(taskAssignment));
     }
 
     @DeleteMapping("/{taskId}/assignments/{workerMembershipId}")
     public ResponseEntity<TaskAssignmentResponse> removeAssignedWorker(@PathVariable Long taskId, @PathVariable Long workerMembershipId){
         TaskAssignment taskAssignment= taskAssignmentService.removeAssignedWorker(taskId, workerMembershipId);
+        return ResponseEntity.ok(toResponse(taskAssignment));
+    }
 
-        TaskAssignmentResponse taskAssignmentResponse = new TaskAssignmentResponse(
+    private TaskAssignmentResponse toResponse(TaskAssignment taskAssignment){
+        return new TaskAssignmentResponse(
                 taskAssignment.getId(),
                 taskAssignment.getTask().getId(),
                 taskAssignment.getTask().getTitle(),
@@ -52,6 +44,5 @@ public class TaskAssignmentController {
                 taskAssignment.getAssignedAt(),
                 taskAssignment.getDueAt()
         );
-        return ResponseEntity.ok(taskAssignmentResponse);
     }
 }
