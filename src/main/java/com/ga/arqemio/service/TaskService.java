@@ -33,36 +33,20 @@ public class TaskService {
     public Task createTask(TaskRequest taskRequest){
         User currentUser= getCurrentLoggedInUser();
         Project project= projectRepository.findById(taskRequest.getProjectId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
-        boolean isPlatformAdmin = currentUser.getIsPlatformAdmin().equals(true);
-        boolean isCompanyOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(
-                        currentUser.getId(),
-                        project.getCompany().getId(),
-                        "OWNER",
-                        "ACTIVE"
-                );
-        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), currentUser.getId(), "ACTIVE");
-        if (!isPlatformAdmin && !isCompanyOwner && !isAssignedManager){
+
+        if (!canManageTask(currentUser,project)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to create Tasks for this project.");
         }
 
         Task task=new Task();
         task.setProject(project);
-        task.setTitle(taskRequest.getTitle());
-        task.setDescription(taskRequest.getDescription());
-        task.setStatus(taskRequest.getStatus());
-        task.setPriority(taskRequest.getPriority());
-        task.setDueDateTime(taskRequest.getDueDateTime());
+        setTaskFields(task, taskRequest);
 
         return taskRepository.save(task);
     }
 
     public List<Task> getAllTasks(){
         User currentUser= getCurrentLoggedInUser();
-
-        if (currentUser.getIsPlatformAdmin()){
-            return taskRepository.findAll();
-        }
-
         return taskRepository.findByProjectCompanyMembershipsUserIdAndProjectCompanyMembershipsStatus(
                 currentUser.getId(),
                 "ACTIVE"
@@ -71,11 +55,10 @@ public class TaskService {
 
     public Task getTaskById(Long taskId){
         User currentUser= getCurrentLoggedInUser();
+        Task task= findTaskById(taskId);
 
-        Task task= taskRepository.findById(taskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "task not found."));
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), task.getProject().getCompany().getId(), "ACTIVE");
-        if (!isActiveMember && !isPlatformAdmin){
+        if (!isActiveMember){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this task.");
         }
 
@@ -84,13 +67,9 @@ public class TaskService {
 
     public Task updateTask(Long taskId, TaskRequest taskRequest){
         User currentUser= getCurrentLoggedInUser();
+        Task task= findTaskById(taskId);
 
-        Task task= taskRepository.findById(taskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "task not found."));
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
-        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), task.getProject().getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(task.getProject().getId(), currentUser.getId(), "ACTIVE");
-
-        if (!isPlatformAdmin && !isCompanyOwner && !isAssignedManager){
+        if (!canManageTask(currentUser, task.getProject())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this task.");
         }
 
@@ -98,11 +77,7 @@ public class TaskService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Task due date cannot be before the task creation date.");
         }
 
-        task.setTitle(taskRequest.getTitle());
-        task.setDescription(taskRequest.getDescription());
-        task.setStatus(taskRequest.getStatus());
-        task.setPriority(taskRequest.getPriority());
-        task.setDueDateTime(taskRequest.getDueDateTime());
+        setTaskFields(task,taskRequest);
 
         return taskRepository.save(task);
 
@@ -110,13 +85,9 @@ public class TaskService {
 
     public Task archiveTask(Long taskId){
         User currentUser= getCurrentLoggedInUser();
+        Task task= findTaskById(taskId);
 
-        Task task= taskRepository.findById(taskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "task not found."));
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
-        boolean isActiveOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), task.getProject().getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(task.getProject().getId(), currentUser.getId(), "ACTIVE");
-
-        if (!isActiveOwner && !isPlatformAdmin && !isAssignedManager){
+        if (!canManageTask(currentUser, task.getProject())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to delete this task.");
         }
 
@@ -127,7 +98,7 @@ public class TaskService {
 
     public Task updateTaskStatus(Long taskId, String status){
         User currentUser= getCurrentLoggedInUser();
-        Task task= taskRepository.findById(taskId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found."));
+        Task task= findTaskById(taskId);
         boolean isAssignedWorker= taskAssignmentRepository.existsByTaskIdAndAssignedToUserIdAndAssignedToStatus(taskId,currentUser.getId(),"ACTIVE");
 
         if (!isAssignedWorker){
@@ -138,4 +109,25 @@ public class TaskService {
         return taskRepository.save(task);
     }
 
+
+    private boolean canManageTask(User user, Project project){
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
+        return isCompanyOwner || isAssignedManager;
+    }
+
+    private Task findTaskById(Long taskId){
+        return taskRepository.findById(taskId)
+                .orElseThrow(()->new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Task not found."));
+
+    }
+
+    private void setTaskFields(Task task, TaskRequest taskRequest){
+        task.setTitle(taskRequest.getTitle());
+        task.setDescription(taskRequest.getDescription());
+        task.setStatus(taskRequest.getStatus());
+        task.setPriority(taskRequest.getPriority());
+        task.setDueDateTime(taskRequest.getDueDateTime());
+    }
 }
