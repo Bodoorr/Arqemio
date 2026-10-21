@@ -22,27 +22,7 @@ public class ProjectUpdateController {
     @PostMapping
     public ResponseEntity<ProjectUpdateResponse> createProjectUpdate(@RequestBody ProjectUpdateRequest projectUpdateRequest){
         ProjectUpdate projectUpdate=projectUpdateService.createProjectUpdate(projectUpdateRequest);
-        Long reviewedByMembershipId = null;
-        String reviewedByName = null;
-
-        if (projectUpdate.getReviewedBy() != null) {
-            reviewedByMembershipId = projectUpdate.getReviewedBy().getId();
-            reviewedByName = projectUpdate.getReviewedBy().getUser().getName();
-        }
-        ProjectUpdateResponse projectUpdateResponse=new ProjectUpdateResponse(
-                projectUpdate.getId(),
-                projectUpdate.getProject().getId(),
-                projectUpdate.getProject().getName(),
-                projectUpdate.getUpdatedBy().getId(),
-                projectUpdate.getUpdatedBy().getUser().getName(),
-                projectUpdate.getTitle(),
-                projectUpdate.getDescription(),
-                projectUpdate.getStatus(),
-                projectUpdate.getReviewNote(),
-                reviewedByMembershipId,
-                reviewedByName
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(projectUpdateResponse);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(projectUpdate));
     }
 
     @GetMapping("/project/{projectId}")
@@ -51,27 +31,7 @@ public class ProjectUpdateController {
         List<ProjectUpdateResponse> projectUpdateResponses=new ArrayList<>();
 
         for (ProjectUpdate projectUpdate:projectUpdates){
-            Long reviewedByMembershipId = null;
-            String reviewedByName = null;
-
-            if (projectUpdate.getReviewedBy() != null) {
-                reviewedByMembershipId = projectUpdate.getReviewedBy().getId();
-                reviewedByName = projectUpdate.getReviewedBy().getUser().getName();
-            }
-            ProjectUpdateResponse projectUpdateResponse=new ProjectUpdateResponse(
-                    projectUpdate.getId(),
-                    projectUpdate.getProject().getId(),
-                    projectUpdate.getProject().getName(),
-                    projectUpdate.getUpdatedBy().getId(),
-                    projectUpdate.getUpdatedBy().getUser().getName(),
-                    projectUpdate.getTitle(),
-                    projectUpdate.getDescription(),
-                    projectUpdate.getStatus(),
-                    projectUpdate.getReviewNote(),
-                    reviewedByMembershipId,
-                    reviewedByName
-            );
-            projectUpdateResponses.add(projectUpdateResponse);
+            projectUpdateResponses.add(toResponse(projectUpdate));
         }
         return projectUpdateResponses;
     }
@@ -79,89 +39,37 @@ public class ProjectUpdateController {
     @GetMapping("/{updateId}")
     public ProjectUpdateResponse getProjectUpdateById(@PathVariable Long updateId){
         ProjectUpdate projectUpdate= projectUpdateService.getProjectUpdateById(updateId);
-        Long reviewedByMembershipId = null;
-        String reviewedByName = null;
-
-        if (projectUpdate.getReviewedBy() != null) {
-            reviewedByMembershipId = projectUpdate.getReviewedBy().getId();
-            reviewedByName = projectUpdate.getReviewedBy().getUser().getName();
-        }
-        ProjectUpdateResponse projectUpdateResponse=new ProjectUpdateResponse(
-                projectUpdate.getId(),
-                projectUpdate.getProject().getId(),
-                projectUpdate.getProject().getName(),
-                projectUpdate.getUpdatedBy().getId(),
-                projectUpdate.getUpdatedBy().getUser().getName(),
-                projectUpdate.getTitle(),
-                projectUpdate.getDescription(),
-                projectUpdate.getStatus(),
-                projectUpdate.getReviewNote(),
-                reviewedByMembershipId,
-                reviewedByName
-        );
-        return projectUpdateResponse;
+        return toResponse(projectUpdate);
     }
 
     @PutMapping("/{updateId}")
     public ProjectUpdateResponse updateProjectUpdate(@PathVariable Long updateId, @RequestBody ProjectUpdateRequest projectUpdateRequest){
         ProjectUpdate projectUpdate= projectUpdateService.updateProjectUpdate(updateId,projectUpdateRequest);
-        Long reviewedByMembershipId = null;
-        String reviewedByName = null;
-        if (projectUpdate.getReviewedBy() != null) {
-            reviewedByMembershipId = projectUpdate.getReviewedBy().getId();
-            reviewedByName = projectUpdate.getReviewedBy().getUser().getName();
-        }
-        ProjectUpdateResponse projectUpdateResponse=new ProjectUpdateResponse(
-                projectUpdate.getId(),
-                projectUpdate.getProject().getId(),
-                projectUpdate.getProject().getName(),
-                projectUpdate.getUpdatedBy().getId(),
-                projectUpdate.getUpdatedBy().getUser().getName(),
-                projectUpdate.getTitle(),
-                projectUpdate.getDescription(),
-                projectUpdate.getStatus(),
-                projectUpdate.getReviewNote(),
-                reviewedByMembershipId,
-                reviewedByName
-        );
-        return projectUpdateResponse;
+        return toResponse(projectUpdate);
     }
 
     @DeleteMapping("/{updateId}")
     public ProjectUpdateResponse archiveProjectUpdate(@PathVariable Long updateId){
         ProjectUpdate projectUpdate= projectUpdateService.archiveProjectUpdate(updateId);
-        Long reviewedByMembershipId = null;
-        String reviewedByName = null;
-        if (projectUpdate.getReviewedBy() != null) {
-            reviewedByMembershipId = projectUpdate.getReviewedBy().getId();
-            reviewedByName = projectUpdate.getReviewedBy().getUser().getName();
-        }
-        ProjectUpdateResponse projectUpdateResponse=new ProjectUpdateResponse(
-                projectUpdate.getId(),
-                projectUpdate.getProject().getId(),
-                projectUpdate.getProject().getName(),
-                projectUpdate.getUpdatedBy().getId(),
-                projectUpdate.getUpdatedBy().getUser().getName(),
-                projectUpdate.getTitle(),
-                projectUpdate.getDescription(),
-                projectUpdate.getStatus(),
-                projectUpdate.getReviewNote(),
-                reviewedByMembershipId,
-                reviewedByName
-        );
-        return projectUpdateResponse;
+        return toResponse(projectUpdate);
     }
 
     @PatchMapping("/{updateId}/review")
     public ProjectUpdateResponse reviewProjectUpdate(@PathVariable Long updateId, @RequestBody ProjectUpdateReviewRequest projectUpdateReviewRequest){
         ProjectUpdate projectUpdate= projectUpdateService.reviewProjectUpdate(updateId,projectUpdateReviewRequest.getStatus(), projectUpdateReviewRequest.getReviewNote());
+        return toResponse(projectUpdate);
+    }
+
+    private ProjectUpdateResponse toResponse(ProjectUpdate projectUpdate){
         Long reviewedByMembershipId = null;
         String reviewedByName = null;
+
         if (projectUpdate.getReviewedBy() != null) {
             reviewedByMembershipId = projectUpdate.getReviewedBy().getId();
             reviewedByName = projectUpdate.getReviewedBy().getUser().getName();
-        }
-        ProjectUpdateResponse projectUpdateResponse=new ProjectUpdateResponse(
+            }
+
+        return new ProjectUpdateResponse(
                 projectUpdate.getId(),
                 projectUpdate.getProject().getId(),
                 projectUpdate.getProject().getName(),
@@ -174,7 +82,7 @@ public class ProjectUpdateController {
                 reviewedByMembershipId,
                 reviewedByName
         );
-        return projectUpdateResponse;
     }
+
     }
 
