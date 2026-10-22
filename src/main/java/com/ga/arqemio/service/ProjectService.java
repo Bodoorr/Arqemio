@@ -38,34 +38,16 @@ public class ProjectService {
     public Project createProject(ProjectRequest projectRequest){
         User currentUser= getCurrentLoggedInUser();
         Company company= companyRepository.findById(projectRequest.getCompanyId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
-        boolean isPlatformAdmin = currentUser.getIsPlatformAdmin().equals(true);
 
-        boolean isCompanyOwner =
-                companyMembershipRepository
-                        .existsByUserIdAndCompanyIdAndRoleAndStatus(
-                                currentUser.getId(),
-                                company.getId(),
-                                "OWNER",
-                                "ACTIVE"
-                        );
-
-        if (!isPlatformAdmin && !isCompanyOwner){
+        if (!isCompanyOwner(currentUser, company.getId())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to create projects for this company.");
         }
 
-        if (projectRequest.getExpectedEndDate().isBefore(projectRequest.getStartDate())){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expected end date cannot be before start date.");
-        }
+        validateProjectDates(projectRequest);
 
         Project project= new Project();
         project.setCompany(company);
-        project.setName(projectRequest.getName());
-        project.setDescription(projectRequest.getDescription());
-        project.setLocation(projectRequest.getLocation());
-        project.setStartDate(projectRequest.getStartDate());
-        project.setExpectedEndDate(projectRequest.getExpectedEndDate());
-        project.setBudget(projectRequest.getBudget());
-        project.setStatus(projectRequest.getStatus());
+        setProjectFields(project,projectRequest);
 
         Project savedProject = projectRepository.save(project);
 
@@ -75,33 +57,17 @@ public class ProjectService {
                 "CREATE", "PROJECT",
                 savedProject.getId(), "Created project " + savedProject.getName());
 
-
         return savedProject;
 
     }
 
     public List<Project> getAllProjects(){
         User currentUser= getCurrentLoggedInUser();
-        if (currentUser.getIsPlatformAdmin()) {
-            return projectRepository.findAll();
-        }
-
         return projectRepository.findByCompanyMembershipsUserIdAndCompanyMembershipsStatus(currentUser.getId(), "ACTIVE");
-
     }
 
     public Page<Project> getProjects(Pageable pageable, String name, String status) {
         User currentUser= getCurrentLoggedInUser();
-        if (currentUser.getIsPlatformAdmin()) {
-            if (name!=null && !name.isBlank()){
-                return projectRepository.findByNameContainingIgnoreCase(name, pageable);
-            }
-            if (status!=null && !status.isBlank()){
-                return projectRepository.findByStatus(status,pageable);
-            }
-            return projectRepository.findAll(pageable);
-        }
-
         if (name!=null && !name.isBlank()){
             return projectRepository.findByCompanyMembershipsUserIdAndCompanyMembershipsStatusAndNameContainingIgnoreCase
                     (currentUser.getId(), "ACTIVE", name, pageable);
@@ -117,38 +83,25 @@ public class ProjectService {
 
     public Project getProjectById(Long projectId){
         User currentUser= getCurrentLoggedInUser();
+        Project project= findProjectById(projectId);
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), project.getCompany().getId(), "ACTIVE");
 
-        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
-         boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
-         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), project.getCompany().getId(), "ACTIVE");
-        if (!isActiveMember && !isPlatformAdmin){
+         if (!isActiveMember){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this project.");
         }
-
         return project;
     }
 
     public Project updateProject(Long projectId, ProjectRequest projectRequest){
         User currentUser= getCurrentLoggedInUser();
+        Project project= findProjectById(projectId);
 
-        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
-        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
-        if (!isPlatformAdmin && !isCompanyOwner){
+        if (!isCompanyOwner(currentUser, project.getCompany().getId())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this project.");
         }
 
-        if (projectRequest.getExpectedEndDate().isBefore(projectRequest.getStartDate())){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expected end date cannot be before start date.");
-        }
-
-        project.setName(projectRequest.getName());
-        project.setDescription(projectRequest.getDescription());
-        project.setLocation(projectRequest.getLocation());
-        project.setStartDate(projectRequest.getStartDate());
-        project.setExpectedEndDate(projectRequest.getExpectedEndDate());
-        project.setBudget(projectRequest.getBudget());
-        project.setStatus(projectRequest.getStatus());
+        validateProjectDates(projectRequest);
+        setProjectFields(project,projectRequest);
 
         return projectRepository.save(project);
 
@@ -156,36 +109,22 @@ public class ProjectService {
 
     public Project archiveProject(Long projectId){
         User currentUser= getCurrentLoggedInUser();
-        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
+        Project project= findProjectById(projectId);
 
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
-        boolean isActiveOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
-
-        if (!isActiveOwner && !isPlatformAdmin){
+        if (!isCompanyOwner(currentUser, project.getCompany().getId())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to delete this project.");
         }
-
         project.setStatus("ARCHIVED");
-
         return projectRepository.save(project);
     }
 
 
     public CompanyMembership assignManager(Long projectId, Long membershipId){
         User currentUser= getCurrentLoggedInUser();
-        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
-        CompanyMembership membership= companyMembershipRepository.findById(membershipId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membership not found."));
+        Project project= findProjectById(projectId);
+        CompanyMembership membership= findMembershipById(membershipId);
 
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
-        boolean isCompanyOwner =
-                companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(
-                        currentUser.getId(),
-                        project.getCompany().getId(),
-                        "OWNER",
-                        "ACTIVE"
-                );
-
-        if (!isPlatformAdmin && !isCompanyOwner) {
+        if (!isCompanyOwner(currentUser, project.getCompany().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to assign managers to this project.");
         }
 
@@ -213,19 +152,10 @@ public class ProjectService {
 
     public CompanyMembership removeManager(Long projectId, Long membershipId){
         User currentUser= getCurrentLoggedInUser();
-        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
-        CompanyMembership membership= companyMembershipRepository.findById(membershipId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membership not found."));
+        Project project= findProjectById(projectId);
+        CompanyMembership membership= findMembershipById(membershipId);
 
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
-        boolean isCompanyOwner =
-                companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(
-                        currentUser.getId(),
-                        project.getCompany().getId(),
-                        "OWNER",
-                        "ACTIVE"
-                );
-
-        if (!isPlatformAdmin && !isCompanyOwner) {
+        if (!isCompanyOwner(currentUser, project.getCompany().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to remove managers from this project.");
         }
 
@@ -241,19 +171,10 @@ public class ProjectService {
 
     public CompanyMembership assignWorker(Long projectId, Long membershipId){
         User currentUser= getCurrentLoggedInUser();
-        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
-        CompanyMembership membership= companyMembershipRepository.findById(membershipId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membership not found."));
+        Project project= findProjectById(projectId);
+        CompanyMembership membership= findMembershipById(membershipId);
 
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
-        boolean isCompanyOwner =
-                companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(
-                        currentUser.getId(),
-                        project.getCompany().getId(),
-                        "OWNER",
-                        "ACTIVE"
-                );
-
-        if (!isPlatformAdmin && !isCompanyOwner) {
+        if (!isCompanyOwner(currentUser, project.getCompany().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to assign workers to this project.");
         }
 
@@ -281,19 +202,10 @@ public class ProjectService {
 
     public CompanyMembership removeWorker(Long projectId, Long membershipId){
         User currentUser= getCurrentLoggedInUser();
-        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
-        CompanyMembership membership= companyMembershipRepository.findById(membershipId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membership not found."));
+        Project project= findProjectById(projectId);
+        CompanyMembership membership= findMembershipById(membershipId);
 
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
-        boolean isCompanyOwner =
-                companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(
-                        currentUser.getId(),
-                        project.getCompany().getId(),
-                        "OWNER",
-                        "ACTIVE"
-                );
-
-        if (!isPlatformAdmin && !isCompanyOwner) {
+        if (!isCompanyOwner(currentUser, project.getCompany().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to remove workers from this project.");
         }
 
@@ -307,5 +219,32 @@ public class ProjectService {
         return membership;
     }
 
+    private Project findProjectById(Long projectId){
+        return projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
+    }
+
+    private CompanyMembership findMembershipById(Long membershipId){
+        return companyMembershipRepository.findById(membershipId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membership not found."));
+    }
+
+    private void validateProjectDates(ProjectRequest projectRequest){
+        if (projectRequest.getStartDate() == null || projectRequest.getExpectedEndDate()== null || projectRequest.getExpectedEndDate().isBefore(projectRequest.getStartDate())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expected end date cannot be before start date.");
+        }
+    }
+
+    private void setProjectFields(Project project, ProjectRequest projectRequest){
+        project.setName(projectRequest.getName());
+        project.setDescription(projectRequest.getDescription());
+        project.setLocation(projectRequest.getLocation());
+        project.setStartDate(projectRequest.getStartDate());
+        project.setExpectedEndDate(projectRequest.getExpectedEndDate());
+        project.setBudget(projectRequest.getBudget());
+        project.setStatus(projectRequest.getStatus());
+    }
+
+    private boolean isCompanyOwner(User user, Long companyId){
+        return companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), companyId,"OWNER","ACTIVE");
+    }
 
 }
