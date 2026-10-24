@@ -31,16 +31,8 @@ public class EquipmentService {
     public Equipment createEquipment(EquipmentRequest equipmentRequest){
         User currentUser= getCurrentLoggedInUser();
         Company company= companyRepository.findById(equipmentRequest.getCompanyId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin().equals(true);
-        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), equipmentRequest.getCompanyId(), "OWNER", "ACTIVE");
-
-        if (!isPlatformAdmin && !isCompanyOwner){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to create Equipment for this company.");
-        }
-
-        if (equipmentRequest.getQuantity()<0){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Equipment quantity cannot be negative.");
-        }
+        validateEquipmentManagementAccess(currentUser, company);
+        validateEquipmentQuantity(equipmentRequest);
 
         Equipment equipment=new Equipment();
         equipment.setCompany(company);
@@ -55,24 +47,16 @@ public class EquipmentService {
 
     public List<Equipment> getAllEquipment(){
         User currentUser= getCurrentLoggedInUser();
-        boolean isPlatformAdmin = currentUser.getIsPlatformAdmin().equals(true);
-
-        if (isPlatformAdmin) {
-            return equipmentRepository.findAll();
-        }
-
         return equipmentRepository.findByCompanyMembershipsUserIdAndCompanyMembershipsStatus(currentUser.getId(), "ACTIVE");
     }
 
     public Equipment getEquipmentById(Long equipmentId){
         User currentUser= getCurrentLoggedInUser();
-
         Equipment equipment= equipmentRepository.findById(equipmentId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
-        boolean isPlatformAdmin = currentUser.getIsPlatformAdmin().equals(true);
-        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), equipment.getCompany().getId(), "ACTIVE");
 
-        if (!isActiveMember && !isPlatformAdmin){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this equipment.");
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), equipment.getCompany().getId(), "ACTIVE");
+        if (!isActiveMember){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"You're not allowed to view this equipment.");
         }
         return equipment;
     }
@@ -80,15 +64,8 @@ public class EquipmentService {
     public Equipment updateEquipment(Long equipmentId, EquipmentRequest equipmentRequest){
         User currentUser= getCurrentLoggedInUser();
         Equipment equipment= equipmentRepository.findById(equipmentId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin().equals(true);
-        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(),equipment.getCompany().getId(), "OWNER","ACTIVE");
-
-        if (!isPlatformAdmin && !isCompanyOwner){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this equipment.");
-        }
-        if (equipmentRequest.getQuantity()<0){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Equipment quantity cannot be negative.");
-        }
+        validateEquipmentManagementAccess(currentUser, equipment.getCompany());
+        validateEquipmentQuantity(equipmentRequest);
 
         equipment.setName(equipmentRequest.getName());
         equipment.setDescription(equipmentRequest.getDescription());
@@ -102,16 +79,23 @@ public class EquipmentService {
     public Equipment archiveEquipment(Long equipmentId){
         User currentUser= getCurrentLoggedInUser();
         Equipment equipment= equipmentRepository.findById(equipmentId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin().equals(true);
-        boolean isActiveOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(),equipment.getCompany().getId(), "OWNER", "ACTIVE");
-
-        if (!isPlatformAdmin && !isActiveOwner){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to delete this Equipment.");
-        }
+        validateEquipmentManagementAccess(currentUser, equipment.getCompany());
         equipment.setStatus("ARCHIVED");
 
         return equipmentRepository.save(equipment);
     }
 
+    private void validateEquipmentManagementAccess(User user, Company company){
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), company.getId(), "OWNER", "ACTIVE");
+        if (!isCompanyOwner){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to manage equipment for this company.");
+        }
+    }
+
+    private void validateEquipmentQuantity(EquipmentRequest equipmentRequest){
+        if (equipmentRequest.getQuantity()<0){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Equipment quantity cannot be negative.");
+        }
+    }
 
 }
