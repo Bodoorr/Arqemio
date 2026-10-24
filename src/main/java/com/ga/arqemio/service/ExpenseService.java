@@ -32,19 +32,12 @@ public class ExpenseService {
     public Expense createExpense(ExpenseRequest expenseRequest){
         User currentUser= getCurrentLoggedInUser();
         Project project= projectRepository.findById(expenseRequest.getProjectId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
-        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), currentUser.getId(), "ACTIVE");
-
-        if (!isCompanyOwner && !isAssignedManager){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to create expenses for this project.");
-        }
+        validateExpenseManagementAccess(currentUser, project);
 
         CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(),project.getCompany().getId(), "ACTIVE")
                 .orElseThrow(()-> new ResponseStatusException(HttpStatus.FORBIDDEN, "Active company membership is not found."));
 
-        if (expenseRequest.getAmount()<=0){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expense amount must be greater than 0.");
-        }
+        validateExpenseAmount(expenseRequest);
 
         Expense expense=new Expense();
         expense.setProject(project);
@@ -61,21 +54,14 @@ public class ExpenseService {
 
     public List<Expense> getAllExpenses(){
         User currentUser= getCurrentLoggedInUser();
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin().equals(true);
-        if (isPlatformAdmin){
-            return expenseRepository.findAll();
-        }
-
         return expenseRepository.findByProjectCompanyMembershipsUserIdAndProjectCompanyMembershipsStatus(currentUser.getId(), "ACTIVE");
     }
 
     public Expense getExpenseById(Long expenseId){
         User currentUser= getCurrentLoggedInUser();
         Expense expense= expenseRepository.findById(expenseId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found."));
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin().equals(true);
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), expense.getProject().getCompany().getId(), "ACTIVE");
-
-        if (!isPlatformAdmin && !isActiveMember){
+        if (!isActiveMember){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this expense.");
         }
         return expense;
@@ -84,16 +70,9 @@ public class ExpenseService {
     public Expense updateExpense(Long expenseId, ExpenseRequest expenseRequest){
         User currentUser= getCurrentLoggedInUser();
         Expense expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
-        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), expense.getProject().getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(expense.getProject().getId(),currentUser.getId(), "ACTIVE");
+        validateExpenseManagementAccess(currentUser, expense.getProject());
 
-        if (!isCompanyOwner && !isAssignedManager){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this expense.");
-        }
-
-        if (expenseRequest.getAmount() <=0){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Expense amount must be greater than 0.");
-        }
+        validateExpenseAmount(expenseRequest);
 
         expense.setTitle(expenseRequest.getTitle());
         expense.setAmount(expenseRequest.getAmount());
@@ -107,15 +86,23 @@ public class ExpenseService {
     public Expense archiveExpense(Long expenseId){
         User currentUser= getCurrentLoggedInUser();
         Expense expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
-        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), expense.getProject().getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(expense.getProject().getId(), currentUser.getId(), "ACTIVE");
-
-        if (!isCompanyOwner && !isAssignedManager){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to archive this expense.");
-        }
+        validateExpenseManagementAccess(currentUser, expense.getProject());
         expense.setStatus("ARCHIVED");
         return expenseRepository.save(expense);
     }
 
+    private void validateExpenseManagementAccess(User user, Project project){
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
 
+        if (!isCompanyOwner && !isAssignedManager){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to manage expenses for this project.");
+        }
+    }
+
+    private void validateExpenseAmount(ExpenseRequest expenseRequest){
+        if (expenseRequest.getAmount()<=0){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expense amount must be greater than 0.");
+        }
+    }
 }
