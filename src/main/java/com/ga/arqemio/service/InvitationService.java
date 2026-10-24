@@ -40,7 +40,6 @@ public class InvitationService {
             String role,
             String invitationLink
     ) {
-
         try {
             ClassPathResource resource = new ClassPathResource("templates/invitation-email.html");
             String html = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -60,8 +59,7 @@ public class InvitationService {
         Company company= companyRepository.findById(companyId)
                 .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
 
-        if (
-                !"OWNER".equals(role) &&
+        if (!"OWNER".equals(role) &&
                         !"MANAGER".equals(role) &&
                         !"WORKER".equals(role)
         ) {
@@ -71,21 +69,18 @@ public class InvitationService {
             );
         }
 
-        boolean isPlatformAdmin = currentUser.getIsPlatformAdmin().equals(true);
+        boolean isPlatformAdmin = Boolean.TRUE.equals(currentUser.getIsPlatformAdmin());
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId,"OWNER", "ACTIVE");
 
-        if (!isPlatformAdmin && !isCompanyOwner){
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "You are not allowed to invite users to this company."
-            );
+        if ("OWNER".equals(role)){
+            if (!isPlatformAdmin){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only platform admins can invite company owners.");
+                }
+            } else {
+            if (!isCompanyOwner){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only company owners can invite managers and workers.");
+            }
         }
-
-        if (role.equals("OWNER") && !isPlatformAdmin && isCompanyOwner) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Company owners cannot invite another company owner."
-            );        }
 
         boolean alreadyAccepted =
                 invitationRepository.existsByEmailIgnoreCaseAndCompanyIdAndRoleAndStatus(
@@ -121,29 +116,14 @@ public class InvitationService {
         invitation.setEmail(email);
         invitation.setRole(role);
         invitation.setUser(currentUser);
-
         invitation.setCompany(company);
-
         invitation.setToken(UUID.randomUUID().toString());
-
         invitation.setStatus("PENDING");
-
         invitation.setExpiresAt(LocalDateTime.now().plusHours(48));
-
 
         Invitation savedInvitation = invitationRepository.save(invitation);
 
-        String invitationLink = "http://localhost:5173/invitation/" + savedInvitation.getToken();
-
-        String emailBody = getInvitationEmail(company.getName(), role, invitationLink);
-
-        EmailDetails emailDetails = new EmailDetails();
-        emailDetails.setRecipient(email);
-        emailDetails.setSubject("You're invited to join Arqemio!");
-        emailDetails.setMsgBody(emailBody);
-
-        boolean isEmailSent = emailService.sendHtmlMail(emailDetails);
-
+       boolean isEmailSent= sendInvitationEmail(savedInvitation);
         if (!isEmailSent) {
             throw new RuntimeException("Invitation saved, but email could not be sent.");
         }
@@ -171,7 +151,6 @@ public class InvitationService {
     public User registerInvitedUser(InvitationRegistrationRequest invitationRegistrationRequest){
         Invitation invitation= validateInvitation(invitationRegistrationRequest.getToken());
 
-
         if (userRepository.existsByEmail(invitation.getEmail())){
             throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exist. Please login to accept the invitation.");
         }
@@ -183,32 +162,12 @@ public class InvitationService {
             newUser.setProfilePicture(invitationRegistrationRequest.getProfilePicture());
             newUser.setStatus(true);
             newUser.setIsPlatformAdmin(false);
-
             User savedUser= userService.createUser(newUser);
 
-        CompanyMembership membership=new CompanyMembership();
-        membership.setUser(savedUser);
-        membership.setCompany(invitation.getCompany());
-        membership.setRole(invitation.getRole());
-        membership.setStatus("ACTIVE");
+            CompanyMembership savedMembership= createMembership(savedUser, invitation);
 
-        CompanyMembership savedMembership= companyMembershipRepository.save(membership);
-
-    if (invitation.getRole().equals("OWNER")){
-        Company company=invitation.getCompany();
-        company.setOwner(savedMembership);
-        companyRepository.save(company);
-    }
-
-        invitation.setStatus("ACCEPTED");
-        invitationRepository.save(invitation);
-
-        Invitation savedInvitation = invitationRepository.save(invitation);
-
-        auditLogService.createAuditLog(savedUser, invitation.getCompany(),
-                "ACCEPT", "INVITATION", savedInvitation.getId(),
-                "Accepted invitation as " + invitation.getRole()
-        );
+            updateCompanyOwner(invitation, savedMembership);
+            markInvitationAccepted(invitation, savedUser);
         return savedUser;
     }
 
@@ -221,39 +180,24 @@ public class InvitationService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This invitation does not belong to the logged in user.");
         }
 
-        CompanyMembership membership=new CompanyMembership();
-        membership.setUser(currentUser);
-        membership.setCompany(invitation.getCompany());
-        membership.setRole(invitation.getRole());
-        membership.setStatus("ACTIVE");
-
-        CompanyMembership savedMembership= companyMembershipRepository.save(membership);
-
-        if (invitation.getRole().equals("OWNER")){
-            Company company= invitation.getCompany();
-            company.setOwner(savedMembership);
-            companyRepository.save(company);
+        boolean alreadyMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), invitation.getCompany().getId(), "ACTIVE");
+        if (alreadyMember){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You are already an active member of this company.");
         }
 
-        invitation.setStatus("ACCEPTED");
+        CompanyMembership savedMembership= createMembership(currentUser, invitation);
+        updateCompanyOwner(invitation, savedMembership);
 
-        Invitation savedInvitation = invitationRepository.save(invitation);
-
-        auditLogService.createAuditLog(currentUser, invitation.getCompany(),
-                "ACCEPT", "INVITATION", savedInvitation.getId(),
-                "Accepted invitation as " + invitation.getRole()
-        );
-
-        return savedInvitation;
+       return markInvitationAccepted(invitation, currentUser);
     }
 
     public Invitation cancelInvitation(Long invitationId){
         User currentUser= getCurrentLoggedInUser();
-        if (!currentUser.getIsPlatformAdmin()){
+        Invitation invitation= findInvitationById(invitationId);
+
+        if (!canManageInvitation(currentUser,invitation)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to cancel the invitation.");
         }
-
-        Invitation invitation= invitationRepository.findById(invitationId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitation not found."));
 
         if (!invitation.getStatus().equals("PENDING")){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You can't cancel this invitation.");
@@ -267,11 +211,12 @@ public class InvitationService {
 
     public Invitation resendInvitation(Long invitationId){
         User currentUser= getCurrentLoggedInUser();
-        if (!currentUser.getIsPlatformAdmin()){
+        Invitation invitation= findInvitationById(invitationId);
+
+        if (!canManageInvitation(currentUser, invitation)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to resend the invitation.");
 
         }
-        Invitation invitation= invitationRepository.findById(invitationId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitation not found."));
         if (invitation.getStatus().equals("ACCEPTED")){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You can't resend this invitation.");
         }
@@ -281,8 +226,27 @@ public class InvitationService {
         invitation.setExpiresAt(LocalDateTime.now().plusHours(48));
         invitationRepository.save(invitation);
 
-        String invitationLink = "http://localhost:5173/invitation/" + invitation.getToken();
+        boolean isEmailSent= sendInvitationEmail(invitation);
+        if (!isEmailSent){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invitation updated, but email could not be sent.");
+        }
 
+        return invitation;
+    }
+
+    private boolean canManageInvitation(User user, Invitation invitation){
+        if ("OWNER".equals(invitation.getRole())){
+            return Boolean.TRUE.equals(user.getIsPlatformAdmin());
+        }
+        return companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), invitation.getCompany().getId(), "OWNER","ACTIVE");
+    }
+
+    private Invitation findInvitationById(Long invitationId){
+        return invitationRepository.findById(invitationId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitation not found."));
+    }
+
+    private boolean sendInvitationEmail(Invitation invitation){
+        String invitationLink = "http://localhost:5173/invitation/" + invitation.getToken();
         String emailBody = getInvitationEmail(invitation.getCompany().getName(), invitation.getRole(), invitationLink);
 
         EmailDetails emailDetails = new EmailDetails();
@@ -290,10 +254,36 @@ public class InvitationService {
         emailDetails.setRecipient(invitation.getEmail());
         emailDetails.setSubject("You're invited to join Arqemio!");
         emailDetails.setMsgBody(emailBody);
-        emailService.sendSimpleMail(emailDetails);
 
-        return invitation;
+        return emailService.sendHtmlMail(emailDetails);
     }
 
+    private CompanyMembership createMembership(User user, Invitation invitation){
+        CompanyMembership membership= new CompanyMembership();
+        membership.setUser(user);
+        membership.setCompany(invitation.getCompany());
+        membership.setRole(invitation.getRole());
+        membership.setStatus("ACTIVE");
 
+        return companyMembershipRepository.save(membership);
+    }
+
+    private void updateCompanyOwner(Invitation invitation, CompanyMembership membership){
+        if ("OWNER".equals(invitation.getRole())){
+            Company company= invitation.getCompany();
+            company.setOwner(membership);
+            companyRepository.save(company);
+        }
+    }
+
+    private Invitation markInvitationAccepted(Invitation invitation, User user){
+        invitation.setStatus("ACCEPTED");
+        Invitation savedInvitation = invitationRepository.save(invitation);
+        auditLogService.createAuditLog(user, invitation.getCompany(),
+                "ACCEPT", "INVITATION", savedInvitation.getId(),
+                "Accepted invitation as " + invitation.getRole()
+        );
+
+        return savedInvitation;
+    }
 }
