@@ -64,9 +64,7 @@ public class FileAttachmentService {
                 .orElseThrow(()-> new ResponseStatusException(HttpStatus.FORBIDDEN,"You're not an active member of this company."));
 
         boolean isOwner = membership.getRole().equals("OWNER");
-
         boolean isManager = projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), currentUser.getId(), "ACTIVE");
-
         boolean isWorker = projectRepository.existsByIdAndWorkersUserIdAndWorkersStatus(project.getId(), currentUser.getId(), "ACTIVE");
 
         if (!isOwner && !isManager && !isWorker) {
@@ -111,10 +109,7 @@ public class FileAttachmentService {
     public List<FileAttachment> getAllProjectAttachments(Long projectId){
         User currentUser= getCurrentLoggedInUser();
         Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Project not found."));
-        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), project.getCompany().getId(), "ACTIVE");
-        if (!currentUser.getIsPlatformAdmin() && !isActiveMember){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
-        }
+        validateCompanyAccess(currentUser, project.getCompany().getId());
 
         return fileAttachmentRepository.findByProjectIdAndStatus(projectId, "ACTIVE");
     }
@@ -122,10 +117,7 @@ public class FileAttachmentService {
     public List<FileAttachment> getAllProjectUpdateAttachments(Long projectUpdateId){
         User currentUser= getCurrentLoggedInUser();
         ProjectUpdate projectUpdate= projectUpdateRepository.findById(projectUpdateId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Project update not found."));
-        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), projectUpdate.getProject().getCompany().getId(), "ACTIVE");
-        if (!currentUser.getIsPlatformAdmin() && !isActiveMember){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
-        }
+        validateCompanyAccess(currentUser, projectUpdate.getProject().getCompany().getId());
 
         return fileAttachmentRepository.findByProjectUpdateIdAndStatus(projectUpdateId, "ACTIVE");
     }
@@ -133,10 +125,7 @@ public class FileAttachmentService {
     public List<FileAttachment> getAllProjectExpenseAttachments(Long expenseId){
         User currentUser= getCurrentLoggedInUser();
         Expense expense= expenseRepository.findById(expenseId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
-        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), expense.getProject().getCompany().getId(), "ACTIVE");
-        if (!currentUser.getIsPlatformAdmin() && !isActiveMember){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
-        }
+        validateCompanyAccess(currentUser, expense.getProject().getCompany().getId());
 
         return fileAttachmentRepository.findByExpenseIdAndStatus(expenseId, "ACTIVE");
     }
@@ -144,10 +133,7 @@ public class FileAttachmentService {
     public FileAttachment getFileAttachmentById(Long attachmentId){
         User currentUser= getCurrentLoggedInUser();
         FileAttachment fileAttachment= fileAttachmentRepository.findById(attachmentId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "File attachment not found."));
-        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), fileAttachment.getProject().getCompany().getId(), "ACTIVE");
-        if (!currentUser.getIsPlatformAdmin() && !isActiveMember){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
-        }
+        validateCompanyAccess(currentUser, fileAttachment.getProject().getCompany().getId());
         if (!fileAttachment.getStatus().equals("ACTIVE")) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File attachment not found.");
         }
@@ -176,7 +162,10 @@ public class FileAttachmentService {
         return fileAttachmentRepository.save(fileAttachment);
     }
 
-
-
-
+    private void validateCompanyAccess(User user, Long companyId){
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(),companyId, "ACTIVE");
+        if (!Boolean.TRUE.equals(user.getIsPlatformAdmin()) && !isActiveMember){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
+        }
+    }
 }
