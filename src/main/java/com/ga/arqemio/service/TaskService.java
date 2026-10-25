@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Service
 @AllArgsConstructor
@@ -24,6 +26,7 @@ public class TaskService {
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private TaskAssignmentRepository taskAssignmentRepository;
+    private static final Logger logger = Logger.getLogger(TaskService.class.getName());
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -35,6 +38,7 @@ public class TaskService {
         Project project= projectRepository.findById(taskRequest.getProjectId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
 
         if (!canManageTask(currentUser,project)){
+            logger.log(Level.WARNING, "User {0} attempted to create a task in project {1} without permission", new Object[]{currentUser.getId(), project.getId()});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to create Tasks for this project.");
         }
 
@@ -42,7 +46,10 @@ public class TaskService {
         task.setProject(project);
         setTaskFields(task, taskRequest);
 
-        return taskRepository.save(task);
+        Task savedTask= taskRepository.save(task);
+        logger.log(Level.INFO, "Task {0} created in project {1} by user {2}", new Object[]{savedTask.getId(), project.getId(), currentUser.getId()});
+
+        return savedTask;
     }
 
     public List<Task> getAllTasks(){
@@ -59,6 +66,7 @@ public class TaskService {
 
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), task.getProject().getCompany().getId(), "ACTIVE");
         if (!isActiveMember){
+            logger.log(Level.WARNING,"User {0} attempted to view task {1} without permission", new Object[]{currentUser.getId(), taskId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this task.");
         }
 
@@ -70,6 +78,7 @@ public class TaskService {
         Task task= findTaskById(taskId);
 
         if (!canManageTask(currentUser, task.getProject())){
+            logger.log(Level.WARNING,"User {0} attempted to update task {1} without permission", new Object[]{currentUser.getId(), taskId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this task.");
         }
 
@@ -79,7 +88,9 @@ public class TaskService {
 
         setTaskFields(task,taskRequest);
 
-        return taskRepository.save(task);
+        Task savedTask= taskRepository.save(task);
+        logger.log(Level.INFO,"Task {0} updated by user {1}", new Object[]{savedTask.getId(), currentUser.getId()});
+        return savedTask;
 
     }
 
@@ -88,12 +99,15 @@ public class TaskService {
         Task task= findTaskById(taskId);
 
         if (!canManageTask(currentUser, task.getProject())){
+            logger.log(Level.WARNING, "User {0} attempted to archive task {1} without permission", new Object[]{currentUser.getId(), taskId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to delete this task.");
         }
 
         task.setStatus("ARCHIVED");
 
-        return taskRepository.save(task);
+        Task savedTask= taskRepository.save(task);
+        logger.log(Level.INFO,"Task {0} archived by user {1}", new Object[]{savedTask.getId(), currentUser.getId()});
+        return savedTask;
     }
 
     public Task updateTaskStatus(Long taskId, String status){
@@ -102,11 +116,15 @@ public class TaskService {
         boolean isAssignedWorker= taskAssignmentRepository.existsByTaskIdAndAssignedToUserIdAndAssignedToStatus(taskId,currentUser.getId(),"ACTIVE");
 
         if (!isAssignedWorker){
+            logger.log(Level.WARNING,"User {0} attempted to change status of task {1} without assignment", new Object[]{currentUser.getId(), taskId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not assigned to this task.");
         }
 
         task.setStatus(status);
-        return taskRepository.save(task);
+        Task savedTask= taskRepository.save(task);
+
+        logger.log(Level.INFO,"Task {0} status updated to {1} by user {2}", new Object[]{savedTask.getId(), status, currentUser.getId()});
+        return savedTask;
     }
 
 
