@@ -20,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Service
 public class UserService {
@@ -43,6 +46,7 @@ public class UserService {
     private final CompanyMembershipRepository companyMembershipRepository;
     private final FileAttachmentService fileAttachmentService;
     private final EmailService emailService;
+    private static final Logger logger= Logger.getLogger(UserService.class.getName());
 
     @Autowired
     public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, CompanyMembershipRepository companyMembershipRepository, FileAttachmentService fileAttachmentService, EmailService emailService) {
@@ -56,11 +60,13 @@ public class UserService {
     }
 
     public User createUser(User userObject) {
-        System.out.println("Service Calling createUser ==>");
         if (!userRepository.existsByEmail(userObject.getEmail())) {
             userObject.setPassword(passwordEncoder.encode(userObject.getPassword()));
-            return userRepository.save(userObject);
+            User savedUser= userRepository.save(userObject);
+            logger.log(Level.INFO,"User {0} registered successfully", savedUser.getId());
+            return savedUser;
         } else {
+            logger.log(Level.WARNING,"Registration rejected: email already exists");
             throw new RuntimeException("User with email address " + userObject.getEmail() + " already" + " exists.");
         }
     }
@@ -72,9 +78,11 @@ public class UserService {
             SecurityContextHolder.getContext().setAuthentication(authentication);
             MyUserDetails myUserDetails = (MyUserDetails) authentication.getPrincipal();
             final String JWT = jwtUtils.generateJwtToken(myUserDetails);
+            logger.log(Level.INFO,"User {0} logged in successfully", myUserDetails.getUser().getId());
             return ResponseEntity.ok(new LoginResponse("Login successful", JWT));
-        } catch (Exception e) {
-            return ResponseEntity.ok(new LoginResponse("Error: username or email is incorrect.", null));
+        } catch (AuthenticationException e) {
+            logger.log(Level.WARNING, "Login failed: invalid credentials");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new LoginResponse("Error: username or email is incorrect.", null));
         }
     }
 
@@ -92,11 +100,13 @@ public class UserService {
         User currentUser= getCurrentLoggedInUser();
 
         if (!passwordEncoder.matches(changePasswordRequest.getCurrentPassword(), currentUser.getPassword())){
+            logger.log(Level.WARNING,"User {0} provided an incorrect current password", currentUser.getId());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,("Current password is incorrect."));
         }
 
         currentUser.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
         userRepository.save(currentUser);
+        logger.log(Level.INFO,"Password changed successfully for user {0}", currentUser.getId());
 
         EmailDetails emailDetails = new EmailDetails(
                 currentUser.getEmail(),
@@ -108,7 +118,6 @@ public class UserService {
         );
 
         emailService.sendSimpleMail(emailDetails);
-
         return "Password changed successfully.";
     }
 
@@ -149,6 +158,7 @@ public class UserService {
         );
 
         emailService.sendHtmlMail(emailDetails);
+        logger.log(Level.INFO,"Password reset email sent for user {0}",user.getId());
         return "Password reset email sent successfully.";
     }
 
@@ -156,6 +166,7 @@ public class UserService {
         User user= userRepository.findByResetPasswordToken(resetPasswordRequest.getToken()).orElseThrow(()->new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid reset password token."));
 
         if (user.getResetPasswordTokenExpiresAt().isBefore(LocalDateTime.now())){
+            logger.log(Level.WARNING,"Expired password reset token used for user {0}", user.getId());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Reset password link has expired.");
         }
         if (resetPasswordRequest.getNewPassword() == null || resetPasswordRequest.getNewPassword().isBlank()){
@@ -168,8 +179,8 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(resetPasswordRequest.getNewPassword()));
         user.setResetPasswordToken(null);
         user.setResetPasswordTokenExpiresAt(null);
-
         userRepository.save(user);
+        logger.log(Level.INFO,"Password reset successfully for user {0}",user.getId());
 
         EmailDetails emailDetails = new EmailDetails(
                 user.getEmail(),
@@ -201,6 +212,7 @@ public class UserService {
         currentUser.setMobileNumber(updateProfileRequest.getMobileNumber());
 
         userRepository.save(currentUser);
+        logger.log(Level.INFO,"User {0} updated their profile", currentUser.getId());
         return getProfile();
     }
 
@@ -208,6 +220,7 @@ public class UserService {
         User currentUser = getCurrentLoggedInUser();
         boolean isOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId, "OWNER", "ACTIVE");
         if (!isOwner) {
+            logger.log(Level.WARNING, "User {0} attempted to update employee {1} in company {2} without permissions", new Object[]{currentUser.getId(), employeeId, companyId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update employees in this company.");
         }
 
@@ -228,6 +241,7 @@ public class UserService {
             employee.setProfilePicture(uploadResult.get("secure_url").toString());
         }
         userRepository.save(employee);
+        logger.log(Level.INFO, "Employee {0} updated by user {1} in company {2}", new Object[]{employeeId, currentUser.getId(), companyId});
 
         List<UserMembershipResponse> membershipResponses = new ArrayList<>();
         membershipResponses.add(toMembershipResponse(employeeMembership));
@@ -239,6 +253,7 @@ public class UserService {
         User currentUser= getCurrentLoggedInUser();
         boolean isOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId, "OWNER","ACTIVE");
         if (!isOwner){
+            logger.log(Level.WARNING,"User {0} attempted to view employees in company {1} without permission", new Object[]{currentUser.getId(), companyId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view employees in this company.");
         }
 
@@ -274,6 +289,5 @@ public class UserService {
                 membershipResponses
         );
     }
-
 }
 
