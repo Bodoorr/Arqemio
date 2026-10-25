@@ -15,10 +15,13 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Service
 @AllArgsConstructor
 public class ReservationService {
+    private static final Logger logger= Logger.getLogger(ReservationService.class.getName());
     private ReservationRepository reservationRepository;
     private EquipmentRepository equipmentRepository;
     private ProjectRepository projectRepository;
@@ -40,6 +43,7 @@ public class ReservationService {
         }
 
         if (!canManageReservation(currentUser, project)){
+            logger.log(Level.WARNING,"User {0} attempted to reserve equipment for project {1} without permission", new Object[]{currentUser.getId(), project.getId()});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,"You're not allowed to reserve equipment for this project.");
         }
 
@@ -47,6 +51,7 @@ public class ReservationService {
                 .orElseThrow(()->new ResponseStatusException(HttpStatus.FORBIDDEN, "Active company membership is not found."));
 
         if (!equipment.getStatus().equals("AVAILABLE")){
+            logger.log(Level.WARNING,"Equipment {0} is not available for reservation", equipment.getId());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Equipment is not available for reservation.");
         }
 
@@ -59,6 +64,7 @@ public class ReservationService {
         int availableQuantity= calculateAvailableQuantity(equipment, reservationRequest.getStartDateTime(), reservationRequest.getEndDateTime());
 
         if (reservationRequest.getQuantity()> availableQuantity){
+            logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{equipment.getId(), reservationRequest.getQuantity(), availableQuantity});
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");
         }
 
@@ -73,6 +79,7 @@ public class ReservationService {
         reservation.setStatus("RESERVED");
 
         Reservation savedReservation = reservationRepository.save(reservation);
+        logger.log(Level.INFO,"Reservation {0} created for equipment {1}", new Object[]{savedReservation.getId(), equipment.getId()});
         auditLogService.createAuditLog(currentUser, project.getCompany(),
                 "CREATE", "RESERVATION", savedReservation.getId(),
                 "Created equipment reservation for " + equipment.getName()
@@ -92,6 +99,7 @@ public class ReservationService {
 
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), reservation.getProject().getCompany().getId(), "ACTIVE");
         if (!isActiveMember){
+            logger.log(Level.WARNING,"User {0} attempted to view reservation {1} without permission", new Object[]{currentUser.getId(), reservationId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this reservation.");
         }
 
@@ -103,6 +111,7 @@ public class ReservationService {
         Reservation reservation= findReservationById(reservationId);
 
         if (!canManageReservation(currentUser, reservation.getProject())){
+            logger.log(Level.WARNING,"User {0} attempted to update reservation {1} without permission", new Object[]{currentUser.getId(), reservationId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this reservation.");
         }
 
@@ -129,6 +138,7 @@ public class ReservationService {
         int availableQuantity= reservation.getEquipment().getQuantity() - reservedQuantity;
 
         if (reservationRequest.getQuantity() > availableQuantity){
+            logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{reservation.getEquipment().getId(), reservationRequest.getQuantity(), availableQuantity});
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");
         }
 
@@ -137,7 +147,9 @@ public class ReservationService {
         reservation.setDescription(reservationRequest.getDescription());
         reservation.setQuantity(reservationRequest.getQuantity());
 
-        return reservationRepository.save(reservation);
+        Reservation updatedReservation= reservationRepository.save(reservation);
+        logger.log(Level.INFO,"Reservation {0} updated successfully", updatedReservation.getId());
+        return updatedReservation;
     }
 
     public Reservation cancelReservation(Long reservationId){
@@ -145,6 +157,7 @@ public class ReservationService {
         Reservation reservation= findReservationById(reservationId);
 
         if (!canManageReservation(currentUser, reservation.getProject())){
+            logger.log(Level.WARNING,"User {0} attempted to cancel reservation {1} without permission", new Object[]{currentUser.getId(), reservationId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to cancel this reservation.");
         }
 
@@ -153,8 +166,9 @@ public class ReservationService {
         }
 
         reservation.setStatus("CANCELLED");
-
         Reservation savedReservation = reservationRepository.save(reservation);
+
+        logger.log(Level.INFO,"Reservation {0} cancelled successfully", savedReservation.getId());
         auditLogService.createAuditLog(currentUser, reservation.getProject().getCompany(),
                 "CANCEL", "RESERVATION", savedReservation.getId(),
                 "Cancelled equipment reservation for " + reservation.getEquipment().getName()
@@ -170,6 +184,7 @@ public class ReservationService {
         boolean isAssignedWorker= projectRepository.existsByIdAndWorkersId(reservation.getProject().getId(), membership.getId());
 
         if (!isAssignedWorker || !membership.getRole().equals("WORKER")){
+            logger.log(Level.WARNING,"User {0} attempted to update reservation {1} status without permission", new Object[]{currentUser.getId(), reservationId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this reservation status.");
         }
 
@@ -182,7 +197,9 @@ public class ReservationService {
         }
 
         reservation.setStatus(status);
-        return reservationRepository.save(reservation);
+        Reservation updatedReservation= reservationRepository.save(reservation);
+        logger.log(Level.INFO, "Reservation {0} marked as {1}",new Object[]{reservationId, status});
+        return updatedReservation;
     }
 
     public int getAvailableQuantity(Long equipmentId, LocalDateTime startDateTime, LocalDateTime endDateTime){
@@ -205,6 +222,7 @@ public class ReservationService {
 
     private void validateReservationDates(LocalDateTime startDateTime, LocalDateTime endDateTime){
         if (endDateTime.isBefore(startDateTime) || endDateTime.equals(startDateTime)){
+            logger.log(Level.WARNING,"Invalid reservation dates: start = {0}, end = {1}", new Object[]{startDateTime, endDateTime});
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End date and time must be after start date and time.");
         }
     }
