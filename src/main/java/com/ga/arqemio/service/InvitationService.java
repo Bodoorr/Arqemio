@@ -18,6 +18,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Service
 @AllArgsConstructor
@@ -29,6 +31,7 @@ public class InvitationService {
     private UserRepository userRepository;
     private UserService userService;
     private AuditLogService auditLogService;
+    private static final Logger logger= Logger.getLogger(InvitationService.class.getName());
 
     public User getCurrentLoggedInUser(){
         MyUserDetails userDetails= (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -74,10 +77,12 @@ public class InvitationService {
 
         if ("OWNER".equals(role)){
             if (!isPlatformAdmin){
+                logger.log(Level.WARNING, "User {0} attempted to invite a company owner without permission", currentUser.getId());
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only platform admins can invite company owners.");
                 }
             } else {
             if (!isCompanyOwner){
+                logger.log(Level.WARNING, "User {0} attempted to invite a member to company {1} without permission", new Object[]{currentUser.getId(), companyId});
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only company owners can invite managers and workers.");
             }
         }
@@ -125,9 +130,10 @@ public class InvitationService {
 
        boolean isEmailSent= sendInvitationEmail(savedInvitation);
         if (!isEmailSent) {
+            logger.log(Level.WARNING, "Invitation {0} saved but email delivery failed", savedInvitation.getId());
             throw new RuntimeException("Invitation saved, but email could not be sent.");
         }
-
+        logger.log(Level.INFO,"Invitation {0} created for company {1} by user {2}", new Object[]{savedInvitation.getId(), companyId, currentUser.getId()});
         return savedInvitation;
     }
 
@@ -142,6 +148,7 @@ public class InvitationService {
         if (!invitation.getExpiresAt().isAfter(LocalDateTime.now())){
             invitation.setStatus("EXPIRED");
             invitationRepository.save(invitation);
+            logger.log(Level.WARNING,"Invitation {0} has expired", invitation.getId());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "This invitation has expired.");
         }
@@ -177,6 +184,7 @@ public class InvitationService {
         Invitation invitation= validateInvitation(token);
 
         if (!currentUser.getEmail().equalsIgnoreCase(invitation.getEmail())){
+            logger.log(Level.WARNING, "User {0} attempted to accept invitation {1} belonging to another user", new Object[]{currentUser.getId(), invitation.getId()});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This invitation does not belong to the logged in user.");
         }
 
@@ -196,6 +204,7 @@ public class InvitationService {
         Invitation invitation= findInvitationById(invitationId);
 
         if (!canManageInvitation(currentUser,invitation)){
+            logger.log(Level.WARNING, "User {0} attempted to cancel invitation {1} without permission", new Object[]{currentUser.getId(), invitationId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to cancel the invitation.");
         }
 
@@ -205,7 +214,7 @@ public class InvitationService {
 
         invitation.setStatus("CANCELLED");
         invitationRepository.save(invitation);
-
+        logger.log(Level.INFO,"Invitation {0} cancelled by user {1}", new Object[]{invitationId, currentUser.getId()});
         return invitation;
     }
 
@@ -214,6 +223,7 @@ public class InvitationService {
         Invitation invitation= findInvitationById(invitationId);
 
         if (!canManageInvitation(currentUser, invitation)){
+            logger.log(Level.WARNING,"User {0} attempted to resend invitation {1} without permission", new Object[]{currentUser.getId(), invitationId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to resend the invitation.");
 
         }
@@ -228,9 +238,10 @@ public class InvitationService {
 
         boolean isEmailSent= sendInvitationEmail(invitation);
         if (!isEmailSent){
+            logger.log(Level.WARNING,"Failed to resend invitation email for invitation {0}", invitationId);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invitation updated, but email could not be sent.");
         }
-
+        logger.log(Level.INFO,"Invitation {0} resent successfully by user {1}", new Object[]{invitationId, currentUser.getId()});
         return invitation;
     }
 
@@ -279,6 +290,7 @@ public class InvitationService {
     private Invitation markInvitationAccepted(Invitation invitation, User user){
         invitation.setStatus("ACCEPTED");
         Invitation savedInvitation = invitationRepository.save(invitation);
+        logger.log(Level.INFO,"Invitation {0} accepted by user {1} for company {2}", new Object[]{savedInvitation.getId(), user.getId(), invitation.getCompany().getId()});
         auditLogService.createAuditLog(user, invitation.getCompany(),
                 "ACCEPT", "INVITATION", savedInvitation.getId(),
                 "Accepted invitation as " + invitation.getRole()
