@@ -56,7 +56,7 @@ public class ProjectUpdateController {
     }
 
     @PatchMapping("/{updateId}/review")
-    public ProjectUpdateResponse reviewProjectUpdate(@PathVariable Long updateId, @RequestBody ProjectUpdateReviewRequest projectUpdateReviewRequest){
+    public ProjectUpdateResponse reviewProjectUpdate(@PathVariable Long updateId, @Valid @RequestBody ProjectUpdateReviewRequest projectUpdateReviewRequest){
         ProjectUpdate projectUpdate= projectUpdateService.reviewProjectUpdate(updateId,projectUpdateReviewRequest.getStatus(), projectUpdateReviewRequest.getReviewNote());
         return toResponse(projectUpdate);
     }
