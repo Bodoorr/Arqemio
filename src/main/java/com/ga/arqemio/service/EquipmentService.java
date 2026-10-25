@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Service
 @AllArgsConstructor
@@ -22,7 +24,7 @@ public class EquipmentService {
     private EquipmentRepository equipmentRepository;
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
-
+    private static final Logger logger= Logger.getLogger(EquipmentService.class.getName());
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return userDetails.getUser();
@@ -42,7 +44,9 @@ public class EquipmentService {
         equipment.setStatus(equipmentRequest.getStatus());
         equipment.setQuantity(equipmentRequest.getQuantity());
 
-        return equipmentRepository.save(equipment);
+        Equipment savedEquipment= equipmentRepository.save(equipment);
+        logger.log(Level.INFO,"Equipment {0} created for company {1} by user {2}", new Object[]{savedEquipment.getId(), company.getId(), currentUser.getId()});
+        return savedEquipment;
     }
 
     public List<Equipment> getAllEquipment(){
@@ -56,6 +60,7 @@ public class EquipmentService {
 
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), equipment.getCompany().getId(), "ACTIVE");
         if (!isActiveMember){
+            logger.log(Level.WARNING,"User {0} attempted to view equipment {1} without permission", new Object[]{currentUser.getId(), equipmentId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,"You're not allowed to view this equipment.");
         }
         return equipment;
@@ -73,7 +78,9 @@ public class EquipmentService {
         equipment.setStatus(equipmentRequest.getStatus());
         equipment.setQuantity(equipmentRequest.getQuantity());
 
-        return equipmentRepository.save(equipment);
+        Equipment savedEquipment= equipmentRepository.save(equipment);
+        logger.log(Level.INFO,"Equipment {0} updated by user {1}", new Object[]{savedEquipment.getId(), currentUser.getId()});
+        return savedEquipment;
     }
 
     public Equipment archiveEquipment(Long equipmentId){
@@ -82,12 +89,15 @@ public class EquipmentService {
         validateEquipmentManagementAccess(currentUser, equipment.getCompany());
         equipment.setStatus("ARCHIVED");
 
-        return equipmentRepository.save(equipment);
+        Equipment savedEquipment= equipmentRepository.save(equipment);
+        logger.log(Level.INFO,"Equipment {0} archived by user {1}", new Object[]{savedEquipment.getId(), currentUser.getId()});
+        return savedEquipment;
     }
 
     private void validateEquipmentManagementAccess(User user, Company company){
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), company.getId(), "OWNER", "ACTIVE");
         if (!isCompanyOwner){
+            logger.log(Level.WARNING,"User {0} attempted to manage equipment for company {1} without permission", new Object[]{user.getId(), company.getId()});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to manage equipment for this company.");
         }
     }
