@@ -4,6 +4,7 @@ import com.ga.arqemio.model.TaskAssignment;
 import com.ga.arqemio.model.request.TaskAssignmentRequest;
 import com.ga.arqemio.model.response.TaskAssignmentResponse;
 import com.ga.arqemio.service.TaskAssignmentService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +17,7 @@ public class TaskAssignmentController {
     private TaskAssignmentService taskAssignmentService;
 
     @PostMapping("/{taskId}/assignments")
-    public ResponseEntity<TaskAssignmentResponse> assignWorker(@PathVariable Long taskId, @RequestBody TaskAssignmentRequest taskAssignmentRequest) {
+    public ResponseEntity<TaskAssignmentResponse> assignWorker(@PathVariable Long taskId, @Valid @RequestBody TaskAssignmentRequest taskAssignmentRequest) {
         TaskAssignment taskAssignment = taskAssignmentService.assignWorker(
                 taskId,
                 taskAssignmentRequest.getWorkerMembershipId(),
