@@ -5,6 +5,7 @@ import com.ga.arqemio.model.request.ProjectUpdateRequest;
 import com.ga.arqemio.model.request.ProjectUpdateReviewRequest;
 import com.ga.arqemio.model.response.ProjectUpdateResponse;
 import com.ga.arqemio.service.ProjectUpdateService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +21,7 @@ public class ProjectUpdateController {
     private ProjectUpdateService projectUpdateService;
 
     @PostMapping
-    public ResponseEntity<ProjectUpdateResponse> createProjectUpdate(@RequestBody ProjectUpdateRequest projectUpdateRequest){
+    public ResponseEntity<ProjectUpdateResponse> createProjectUpdate(@Valid @RequestBody ProjectUpdateRequest projectUpdateRequest){
         ProjectUpdate projectUpdate=projectUpdateService.createProjectUpdate(projectUpdateRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(projectUpdate));
     }
@@ -43,7 +44,7 @@ public class ProjectUpdateController {
     }
 
     @PutMapping("/{updateId}")
-    public ProjectUpdateResponse updateProjectUpdate(@PathVariable Long updateId, @RequestBody ProjectUpdateRequest projectUpdateRequest){
+    public ProjectUpdateResponse updateProjectUpdate(@PathVariable Long updateId, @Valid @RequestBody ProjectUpdateRequest projectUpdateRequest){
         ProjectUpdate projectUpdate= projectUpdateService.updateProjectUpdate(updateId,projectUpdateRequest);
         return toResponse(projectUpdate);
     }
