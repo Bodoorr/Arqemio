@@ -4,6 +4,7 @@ import com.ga.arqemio.model.request.UpdateProfileRequest;
 import com.ga.arqemio.model.response.ChangePasswordRequest;
 import com.ga.arqemio.model.response.UserProfileResponse;
 import com.ga.arqemio.service.UserService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +26,7 @@ public class ProfileController {
     }
 
     @PatchMapping("/profile")
-    public ResponseEntity<UserProfileResponse> updateProfile(@RequestBody UpdateProfileRequest updateProfileRequest){
+    public ResponseEntity<UserProfileResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest updateProfileRequest){
         return ResponseEntity.ok(userService.updateProfile(updateProfileRequest));
     }
 
