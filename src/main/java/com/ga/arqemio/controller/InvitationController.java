@@ -7,6 +7,7 @@ import com.ga.arqemio.model.request.InvitationRequest;
 import com.ga.arqemio.model.response.InvitationResponse;
 import com.ga.arqemio.model.response.InvitationValidationResponse;
 import com.ga.arqemio.service.InvitationService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +21,7 @@ public class InvitationController {
 
     @PostMapping
     public ResponseEntity<InvitationResponse> createInvitation(
-            @RequestBody InvitationRequest request) {
+            @Valid @RequestBody InvitationRequest request) {
 
         Invitation invitation = invitationService.createInvitation(
                 request.getEmail(),
@@ -46,7 +47,7 @@ public class InvitationController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerOwner(@RequestBody InvitationRegistrationRequest invitationRegistrationRequest){
+    public ResponseEntity<?> registerOwner(@Valid @RequestBody InvitationRegistrationRequest invitationRegistrationRequest){
         User user= invitationService.registerInvitedUser(invitationRegistrationRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(user);
     }
