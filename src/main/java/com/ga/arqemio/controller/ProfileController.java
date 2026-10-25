@@ -1,7 +1,7 @@
 package com.ga.arqemio.controller;
 
+import com.ga.arqemio.model.request.ChangePasswordRequest;
 import com.ga.arqemio.model.request.UpdateProfileRequest;
-import com.ga.arqemio.model.response.ChangePasswordRequest;
 import com.ga.arqemio.model.response.UserProfileResponse;
 import com.ga.arqemio.service.UserService;
 import jakarta.validation.Valid;
@@ -41,7 +41,7 @@ public class ProfileController {
     }
 
     @PatchMapping("/change-password")
-    public ResponseEntity<String> changePassword(@RequestBody ChangePasswordRequest changePasswordRequest){
+    public ResponseEntity<String> changePassword(@Valid @RequestBody ChangePasswordRequest changePasswordRequest){
         return ResponseEntity.ok(userService.changePassword(changePasswordRequest));
     }
 }

@@ -4,11 +4,7 @@ package com.ga.arqemio.service;
 import com.ga.arqemio.model.CompanyMembership;
 import com.ga.arqemio.model.EmailDetails;
 import com.ga.arqemio.model.User;
-import com.ga.arqemio.model.request.ForgetPasswordRequest;
-import com.ga.arqemio.model.request.LoginRequest;
-import com.ga.arqemio.model.request.ResetPasswordRequest;
-import com.ga.arqemio.model.request.UpdateProfileRequest;
-import com.ga.arqemio.model.response.ChangePasswordRequest;
+import com.ga.arqemio.model.request.*;
 import com.ga.arqemio.model.response.LoginResponse;
 import com.ga.arqemio.model.response.UserMembershipResponse;
 import com.ga.arqemio.model.response.UserProfileResponse;
@@ -97,10 +93,6 @@ public class UserService {
 
         if (!passwordEncoder.matches(changePasswordRequest.getCurrentPassword(), currentUser.getPassword())){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,("Current password is incorrect."));
-        }
-
-        if (changePasswordRequest.getNewPassword() == null || changePasswordRequest.getNewPassword().isBlank()){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"New password cannot be empty.");
         }
 
         currentUser.setPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
