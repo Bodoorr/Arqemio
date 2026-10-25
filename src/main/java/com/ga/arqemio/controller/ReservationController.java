@@ -5,6 +5,7 @@ import com.ga.arqemio.model.request.ReservationRequest;
 import com.ga.arqemio.model.request.ReservationStatusRequest;
 import com.ga.arqemio.model.response.ReservationResponse;
 import com.ga.arqemio.service.ReservationService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +22,7 @@ public class ReservationController {
     private ReservationService reservationService;
 
     @PostMapping
-    public ResponseEntity<ReservationResponse> createReservation(@RequestBody ReservationRequest reservationRequest){
+    public ResponseEntity<ReservationResponse> createReservation(@Valid @RequestBody ReservationRequest reservationRequest){
         Reservation reservation= reservationService.createReservation(reservationRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(reservation));
     }
@@ -43,7 +44,7 @@ public class ReservationController {
     }
 
     @PutMapping("/{reservationId}")
-    public ResponseEntity<ReservationResponse> updateReservation(@PathVariable Long reservationId, @RequestBody ReservationRequest reservationRequest){
+    public ResponseEntity<ReservationResponse> updateReservation(@PathVariable Long reservationId, @Valid @RequestBody ReservationRequest reservationRequest){
         Reservation reservation= reservationService.updateReservation(reservationId,reservationRequest);
         return ResponseEntity.ok(toResponse(reservation));
     }
@@ -55,7 +56,7 @@ public class ReservationController {
     }
 
     @PatchMapping("/{reservationId}/status")
-    public ResponseEntity<ReservationResponse> updateReservationStatus(@PathVariable Long reservationId, @RequestBody ReservationStatusRequest reservationStatusRequest){
+    public ResponseEntity<ReservationResponse> updateReservationStatus(@PathVariable Long reservationId, @Valid @RequestBody ReservationStatusRequest reservationStatusRequest){
         Reservation reservation= reservationService.updateReservationStatus(reservationId, reservationStatusRequest.getStatus());
         return ResponseEntity.ok(toResponse(reservation));
     }

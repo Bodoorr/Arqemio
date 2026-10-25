@@ -4,6 +4,7 @@ import com.ga.arqemio.model.Company;
 import com.ga.arqemio.model.request.CompanyRequest;
 import com.ga.arqemio.model.response.CompanyResponse;
 import com.ga.arqemio.service.CompanyService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ public class CompanyController {
     private CompanyService companyService;
 
     @PostMapping
-    public ResponseEntity<CompanyResponse> creatCompany(@RequestBody CompanyRequest companyRequest){
+    public ResponseEntity<CompanyResponse> createCompany(@Valid @RequestBody CompanyRequest companyRequest){
         Company company= companyService.createCompany(companyRequest);
 
         CompanyResponse companyResponse= new CompanyResponse(
