@@ -21,20 +21,7 @@ public class ExpenseController {
     @PostMapping
     public ResponseEntity<ExpenseResponse> createExpense(@RequestBody ExpenseRequest expenseRequest){
         Expense expense= expenseService.createExpense(expenseRequest);
-        ExpenseResponse expenseResponse=new ExpenseResponse(
-                expense.getId(),
-                expense.getProject().getId(),
-                expense.getProject().getName(),
-                expense.getMember().getId(),
-                expense.getMember().getUser().getName(),
-                expense.getTitle(),
-                expense.getAmount(),
-                expense.getCategory(),
-                expense.getDescription(),
-                expense.getStatus(),
-                expense.getExpenseDateTime()
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(expenseResponse);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(expense));
     }
 
     @GetMapping
@@ -43,20 +30,7 @@ public class ExpenseController {
         List<ExpenseResponse> expenseResponses= new ArrayList<>();
 
         for (Expense expense:expenses){
-            ExpenseResponse expenseResponse=new ExpenseResponse(
-                    expense.getId(),
-                    expense.getProject().getId(),
-                    expense.getProject().getName(),
-                    expense.getMember().getId(),
-                    expense.getMember().getUser().getName(),
-                    expense.getTitle(),
-                    expense.getAmount(),
-                    expense.getCategory(),
-                    expense.getDescription(),
-                    expense.getStatus(),
-                    expense.getExpenseDateTime()
-            );
-            expenseResponses.add(expenseResponse);
+            expenseResponses.add(toResponse(expense));
         }
         return ResponseEntity.ok(expenseResponses);
     }
@@ -64,46 +38,23 @@ public class ExpenseController {
     @GetMapping("/{expenseId}")
     public ResponseEntity<ExpenseResponse> getExpense(@PathVariable Long expenseId){
         Expense expense= expenseService.getExpenseById(expenseId);
-        ExpenseResponse expenseResponse=new ExpenseResponse(
-                expense.getId(),
-                expense.getProject().getId(),
-                expense.getProject().getName(),
-                expense.getMember().getId(),
-                expense.getMember().getUser().getName(),
-                expense.getTitle(),
-                expense.getAmount(),
-                expense.getCategory(),
-                expense.getDescription(),
-                expense.getStatus(),
-                expense.getExpenseDateTime()
-        );
-        return ResponseEntity.ok(expenseResponse);
+        return ResponseEntity.ok(toResponse(expense));
     }
 
     @PutMapping("/{expenseId}")
     public ResponseEntity<ExpenseResponse> updateExpense(@PathVariable Long expenseId, @RequestBody ExpenseRequest expenseRequest){
         Expense expense= expenseService.updateExpense(expenseId,expenseRequest);
-        ExpenseResponse expenseResponse=new ExpenseResponse(
-                expense.getId(),
-                expense.getProject().getId(),
-                expense.getProject().getName(),
-                expense.getMember().getId(),
-                expense.getMember().getUser().getName(),
-                expense.getTitle(),
-                expense.getAmount(),
-                expense.getCategory(),
-                expense.getDescription(),
-                expense.getStatus(),
-                expense.getExpenseDateTime()
-        );
-
-        return ResponseEntity.ok(expenseResponse);
+        return ResponseEntity.ok(toResponse(expense));
     }
 
     @DeleteMapping("/{expenseId}")
     public ResponseEntity<ExpenseResponse> archiveExpense(@PathVariable Long expenseId){
         Expense expense= expenseService.archiveExpense(expenseId);
-        ExpenseResponse expenseResponse=new ExpenseResponse(
+        return ResponseEntity.ok(toResponse(expense));
+    }
+
+    private ExpenseResponse toResponse(Expense expense){
+        return new ExpenseResponse(
                 expense.getId(),
                 expense.getProject().getId(),
                 expense.getProject().getName(),
@@ -116,9 +67,6 @@ public class ExpenseController {
                 expense.getStatus(),
                 expense.getExpenseDateTime()
         );
-
-        return ResponseEntity.ok(expenseResponse);
     }
-
 }
 

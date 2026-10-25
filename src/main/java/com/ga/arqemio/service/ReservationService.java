@@ -34,14 +34,12 @@ public class ReservationService {
         User currentUser= getCurrentLoggedInUser();
         Equipment equipment= equipmentRepository.findById(reservationRequest.getEquipmentId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
         Project project= projectRepository.findById(reservationRequest.getProjectId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
-        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), equipment.getCompany().getId(), "OWNER","ACTIVE");
-        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), currentUser.getId(), "ACTIVE");
 
         if (!equipment.getCompany().getId().equals(project.getCompany().getId())){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Equipment and project must belong to the same company.");
         }
 
-        if (!isCompanyOwner && !isAssignedManager){
+        if (!canManageReservation(currentUser, project)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,"You're not allowed to reserve equipment for this project.");
         }
 
@@ -56,27 +54,10 @@ public class ReservationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation quantity must be greater than 0.");
         }
 
-        if (reservationRequest.getEndDateTime().isBefore(reservationRequest.getStartDateTime()) || reservationRequest.getEndDateTime().equals(reservationRequest.getStartDateTime())){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End date and time must be after start date and time.");
-        }
+        validateReservationDates(reservationRequest.getStartDateTime(),reservationRequest.getEndDateTime());
 
+        int availableQuantity= calculateAvailableQuantity(equipment, reservationRequest.getStartDateTime(), reservationRequest.getEndDateTime());
 
-        //Reservation Logic
-        List<Reservation> existingReservations= reservationRepository.findByEquipmentId(equipment.getId());
-
-        int reservedQuantity=0;
-
-        for (Reservation existingReservation: existingReservations){
-            if (existingReservation.getStatus().equals("RESERVED")){
-                boolean overlaps= reservationRequest.getStartDateTime().isBefore(existingReservation.getEndDateTime()) &&
-                        reservationRequest.getEndDateTime().isAfter(existingReservation.getStartDateTime());
-                if (overlaps){
-                    reservedQuantity += existingReservation.getQuantity();
-                }
-            }
-        }
-
-        int availableQuantity= equipment.getQuantity()-reservedQuantity;
         if (reservationRequest.getQuantity()> availableQuantity){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");
         }
@@ -102,20 +83,15 @@ public class ReservationService {
 
     public List<Reservation> getAllReservation(){
         User currentUser= getCurrentLoggedInUser();
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin().equals(true);
-        if (isPlatformAdmin){
-            return reservationRepository.findAll();
-        }
         return reservationRepository.findByProjectCompanyMembershipsUserIdAndProjectCompanyMembershipsStatus(currentUser.getId(), "ACTIVE");
     }
 
     public Reservation getReservationById(Long reservationId){
         User currentUser=getCurrentLoggedInUser();
-        Reservation reservation= reservationRepository.findById(reservationId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reservation not found."));
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin();
-        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), reservation.getProject().getCompany().getId(), "ACTIVE");
+        Reservation reservation= findReservationById(reservationId);
 
-        if (!isActiveMember && !isPlatformAdmin){
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), reservation.getProject().getCompany().getId(), "ACTIVE");
+        if (!isActiveMember){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this reservation.");
         }
 
@@ -124,11 +100,9 @@ public class ReservationService {
 
     public Reservation updateReservation(Long reservationId, ReservationRequest reservationRequest){
         User currentUser= getCurrentLoggedInUser();
-        Reservation reservation= reservationRepository.findById(reservationId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reservation not found."));
-        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(),reservation.getProject().getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(reservation.getProject().getId(), currentUser.getId(), "ACTIVE");
+        Reservation reservation= findReservationById(reservationId);
 
-        if (!isCompanyOwner && !isAssignedManager){
+        if (!canManageReservation(currentUser, reservation.getProject())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this reservation.");
         }
 
@@ -136,9 +110,7 @@ public class ReservationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation quantity must be greater than 0.");
         }
 
-        if (reservationRequest.getEndDateTime().isBefore(reservationRequest.getStartDateTime()) || reservationRequest.getEndDateTime().equals(reservationRequest.getStartDateTime())){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End date and time must be after start date and time.");
-        }
+        validateReservationDates(reservationRequest.getStartDateTime(), reservationRequest.getEndDateTime());
 
         List<Reservation> existingReservations= reservationRepository.findByEquipmentId(reservation.getEquipment().getId());
         int reservedQuantity=0;
@@ -170,11 +142,9 @@ public class ReservationService {
 
     public Reservation cancelReservation(Long reservationId){
         User currentUser= getCurrentLoggedInUser();
-        Reservation reservation= reservationRepository.findById(reservationId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reservation not found."));
-        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(),reservation.getProject().getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(reservation.getProject().getId(), currentUser.getId(), "ACTIVE");
+        Reservation reservation= findReservationById(reservationId);
 
-        if (!isCompanyOwner && !isAssignedManager){
+        if (!canManageReservation(currentUser, reservation.getProject())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to cancel this reservation.");
         }
 
@@ -195,7 +165,7 @@ public class ReservationService {
 
     public Reservation updateReservationStatus(Long reservationId, String status){
         User currentUser= getCurrentLoggedInUser();
-        Reservation reservation= reservationRepository.findById(reservationId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Reservation not found."));
+        Reservation reservation= findReservationById(reservationId);
         CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(), reservation.getProject().getCompany().getId(), "ACTIVE").orElseThrow(()-> new ResponseStatusException(HttpStatus.FORBIDDEN, "Active company membership not found."));
         boolean isAssignedWorker= projectRepository.existsByIdAndWorkersId(reservation.getProject().getId(), membership.getId());
 
@@ -217,23 +187,43 @@ public class ReservationService {
 
     public int getAvailableQuantity(Long equipmentId, LocalDateTime startDateTime, LocalDateTime endDateTime){
         Equipment equipment= equipmentRepository.findById(equipmentId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
+        validateReservationDates(startDateTime,endDateTime);
+
+        return calculateAvailableQuantity(equipment,startDateTime,endDateTime);
+    }
+
+    private boolean canManageReservation(User user, Project project){
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(),project.getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
+
+        return isCompanyOwner || isAssignedManager;
+    }
+
+    private Reservation findReservationById(Long reservationId){
+        return reservationRepository.findById(reservationId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reservation not found."));
+    }
+
+    private void validateReservationDates(LocalDateTime startDateTime, LocalDateTime endDateTime){
         if (endDateTime.isBefore(startDateTime) || endDateTime.equals(startDateTime)){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End date and time must be after start date and time.");
         }
-
-        List<Reservation> existingReservations= reservationRepository.findByEquipmentId(equipmentId);
-        int reservedQuantity= 0;
-        for (Reservation existingReservation: existingReservations){
-                if (existingReservation.getStatus().equals("RESERVED")){
-                boolean overlaps= startDateTime.isBefore(existingReservation.getEndDateTime()) && endDateTime.isAfter(existingReservation.getStartDateTime());
-                    if (overlaps){
-                        reservedQuantity+=existingReservation.getQuantity();
-                    }
-                }
-        }
-        return equipment.getQuantity()- reservedQuantity;
     }
 
+    private int calculateAvailableQuantity(Equipment equipment, LocalDateTime startDateTime, LocalDateTime endDateTime){
+        //Reservation Logic
+        List<Reservation> existingReservations= reservationRepository.findByEquipmentId(equipment.getId());
+        int reservedQuantity=0;
 
+        for (Reservation existingReservation: existingReservations){
+            if (existingReservation.getStatus().equals("RESERVED")){
+                boolean overlaps= startDateTime.isBefore(existingReservation.getEndDateTime()) &&
+                        endDateTime.isAfter(existingReservation.getStartDateTime());
+                if (overlaps){
+                    reservedQuantity += existingReservation.getQuantity();
+                }
+            }
+        }
+    return equipment.getQuantity() - reservedQuantity;
+    }
 
 }

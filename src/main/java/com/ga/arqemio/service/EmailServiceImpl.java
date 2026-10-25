@@ -2,7 +2,6 @@ package com.ga.arqemio.service;
 
 import com.ga.arqemio.model.EmailDetails;
 import java.io.File;
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 import org.springframework.beans.factory.annotation.Autowired;

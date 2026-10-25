@@ -6,8 +6,10 @@ import com.ga.arqemio.model.request.CompanyRequest;
 import com.ga.arqemio.repository.CompanyRepository;
 import com.ga.arqemio.security.MyUserDetails;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @AllArgsConstructor
@@ -21,9 +23,8 @@ public class CompanyService {
 
     public Company createCompany(CompanyRequest companyRequest){
         User currentUser= getCurrentLoggedInUser();
-
         if (!currentUser.getIsPlatformAdmin()){
-            throw new RuntimeException("Only Platform Admin can create companies.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only Platform Admin can create companies.");
         }
 
         Company company=new Company();

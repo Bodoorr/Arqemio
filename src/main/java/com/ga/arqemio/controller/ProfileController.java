@@ -1,6 +1,5 @@
 package com.ga.arqemio.controller;
 
-import com.ga.arqemio.model.User;
 import com.ga.arqemio.model.request.UpdateProfileRequest;
 import com.ga.arqemio.model.response.ChangePasswordRequest;
 import com.ga.arqemio.model.response.UserProfileResponse;

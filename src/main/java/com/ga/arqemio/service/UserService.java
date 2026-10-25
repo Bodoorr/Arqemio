@@ -46,7 +46,7 @@ public class UserService {
     private final AuthenticationManager authenticationManager;
     private final CompanyMembershipRepository companyMembershipRepository;
     private final FileAttachmentService fileAttachmentService;
-    private EmailService emailService;
+    private final EmailService emailService;
 
     @Autowired
     public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, CompanyMembershipRepository companyMembershipRepository, FileAttachmentService fileAttachmentService, EmailService emailService) {
@@ -67,10 +67,6 @@ public class UserService {
         } else {
             throw new RuntimeException("User with email address " + userObject.getEmail() + " already" + " exists.");
         }
-    }
-
-    public User findUserByEmail(String email) {
-        return userRepository.findUserByEmail(email).orElseThrow(() -> new RuntimeException("User not found."));
     }
 
     public ResponseEntity<?> loginUser(LoginRequest loginRequest) {
@@ -199,31 +195,13 @@ public class UserService {
     public UserProfileResponse getProfile() {
         User currentUser = getCurrentLoggedInUser();
         List<UserMembershipResponse> membershipResponses = new ArrayList<>();
-
         List<CompanyMembership> memberships = companyMembershipRepository.findByUserIdAndStatus(currentUser.getId(), "ACTIVE");
 
         for (CompanyMembership membership : memberships) {
-            UserMembershipResponse membershipResponse = new UserMembershipResponse(
-                    membership.getId(),
-                    membership.getCompany().getId(),
-                    membership.getCompany().getName(),
-                    membership.getRole(),
-                    membership.getStatus()
-            );
-
-            membershipResponses.add(membershipResponse);
+            membershipResponses.add(toMembershipResponse(membership));
         }
 
-        UserProfileResponse userProfileResponse = new UserProfileResponse(
-                currentUser.getId(),
-                currentUser.getName(),
-                currentUser.getEmail(),
-                currentUser.getMobileNumber(),
-                currentUser.getProfilePicture(),
-                membershipResponses
-        );
-
-        return userProfileResponse;
+        return toProfileResponse(currentUser, membershipResponses);
     }
 
     public UserProfileResponse updateProfile(UpdateProfileRequest updateProfileRequest) {
@@ -248,9 +226,9 @@ public class UserService {
         employee.setName(name);
         employee.setMobileNumber(mobileNumber);
         if (email!=null && !email.isBlank()){
-        if (!employee.getEmail().equals(email) && userRepository.existsByEmail(email)) {
+            if (!employee.getEmail().equals(email) && userRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
-        }
+            }
             employee.setEmail(email);
         }
         if (profilePicture != null && !profilePicture.isEmpty()) {
@@ -260,25 +238,9 @@ public class UserService {
         userRepository.save(employee);
 
         List<UserMembershipResponse> membershipResponses = new ArrayList<>();
-        UserMembershipResponse membershipResponse = new UserMembershipResponse(
-                employeeMembership.getId(),
-                employeeMembership.getCompany().getId(),
-                employeeMembership.getCompany().getName(),
-                employeeMembership.getRole(),
-                employeeMembership.getStatus()
-        );
+        membershipResponses.add(toMembershipResponse(employeeMembership));
 
-        membershipResponses.add(membershipResponse);
-
-        UserProfileResponse employeeProfile = new UserProfileResponse(
-                employee.getId(),
-                employee.getName(),
-                employee.getEmail(),
-                employee.getMobileNumber(),
-                employee.getProfilePicture(),
-                membershipResponses
-        );
-        return employeeProfile;
+        return toProfileResponse(employee, membershipResponses);
     }
 
     public List<UserProfileResponse> getEmployeeProfiles(Long companyId){
@@ -294,27 +256,31 @@ public class UserService {
         for (CompanyMembership membership: memberships){
             User employee= membership.getUser();
             List<UserMembershipResponse> membershipResponses= new ArrayList<>();
-                    UserMembershipResponse membershipResponse=new UserMembershipResponse(
-                    membership.getId(),
-                    membership.getCompany().getId(),
-                    membership.getCompany().getName(),
-                    membership.getRole(),
-                    membership.getStatus()
-            );
-
-            membershipResponses.add(membershipResponse);
-
-            UserProfileResponse employeeProfile= new UserProfileResponse(
-                    employee.getId(),
-                    employee.getName(),
-                    employee.getEmail(),
-                    employee.getMobileNumber(),
-                    employee.getProfilePicture(),
-                    membershipResponses
-            );
-            employeeProfiles.add(employeeProfile);
+            membershipResponses.add(toMembershipResponse(membership));
+            employeeProfiles.add(toProfileResponse(employee, membershipResponses));
         }
         return employeeProfiles;
+    }
+
+    private UserMembershipResponse toMembershipResponse(CompanyMembership membership){
+        return new UserMembershipResponse(
+                membership.getId(),
+                membership.getCompany().getId(),
+                membership.getCompany().getName(),
+                membership.getRole(),
+                membership.getStatus()
+        );
+    }
+
+    private UserProfileResponse toProfileResponse(User user, List<UserMembershipResponse> membershipResponses){
+        return new UserProfileResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getMobileNumber(),
+                user.getProfilePicture(),
+                membershipResponses
+        );
     }
 
 }

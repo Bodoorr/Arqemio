@@ -11,11 +11,5 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             String status
     );
 
-    List<Reservation> findByEquipmentIdAndStatus(
-            Long equipmentId,
-            String status
-    );
-
     List<Reservation> findByEquipmentId(Long equipmentId);
-
 }

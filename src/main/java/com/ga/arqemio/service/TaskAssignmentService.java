@@ -33,12 +33,10 @@ public class TaskAssignmentService {
 
     public TaskAssignment assignWorker(Long taskId, Long workerMembershipId, LocalDateTime assignedAt, LocalDateTime dueAt) {
         User currentUser = getCurrentLoggedInUser();
-        Task task = taskRepository.findById(taskId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "task not found."));
+        Task task= findTaskById(taskId);
         CompanyMembership worker = companyMembershipRepository.findById(workerMembershipId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker membership not found."));
-        boolean isCompanyOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), task.getProject().getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isAssignedManager = projectRepository.existsByIdAndManagersUserIdAndManagersStatus(task.getProject().getId(), currentUser.getId(), "ACTIVE");
 
-        if (!isCompanyOwner && !isAssignedManager) {
+        if (!canManageTaskAssignments(currentUser, task)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to assign workers to this task.");
         }
 
@@ -88,11 +86,9 @@ public class TaskAssignmentService {
 
     public TaskAssignment removeAssignedWorker(Long taskId, Long workerMembershipId) {
         User currentUser = getCurrentLoggedInUser();
-        Task task = taskRepository.findById(taskId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found."));
-        boolean isCompanyOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), task.getProject().getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isAssignedManager = projectRepository.existsByIdAndManagersUserIdAndManagersStatus(task.getProject().getId(), currentUser.getId(), "ACTIVE");
+        Task task = findTaskById(taskId);
 
-        if (!isCompanyOwner && !isAssignedManager) {
+        if (!canManageTaskAssignments(currentUser, task)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to remove workers from this task.");
         }
 
@@ -104,6 +100,16 @@ public class TaskAssignmentService {
         return taskAssignment;
     }
 
+    private boolean canManageTaskAssignments(User user, Task task){
+        boolean isCompanyOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), task.getProject().getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isAssignedManager = projectRepository.existsByIdAndManagersUserIdAndManagersStatus(task.getProject().getId(), user.getId(), "ACTIVE");
+
+        return isCompanyOwner || isAssignedManager;
+    }
+
+    private Task findTaskById(Long taskId){
+        return taskRepository.findById(taskId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found."));
+    }
 
 
 }

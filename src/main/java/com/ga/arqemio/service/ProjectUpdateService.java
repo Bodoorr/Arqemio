@@ -63,12 +63,8 @@ public class ProjectUpdateService {
     public List<ProjectUpdate> getProjectUpdates(Long projectId){
         User currentUser= getCurrentLoggedInUser();
         Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin().equals(true);
-        boolean isCompanyOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isAssignedManager = projectRepository.existsByIdAndManagersUserIdAndManagersStatus(projectId, currentUser.getId(), "ACTIVE");
-        boolean isAssignedWorker = projectRepository.existsByIdAndWorkersUserIdAndWorkersStatus(projectId, currentUser.getId(), "ACTIVE");
 
-        if (!isPlatformAdmin && !isCompanyOwner && !isAssignedManager && !isAssignedWorker){
+        if (!canViewProjectUpdate(currentUser, project)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,"You're not allowed to view updates for this project.");
         }
 
@@ -77,13 +73,9 @@ public class ProjectUpdateService {
 
     public ProjectUpdate getProjectUpdateById(Long updateId){
         User currentUser= getCurrentLoggedInUser();
-        ProjectUpdate projectUpdate= projectUpdateRepository.findById(updateId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Project update not found."));
-        boolean isPlatformAdmin= currentUser.getIsPlatformAdmin().equals(true);
-        boolean isCompanyOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), projectUpdate.getProject().getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isAssignedManager = projectRepository.existsByIdAndManagersUserIdAndManagersStatus(projectUpdate.getProject().getId(), currentUser.getId(), "ACTIVE");
-        boolean isAssignedWorker = projectRepository.existsByIdAndWorkersUserIdAndWorkersStatus(projectUpdate.getProject().getId(), currentUser.getId(), "ACTIVE");
+        ProjectUpdate projectUpdate= findProjectUpdateById(updateId);
 
-        if (!isPlatformAdmin && !isCompanyOwner && !isAssignedManager && !isAssignedWorker) {
+        if (!canViewProjectUpdate(currentUser, projectUpdate.getProject())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this project update.");
         }
 
@@ -92,12 +84,9 @@ public class ProjectUpdateService {
 
     public ProjectUpdate reviewProjectUpdate(Long updateId, String status, String reviewNote){
         User currentUser= getCurrentLoggedInUser();
-        ProjectUpdate projectUpdate= projectUpdateRepository.findById(updateId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project update not found."));
+        ProjectUpdate projectUpdate= findProjectUpdateById(updateId);
         Project project= projectUpdate.getProject();
-        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(),project.getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), currentUser.getId(), "ACTIVE");
-
-        if (!isCompanyOwner && !isAssignedManager){
+        if (!canManageProjectUpdate(currentUser, project)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to review this project update.");
         }
 
@@ -123,7 +112,7 @@ public class ProjectUpdateService {
     public ProjectUpdate updateProjectUpdate(Long updateId, ProjectUpdateRequest projectUpdateRequest){
         User currentUser= getCurrentLoggedInUser();
 
-        ProjectUpdate projectUpdate= projectUpdateRepository.findById(updateId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Project update not found."));
+        ProjectUpdate projectUpdate= findProjectUpdateById(updateId);
 
         if (!projectUpdate.getUpdatedBy().getUser().getId().equals(currentUser.getId())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this project update.");
@@ -141,7 +130,7 @@ public class ProjectUpdateService {
 
     public ProjectUpdate archiveProjectUpdate(Long updateId){
         User currentUser= getCurrentLoggedInUser();
-        ProjectUpdate projectUpdate= projectUpdateRepository.findById(updateId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project update not found."));
+        ProjectUpdate projectUpdate= findProjectUpdateById(updateId);
 
         if (!projectUpdate.getUpdatedBy().getUser().getId().equals(currentUser.getId())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to archive this project update.");
@@ -154,5 +143,25 @@ public class ProjectUpdateService {
         projectUpdate.setStatus("ARCHIVED");
 
         return projectUpdateRepository.save(projectUpdate);
+    }
+
+    private ProjectUpdate findProjectUpdateById(Long updateId){
+        return projectUpdateRepository.findById(updateId)
+                .orElseThrow(()-> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Project update not found."));
+    }
+
+    private boolean canManageProjectUpdate(User user, Project project){
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(),project.getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
+
+        return isAssignedManager || isCompanyOwner;
+    }
+
+    private boolean canViewProjectUpdate(User user, Project project){
+        boolean canManage= canManageProjectUpdate(user,project);
+        boolean isAssignedWorker = projectRepository.existsByIdAndWorkersUserIdAndWorkersStatus(project.getId(), user.getId(), "ACTIVE");
+
+        return canManage || isAssignedWorker;
     }
 }

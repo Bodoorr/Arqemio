@@ -27,20 +27,7 @@ public class ProjectController {
     @PostMapping
     public ResponseEntity<ProjectResponse> createProject(@RequestBody ProjectRequest projectRequest){
         Project project= projectService.createProject(projectRequest);
-        ProjectResponse projectResponse=new ProjectResponse(
-                project.getId(),
-                project.getCompany().getId(),
-                project.getCompany().getName(),
-                project.getName(),
-                project.getDescription(),
-                project.getLocation(),
-                project.getStartDate(),
-                project.getExpectedEndDate(),
-                project.getBudget(),
-                project.getStatus()
-                );
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(projectResponse);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(project));
 
     }
 
@@ -49,19 +36,7 @@ public class ProjectController {
         List<Project> projects= projectService.getAllProjects();
         List<ProjectResponse> projectResponses= new ArrayList<>();
         for (Project project: projects){
-            ProjectResponse projectResponse= new ProjectResponse(
-                    project.getId(),
-                    project.getCompany().getId(),
-                    project.getCompany().getName(),
-                    project.getName(),
-                    project.getDescription(),
-                    project.getLocation(),
-                    project.getStartDate(),
-                    project.getExpectedEndDate(),
-                    project.getBudget(),
-                    project.getStatus()
-            );
-            projectResponses.add(projectResponse);
+            projectResponses.add(toResponse(project));
         }
 
          return ResponseEntity.ok(projectResponses);
@@ -87,48 +62,48 @@ public class ProjectController {
     @GetMapping("/{projectId}")
     public ResponseEntity<ProjectResponse> getProject(@PathVariable Long projectId){
         Project project= projectService.getProjectById(projectId);
-
-        ProjectResponse projectResponse=new ProjectResponse(
-                project.getId(),
-                project.getCompany().getId(),
-                project.getCompany().getName(),
-                project.getName(),
-                project.getDescription(),
-                project.getLocation(),
-                project.getStartDate(),
-                project.getExpectedEndDate(),
-                project.getBudget(),
-                project.getStatus()
-        );
-        return ResponseEntity.ok(projectResponse);
+        return ResponseEntity.ok(toResponse(project));
     }
 
     @PutMapping("/{projectId}")
     public ResponseEntity<ProjectResponse> updateProject(@PathVariable Long projectId, @RequestBody ProjectRequest projectRequest){
         Project project= projectService.updateProject(projectId, projectRequest);
-
-        ProjectResponse projectResponse=new ProjectResponse(
-                project.getId(),
-                project.getCompany().getId(),
-                project.getCompany().getName(),
-                project.getName(),
-                project.getDescription(),
-                project.getLocation(),
-                project.getStartDate(),
-                project.getExpectedEndDate(),
-                project.getBudget(),
-                project.getStatus()
-        );
-          return ResponseEntity.ok(projectResponse);
+          return ResponseEntity.ok(toResponse(project));
     }
 
     @DeleteMapping("/{projectId}")
     public ResponseEntity<ProjectResponse> archiveProject(
             @PathVariable Long projectId) {
-
         Project project = projectService.archiveProject(projectId);
+        return ResponseEntity.ok(toResponse(project));
+    }
 
-        ProjectResponse projectResponse = new ProjectResponse(
+    @PostMapping("/{projectId}/managers/{membershipId}")
+    public ResponseEntity<ProjectMemberResponse> assignManager(@PathVariable Long projectId, @PathVariable Long membershipId){
+        CompanyMembership manager = projectService.assignManager(projectId,membershipId);
+        return ResponseEntity.ok(toMemberResponse(manager, projectId));
+    }
+
+    @DeleteMapping("/{projectId}/managers/{membershipId}")
+    public ResponseEntity<ProjectMemberResponse> removeManager(@PathVariable Long projectId, @PathVariable Long membershipId){
+        CompanyMembership manager= projectService.removeManager(projectId,membershipId);
+        return ResponseEntity.ok(toMemberResponse(manager, projectId));
+    }
+
+    @PostMapping("/{projectId}/workers/{membershipId}")
+    public ResponseEntity<ProjectMemberResponse> assignWorker(@PathVariable Long projectId, @PathVariable Long membershipId){
+        CompanyMembership worker = projectService.assignWorker(projectId,membershipId);
+        return ResponseEntity.ok(toMemberResponse(worker, projectId));
+    }
+
+    @DeleteMapping("/{projectId}/workers/{membershipId}")
+    public ResponseEntity<ProjectMemberResponse> removeWorker(@PathVariable Long projectId, @PathVariable Long membershipId){
+        CompanyMembership worker= projectService.removeWorker(projectId,membershipId);
+        return ResponseEntity.ok(toMemberResponse(worker, projectId));
+    }
+
+    private ProjectResponse toResponse(Project project){
+        return new ProjectResponse(
                 project.getId(),
                 project.getCompany().getId(),
                 project.getCompany().getName(),
@@ -140,69 +115,18 @@ public class ProjectController {
                 project.getBudget(),
                 project.getStatus()
         );
-
-        return ResponseEntity.ok(projectResponse);
     }
 
-    @PostMapping("/{projectId}/managers/{membershipId}")
-    public ResponseEntity<ProjectMemberResponse> assignManager(@PathVariable Long projectId, @PathVariable Long membershipId){
-        CompanyMembership manager = projectService.assignManager(projectId,membershipId);
-
-        ProjectMemberResponse projectMemberResponse=new ProjectMemberResponse(
+    private ProjectMemberResponse toMemberResponse(CompanyMembership member, Long projectId){
+        return new ProjectMemberResponse(
                 projectId,
-                manager.getCompany().getName(),
-                manager.getId(),
-                manager.getUser().getName(),
-                manager.getRole()
+                member.getCompany().getName(),
+                member.getId(),
+                member.getUser().getName(),
+                member.getRole()
         );
-
-        return ResponseEntity.ok(projectMemberResponse);
     }
 
-    @DeleteMapping("/{projectId}/managers/{membershipId}")
-    public ResponseEntity<ProjectMemberResponse> removeManager(@PathVariable Long projectId, @PathVariable Long membershipId){
-        CompanyMembership manager= projectService.removeManager(projectId,membershipId);
-
-        ProjectMemberResponse projectMemberResponse= new ProjectMemberResponse(
-                projectId,
-                manager.getCompany().getName(),
-                manager.getId(),
-                manager.getUser().getName(),
-                manager.getRole()
-        );
-
-        return ResponseEntity.ok(projectMemberResponse);
-    }
-
-    @PostMapping("/{projectId}/workers/{membershipId}")
-    public ResponseEntity<ProjectMemberResponse> assignWorker(@PathVariable Long projectId, @PathVariable Long membershipId){
-        CompanyMembership worker = projectService.assignWorker(projectId,membershipId);
-
-        ProjectMemberResponse projectMemberResponse=new ProjectMemberResponse(
-                projectId,
-                worker.getCompany().getName(),
-                worker.getId(),
-                worker.getUser().getName(),
-                worker.getRole()
-        );
-
-        return ResponseEntity.ok(projectMemberResponse);
-    }
-
-    @DeleteMapping("/{projectId}/workers/{membershipId}")
-    public ResponseEntity<ProjectMemberResponse> removeWorker(@PathVariable Long projectId, @PathVariable Long membershipId){
-        CompanyMembership worker= projectService.removeWorker(projectId,membershipId);
-
-        ProjectMemberResponse projectMemberResponse= new ProjectMemberResponse(
-                projectId,
-                worker.getCompany().getName(),
-                worker.getId(),
-                worker.getUser().getName(),
-                worker.getRole()
-        );
-
-        return ResponseEntity.ok(projectMemberResponse);
-    }
 
 
 

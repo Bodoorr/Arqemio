@@ -21,37 +21,13 @@ public class FileAttachmentController {
     @PostMapping
     public ResponseEntity<FileAttachmentResponse> createFileAttachment(@RequestParam("file") MultipartFile file, @RequestParam Long projectId, @RequestParam(required = false) Long projectUpdateId, @RequestParam(required = false) Long expenseId){
         FileAttachment fileAttachment= fileAttachmentService.createFileAttachment(file,projectId,projectUpdateId,expenseId);
-        FileAttachmentResponse fileAttachmentResponse=new FileAttachmentResponse(
-                fileAttachment.getId(),
-                fileAttachment.getProject().getId(),
-                fileAttachment.getExpense() != null ? fileAttachment.getExpense().getId() : null,
-                fileAttachment.getProjectUpdate() != null ? fileAttachment.getProjectUpdate().getId() : null,
-                fileAttachment.getFileUrl(),
-                fileAttachment.getFileName(),
-                fileAttachment.getFileType(),
-                fileAttachment.getUploadedBy().getId(),
-                fileAttachment.getUploadedBy().getUser().getName(),
-                fileAttachment.getStatus()
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(fileAttachmentResponse);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(fileAttachment));
     }
 
     @GetMapping("/{attachmentId}")
     public ResponseEntity<FileAttachmentResponse> getFileAttachment(@PathVariable Long attachmentId){
         FileAttachment fileAttachment= fileAttachmentService.getFileAttachmentById(attachmentId);
-        FileAttachmentResponse fileAttachmentResponse=new FileAttachmentResponse(
-                fileAttachment.getId(),
-                fileAttachment.getProject().getId(),
-                fileAttachment.getExpense() != null ? fileAttachment.getExpense().getId() : null,
-                fileAttachment.getProjectUpdate() != null ? fileAttachment.getProjectUpdate().getId() : null,
-                fileAttachment.getFileUrl(),
-                fileAttachment.getFileName(),
-                fileAttachment.getFileType(),
-                fileAttachment.getUploadedBy().getId(),
-                fileAttachment.getUploadedBy().getUser().getName(),
-                fileAttachment.getStatus()
-        );
-        return ResponseEntity.ok(fileAttachmentResponse);
+        return ResponseEntity.ok(toResponse(fileAttachment));
     }
 
     @GetMapping("/project/{projectId}")
@@ -60,19 +36,7 @@ public class FileAttachmentController {
         List<FileAttachmentResponse> fileAttachmentResponses= new ArrayList<>();
 
         for (FileAttachment fileAttachment : fileAttachments){
-            FileAttachmentResponse fileAttachmentResponse=new FileAttachmentResponse(
-                    fileAttachment.getId(),
-                    fileAttachment.getProject().getId(),
-                    fileAttachment.getExpense() != null ? fileAttachment.getExpense().getId() : null,
-                    fileAttachment.getProjectUpdate() != null ? fileAttachment.getProjectUpdate().getId() : null,
-                    fileAttachment.getFileUrl(),
-                    fileAttachment.getFileName(),
-                    fileAttachment.getFileType(),
-                    fileAttachment.getUploadedBy().getId(),
-                    fileAttachment.getUploadedBy().getUser().getName(),
-                    fileAttachment.getStatus()
-            );
-            fileAttachmentResponses.add(fileAttachmentResponse);
+            fileAttachmentResponses.add(toResponse(fileAttachment));
         }
         return ResponseEntity.ok(fileAttachmentResponses);
     }
@@ -83,19 +47,7 @@ public class FileAttachmentController {
         List<FileAttachmentResponse> fileAttachmentResponses= new ArrayList<>();
 
         for (FileAttachment fileAttachment : fileAttachments){
-            FileAttachmentResponse fileAttachmentResponse=new FileAttachmentResponse(
-                    fileAttachment.getId(),
-                    fileAttachment.getProject().getId(),
-                    fileAttachment.getExpense() != null ? fileAttachment.getExpense().getId() : null,
-                    fileAttachment.getProjectUpdate() != null ? fileAttachment.getProjectUpdate().getId() : null,
-                    fileAttachment.getFileUrl(),
-                    fileAttachment.getFileName(),
-                    fileAttachment.getFileType(),
-                    fileAttachment.getUploadedBy().getId(),
-                    fileAttachment.getUploadedBy().getUser().getName(),
-                    fileAttachment.getStatus()
-            );
-            fileAttachmentResponses.add(fileAttachmentResponse);
+            fileAttachmentResponses.add(toResponse(fileAttachment));
         }
         return ResponseEntity.ok(fileAttachmentResponses);
     }
@@ -106,19 +58,7 @@ public class FileAttachmentController {
         List<FileAttachmentResponse> fileAttachmentResponses= new ArrayList<>();
 
         for (FileAttachment fileAttachment : fileAttachments){
-            FileAttachmentResponse fileAttachmentResponse=new FileAttachmentResponse(
-                    fileAttachment.getId(),
-                    fileAttachment.getProject().getId(),
-                    fileAttachment.getExpense() != null ? fileAttachment.getExpense().getId() : null,
-                    fileAttachment.getProjectUpdate() != null ? fileAttachment.getProjectUpdate().getId() : null,
-                    fileAttachment.getFileUrl(),
-                    fileAttachment.getFileName(),
-                    fileAttachment.getFileType(),
-                    fileAttachment.getUploadedBy().getId(),
-                    fileAttachment.getUploadedBy().getUser().getName(),
-                    fileAttachment.getStatus()
-            );
-            fileAttachmentResponses.add(fileAttachmentResponse);
+            fileAttachmentResponses.add(toResponse(fileAttachment));
         }
         return ResponseEntity.ok(fileAttachmentResponses);
     }
@@ -126,7 +66,11 @@ public class FileAttachmentController {
     @DeleteMapping("/{attachmentId}")
     public ResponseEntity<FileAttachmentResponse> archiveFileAttachment(@PathVariable Long attachmentId){
         FileAttachment fileAttachment= fileAttachmentService.archiveFileAttachment(attachmentId);
-        FileAttachmentResponse fileAttachmentResponse=new FileAttachmentResponse(
+        return ResponseEntity.ok(toResponse(fileAttachment));
+    }
+
+    private FileAttachmentResponse toResponse(FileAttachment fileAttachment){
+        return new FileAttachmentResponse(
                 fileAttachment.getId(),
                 fileAttachment.getProject().getId(),
                 fileAttachment.getExpense() != null ? fileAttachment.getExpense().getId() : null,
@@ -138,6 +82,6 @@ public class FileAttachmentController {
                 fileAttachment.getUploadedBy().getUser().getName(),
                 fileAttachment.getStatus()
         );
-        return ResponseEntity.ok(fileAttachmentResponse);
     }
+
 }
