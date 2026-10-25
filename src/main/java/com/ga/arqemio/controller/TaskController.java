@@ -5,6 +5,7 @@ import com.ga.arqemio.model.request.TaskRequest;
 import com.ga.arqemio.model.request.TaskStatusRequest;
 import com.ga.arqemio.model.response.TaskResponse;
 import com.ga.arqemio.service.TaskService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +21,7 @@ public class TaskController {
     private TaskService taskService;
 
     @PostMapping
-    public ResponseEntity<TaskResponse> createTask(@RequestBody TaskRequest taskRequest){
+    public ResponseEntity<TaskResponse> createTask(@Valid @RequestBody TaskRequest taskRequest){
         Task task= taskService.createTask(taskRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(task));
     }
@@ -44,7 +45,7 @@ public class TaskController {
 
 
     @PutMapping("/{taskId}")
-    public ResponseEntity<TaskResponse> updateTask(@PathVariable Long taskId, @RequestBody TaskRequest taskRequest) {
+    public ResponseEntity<TaskResponse> updateTask(@PathVariable Long taskId, @Valid @RequestBody TaskRequest taskRequest) {
         Task task = taskService.updateTask(taskId, taskRequest);
         return ResponseEntity.ok(toResponse(task));
     }
