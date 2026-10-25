@@ -11,11 +11,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 @Service
 @AllArgsConstructor
 public class CompanyService {
     private CompanyRepository companyRepository;
-
+    private static final Logger logger= Logger.getLogger(CompanyService.class.getName());
     public User getCurrentLoggedInUser(){
         MyUserDetails userDetails= (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return userDetails.getUser();
@@ -24,6 +27,7 @@ public class CompanyService {
     public Company createCompany(CompanyRequest companyRequest){
         User currentUser= getCurrentLoggedInUser();
         if (!currentUser.getIsPlatformAdmin()){
+            logger.log(Level.WARNING, "User {0} attempted to create a company without platform admin permission", currentUser.getId());
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only Platform Admin can create companies.");
         }
 
@@ -35,6 +39,8 @@ public class CompanyService {
         company.setStatus("ACTIVE");
         company.setOwner(null);
 
-        return companyRepository.save(company);
+        Company savedCompany= companyRepository.save(company);
+        logger.log(Level.INFO,"Company {0} created successfully by platform admin {1}", new Object[]{savedCompany.getId(), currentUser.getId()});
+        return savedCompany;
     }
 }
