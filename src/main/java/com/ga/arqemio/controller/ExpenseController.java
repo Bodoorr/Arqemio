@@ -4,6 +4,7 @@ import com.ga.arqemio.model.Expense;
 import com.ga.arqemio.model.request.ExpenseRequest;
 import com.ga.arqemio.model.response.ExpenseResponse;
 import com.ga.arqemio.service.ExpenseService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ public class ExpenseController {
     private ExpenseService expenseService;
 
     @PostMapping
-    public ResponseEntity<ExpenseResponse> createExpense(@RequestBody ExpenseRequest expenseRequest){
+    public ResponseEntity<ExpenseResponse> createExpense(@Valid @RequestBody ExpenseRequest expenseRequest){
         Expense expense= expenseService.createExpense(expenseRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(expense));
     }
@@ -42,7 +43,7 @@ public class ExpenseController {
     }
 
     @PutMapping("/{expenseId}")
-    public ResponseEntity<ExpenseResponse> updateExpense(@PathVariable Long expenseId, @RequestBody ExpenseRequest expenseRequest){
+    public ResponseEntity<ExpenseResponse> updateExpense(@Valid @PathVariable Long expenseId, @RequestBody ExpenseRequest expenseRequest){
         Expense expense= expenseService.updateExpense(expenseId,expenseRequest);
         return ResponseEntity.ok(toResponse(expense));
     }
