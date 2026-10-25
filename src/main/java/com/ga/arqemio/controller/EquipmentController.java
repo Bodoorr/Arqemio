@@ -4,6 +4,7 @@ import com.ga.arqemio.model.Equipment;
 import com.ga.arqemio.model.request.EquipmentRequest;
 import com.ga.arqemio.model.response.EquipmentResponse;
 import com.ga.arqemio.service.EquipmentService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ public class EquipmentController {
     private EquipmentService equipmentService;
 
     @PostMapping
-    public ResponseEntity<EquipmentResponse> createEquipment(@RequestBody EquipmentRequest equipmentRequest){
+    public ResponseEntity<EquipmentResponse> createEquipment(@Valid @RequestBody EquipmentRequest equipmentRequest){
         Equipment equipment= equipmentService.createEquipment(equipmentRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(equipment));
     }
@@ -41,7 +42,7 @@ public class EquipmentController {
     }
 
     @PutMapping("/{equipmentId}")
-    public ResponseEntity<EquipmentResponse> updateEquipment(@PathVariable Long equipmentId, @RequestBody EquipmentRequest equipmentRequest){
+    public ResponseEntity<EquipmentResponse> updateEquipment(@PathVariable Long equipmentId,@Valid @RequestBody EquipmentRequest equipmentRequest){
         Equipment equipment= equipmentService.updateEquipment(equipmentId,equipmentRequest);
         return ResponseEntity.ok(toResponse(equipment));
     }
