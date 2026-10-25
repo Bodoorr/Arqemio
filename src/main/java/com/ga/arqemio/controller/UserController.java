@@ -16,7 +16,7 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest){
+    public ResponseEntity<?> loginUser(@Valid @RequestBody LoginRequest loginRequest){
         System.out.println("Calling loginUser ==>");
         return userService.loginUser(loginRequest);
     }
