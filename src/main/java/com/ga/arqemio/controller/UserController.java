@@ -4,6 +4,7 @@ import com.ga.arqemio.model.request.ForgetPasswordRequest;
 import com.ga.arqemio.model.request.LoginRequest;
 import com.ga.arqemio.model.request.ResetPasswordRequest;
 import com.ga.arqemio.service.UserService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +22,7 @@ public class UserController {
     }
 
     @PostMapping("/forget-password")
-    public ResponseEntity<String> forgetPassword(@RequestBody ForgetPasswordRequest forgetPasswordRequest){
+    public ResponseEntity<String> forgetPassword(@Valid @RequestBody ForgetPasswordRequest forgetPasswordRequest){
         return ResponseEntity.ok(userService.forgetPassword(forgetPasswordRequest));
     }
 
