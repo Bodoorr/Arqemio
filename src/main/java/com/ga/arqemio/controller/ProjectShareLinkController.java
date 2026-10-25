@@ -3,6 +3,7 @@ package com.ga.arqemio.controller;
 import com.ga.arqemio.model.request.ProjectUpdateShareRequest;
 import com.ga.arqemio.model.response.ProjectUpdateShareResponse;
 import com.ga.arqemio.service.ProjectShareLinkService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,7 +15,7 @@ public class ProjectShareLinkController {
     private ProjectShareLinkService projectShareLinkService;
 
     @PostMapping("/{updateId}")
-    public ResponseEntity<String> shareProjectUpdate(@PathVariable Long updateId, @RequestBody ProjectUpdateShareRequest projectUpdateShareRequest){
+    public ResponseEntity<String> shareProjectUpdate(@PathVariable Long updateId, @Valid @RequestBody ProjectUpdateShareRequest projectUpdateShareRequest){
         projectShareLinkService.shareProjectUpdate(updateId,projectUpdateShareRequest);
         return ResponseEntity.ok("Project update shared successfully");
     }
