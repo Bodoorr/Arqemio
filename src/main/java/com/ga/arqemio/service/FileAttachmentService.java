@@ -16,6 +16,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 @Service
 @AllArgsConstructor
 public class FileAttachmentService {
@@ -26,6 +29,7 @@ public class FileAttachmentService {
     private ProjectUpdateRepository projectUpdateRepository;
     private ExpenseRepository expenseRepository;
     private  CompanyMembershipRepository companyMembershipRepository;
+    private static final Logger logger= Logger.getLogger(FileAttachmentService.class.getName());
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -100,7 +104,9 @@ public class FileAttachmentService {
             fileAttachment.setFileType(file.getContentType());
             fileAttachment.setUploadedBy(membership);
 
-            return fileAttachmentRepository.save(fileAttachment);
+            FileAttachment savedAttachment= fileAttachmentRepository.save(fileAttachment);
+            logger.log(Level.INFO,"File attachment {0} uploaded to project {1} by user {2}", new Object[]{savedAttachment.getId(), projectId, currentUser.getId()});
+            return savedAttachment;
         } catch (IOException e){
             throw new RuntimeException("Failed to upload image.");
         }
@@ -159,12 +165,15 @@ public class FileAttachmentService {
         }
 
         fileAttachment.setStatus("ARCHIVED");
-        return fileAttachmentRepository.save(fileAttachment);
+        FileAttachment archivedAttachment= fileAttachmentRepository.save(fileAttachment);
+        logger.log(Level.INFO,"File attachment {0} archived by user {1}", new Object[]{attachmentId, currentUser.getId()});
+        return archivedAttachment;
     }
 
     private void validateCompanyAccess(User user, Long companyId){
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(),companyId, "ACTIVE");
         if (!Boolean.TRUE.equals(user.getIsPlatformAdmin()) && !isActiveMember){
+            logger.log(Level.WARNING, "User {0} attempted to access company {1} attachments without permission", new Object[]{user.getId(), companyId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
         }
     }
