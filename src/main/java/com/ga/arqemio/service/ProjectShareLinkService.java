@@ -18,6 +18,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Service
 @AllArgsConstructor
@@ -29,6 +31,7 @@ public class ProjectShareLinkService {
     private EmailService emailService;
     private FileAttachmentRepository fileAttachmentRepository;
     private AuditLogService auditLogService;
+    private static final Logger logger =Logger.getLogger(ProjectShareLinkService.class.getName());
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -61,6 +64,7 @@ public class ProjectShareLinkService {
         Project project= projectUpdate.getProject();
 
         if (!canShareProjectUpdate(currentUser, project)){
+            logger.log(Level.WARNING,"User {0} attempted to share project update {1} without permission", new Object[]{currentUser.getId(), updateId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to share this project update");
         }
 
@@ -98,7 +102,7 @@ public class ProjectShareLinkService {
                 "SHARE", "PROJECT_UPDATE", projectUpdate.getId(),
                 "Shared project update with customer " + shareLink.getCustomerEmail()
         );
-
+        logger.log(Level.INFO,"Project share link {0} created for project update {1} by user {2}", new Object[]{savedShareLink.getId(), updateId, currentUser.getId()});
         return savedShareLink;
     }
 
