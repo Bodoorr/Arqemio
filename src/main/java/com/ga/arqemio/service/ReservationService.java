@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,6 +28,7 @@ public class ReservationService {
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private AuditLogService auditLogService;
+    private static final ReentrantLock reservationLock= new ReentrantLock();
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -61,31 +63,37 @@ public class ReservationService {
 
         validateReservationDates(reservationRequest.getStartDateTime(),reservationRequest.getEndDateTime());
 
-        int availableQuantity= calculateAvailableQuantity(equipment, reservationRequest.getStartDateTime(), reservationRequest.getEndDateTime());
+        //Reservation lock
+        reservationLock.lock();
+        try {
+            int availableQuantity= calculateAvailableQuantity(equipment, reservationRequest.getStartDateTime(), reservationRequest.getEndDateTime());
 
-        if (reservationRequest.getQuantity()> availableQuantity){
-            logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{equipment.getId(), reservationRequest.getQuantity(), availableQuantity});
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");
+            if (reservationRequest.getQuantity()> availableQuantity){
+                logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{equipment.getId(), reservationRequest.getQuantity(), availableQuantity});
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");
+            }
+
+            Reservation reservation= new Reservation();
+            reservation.setEquipment(equipment);
+            reservation.setProject(project);
+            reservation.setMembership(membership);
+            reservation.setStartDateTime(reservationRequest.getStartDateTime());
+            reservation.setEndDateTime(reservationRequest.getEndDateTime());
+            reservation.setDescription(reservationRequest.getDescription());
+            reservation.setQuantity(reservationRequest.getQuantity());
+            reservation.setStatus("RESERVED");
+
+            Reservation savedReservation = reservationRepository.save(reservation);
+            logger.log(Level.INFO,"Reservation {0} created for equipment {1}", new Object[]{savedReservation.getId(), equipment.getId()});
+            auditLogService.createAuditLog(currentUser, project.getCompany(),
+                    "CREATE", "RESERVATION", savedReservation.getId(),
+                    "Created equipment reservation for " + equipment.getName()
+            );
+
+            return savedReservation;
+        } finally {
+            reservationLock.unlock();
         }
-
-        Reservation reservation= new Reservation();
-        reservation.setEquipment(equipment);
-        reservation.setProject(project);
-        reservation.setMembership(membership);
-        reservation.setStartDateTime(reservationRequest.getStartDateTime());
-        reservation.setEndDateTime(reservationRequest.getEndDateTime());
-        reservation.setDescription(reservationRequest.getDescription());
-        reservation.setQuantity(reservationRequest.getQuantity());
-        reservation.setStatus("RESERVED");
-
-        Reservation savedReservation = reservationRepository.save(reservation);
-        logger.log(Level.INFO,"Reservation {0} created for equipment {1}", new Object[]{savedReservation.getId(), equipment.getId()});
-        auditLogService.createAuditLog(currentUser, project.getCompany(),
-                "CREATE", "RESERVATION", savedReservation.getId(),
-                "Created equipment reservation for " + equipment.getName()
-        );
-
-        return savedReservation;
     }
 
     public List<Reservation> getAllReservation(){
@@ -108,98 +116,121 @@ public class ReservationService {
 
     public Reservation updateReservation(Long reservationId, ReservationRequest reservationRequest){
         User currentUser= getCurrentLoggedInUser();
-        Reservation reservation= findReservationById(reservationId);
+        //Reservation lock
+        reservationLock.lock();
 
-        if (!canManageReservation(currentUser, reservation.getProject())){
-            logger.log(Level.WARNING,"User {0} attempted to update reservation {1} without permission", new Object[]{currentUser.getId(), reservationId});
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this reservation.");
-        }
+        try {
+            Reservation reservation= findReservationById(reservationId);
+            if (!reservation.getStatus().equals("RESERVED")){
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Only reserved reservations can be updated.");
+            }
 
-        if (reservationRequest.getQuantity()<=0){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation quantity must be greater than 0.");
-        }
+            if (!canManageReservation(currentUser, reservation.getProject())){
+                logger.log(Level.WARNING,"User {0} attempted to update reservation {1} without permission", new Object[]{currentUser.getId(), reservationId});
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this reservation.");
+            }
 
-        validateReservationDates(reservationRequest.getStartDateTime(), reservationRequest.getEndDateTime());
+            if (reservationRequest.getQuantity()<=0){
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation quantity must be greater than 0.");
+            }
 
-        List<Reservation> existingReservations= reservationRepository.findByEquipmentId(reservation.getEquipment().getId());
-        int reservedQuantity=0;
-        for (Reservation existingReservation : existingReservations){
-            if (!existingReservation.getId().equals(reservation.getId())){
-                if (existingReservation.getStatus().equals("RESERVED")){
-                    boolean overlaps= reservationRequest.getStartDateTime().isBefore(existingReservation.getEndDateTime()) &&
-                            reservationRequest.getEndDateTime().isAfter(existingReservation.getStartDateTime());
+            validateReservationDates(reservationRequest.getStartDateTime(), reservationRequest.getEndDateTime());
 
-                    if (overlaps){
-                        reservedQuantity+=existingReservation.getQuantity();
+            List<Reservation> existingReservations= reservationRepository.findByEquipmentId(reservation.getEquipment().getId());
+            int reservedQuantity=0;
+            for (Reservation existingReservation : existingReservations){
+                if (!existingReservation.getId().equals(reservation.getId())){
+                    if (existingReservation.getStatus().equals("RESERVED")){
+                        boolean overlaps= reservationRequest.getStartDateTime().isBefore(existingReservation.getEndDateTime()) &&
+                                reservationRequest.getEndDateTime().isAfter(existingReservation.getStartDateTime());
+
+                        if (overlaps){
+                            reservedQuantity+=existingReservation.getQuantity();
+                        }
                     }
                 }
             }
+            int availableQuantity= reservation.getEquipment().getQuantity() - reservedQuantity;
+
+            if (reservationRequest.getQuantity() > availableQuantity){
+                logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{reservation.getEquipment().getId(), reservationRequest.getQuantity(), availableQuantity});
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");
+            }
+
+            reservation.setStartDateTime(reservationRequest.getStartDateTime());
+            reservation.setEndDateTime(reservationRequest.getEndDateTime());
+            reservation.setDescription(reservationRequest.getDescription());
+            reservation.setQuantity(reservationRequest.getQuantity());
+
+            Reservation updatedReservation= reservationRepository.save(reservation);
+            logger.log(Level.INFO,"Reservation {0} updated successfully", updatedReservation.getId());
+            return updatedReservation;
+        } finally {
+            reservationLock.unlock();
         }
-        int availableQuantity= reservation.getEquipment().getQuantity() - reservedQuantity;
-
-        if (reservationRequest.getQuantity() > availableQuantity){
-            logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{reservation.getEquipment().getId(), reservationRequest.getQuantity(), availableQuantity});
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");
-        }
-
-        reservation.setStartDateTime(reservationRequest.getStartDateTime());
-        reservation.setEndDateTime(reservationRequest.getEndDateTime());
-        reservation.setDescription(reservationRequest.getDescription());
-        reservation.setQuantity(reservationRequest.getQuantity());
-
-        Reservation updatedReservation= reservationRepository.save(reservation);
-        logger.log(Level.INFO,"Reservation {0} updated successfully", updatedReservation.getId());
-        return updatedReservation;
     }
 
     public Reservation cancelReservation(Long reservationId){
         User currentUser= getCurrentLoggedInUser();
-        Reservation reservation= findReservationById(reservationId);
 
-        if (!canManageReservation(currentUser, reservation.getProject())){
-            logger.log(Level.WARNING,"User {0} attempted to cancel reservation {1} without permission", new Object[]{currentUser.getId(), reservationId});
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to cancel this reservation.");
+        //Reservation lock
+        reservationLock.lock();
+        try {
+            Reservation reservation= findReservationById(reservationId);
+
+            if (!canManageReservation(currentUser, reservation.getProject())){
+                logger.log(Level.WARNING,"User {0} attempted to cancel reservation {1} without permission", new Object[]{currentUser.getId(), reservationId});
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to cancel this reservation.");
+            }
+
+            if (!reservation.getStatus().equals("RESERVED")){
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only reserved reservations can be cancelled.");
+            }
+
+            reservation.setStatus("CANCELLED");
+            Reservation savedReservation = reservationRepository.save(reservation);
+
+            logger.log(Level.INFO,"Reservation {0} cancelled successfully", savedReservation.getId());
+            auditLogService.createAuditLog(currentUser, reservation.getProject().getCompany(),
+                    "CANCEL", "RESERVATION", savedReservation.getId(),
+                    "Cancelled equipment reservation for " + reservation.getEquipment().getName()
+            );
+            return savedReservation;
+        } finally {
+            reservationLock.unlock();
         }
 
-        if (!reservation.getStatus().equals("RESERVED")){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only reserved reservations can be cancelled.");
-        }
-
-        reservation.setStatus("CANCELLED");
-        Reservation savedReservation = reservationRepository.save(reservation);
-
-        logger.log(Level.INFO,"Reservation {0} cancelled successfully", savedReservation.getId());
-        auditLogService.createAuditLog(currentUser, reservation.getProject().getCompany(),
-                "CANCEL", "RESERVATION", savedReservation.getId(),
-                "Cancelled equipment reservation for " + reservation.getEquipment().getName()
-        );
-
-        return savedReservation;
     }
 
     public Reservation updateReservationStatus(Long reservationId, String status){
         User currentUser= getCurrentLoggedInUser();
-        Reservation reservation= findReservationById(reservationId);
-        CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(), reservation.getProject().getCompany().getId(), "ACTIVE").orElseThrow(()-> new ResponseStatusException(HttpStatus.FORBIDDEN, "Active company membership not found."));
-        boolean isAssignedWorker= projectRepository.existsByIdAndWorkersId(reservation.getProject().getId(), membership.getId());
+        //Reservation lock
+        reservationLock.lock();
+        try {
+            Reservation reservation= findReservationById(reservationId);
+            CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(), reservation.getProject().getCompany().getId(), "ACTIVE").orElseThrow(()-> new ResponseStatusException(HttpStatus.FORBIDDEN, "Active company membership not found."));
+            boolean isAssignedWorker= projectRepository.existsByIdAndWorkersId(reservation.getProject().getId(), membership.getId());
 
-        if (!isAssignedWorker || !membership.getRole().equals("WORKER")){
-            logger.log(Level.WARNING,"User {0} attempted to update reservation {1} status without permission", new Object[]{currentUser.getId(), reservationId});
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this reservation status.");
+            if (!isAssignedWorker || !membership.getRole().equals("WORKER")){
+                logger.log(Level.WARNING,"User {0} attempted to update reservation {1} status without permission", new Object[]{currentUser.getId(), reservationId});
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this reservation status.");
+            }
+
+            if (!reservation.getStatus().equals("RESERVED")) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This reservation can no longer be updated.");
+            }
+
+            if (!status.equals("COMPLETED")) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Worker can only mark a reservation as COMPLETED.");
+            }
+
+            reservation.setStatus(status);
+            Reservation updatedReservation= reservationRepository.save(reservation);
+            logger.log(Level.INFO, "Reservation {0} marked as {1}",new Object[]{reservationId, status});
+            return updatedReservation;
+        } finally {
+            reservationLock.unlock();
         }
-
-        if (!reservation.getStatus().equals("RESERVED")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This reservation can no longer be updated.");
-        }
-
-        if (!status.equals("COMPLETED")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Worker can only mark a reservation as COMPLETED.");
-        }
-
-        reservation.setStatus(status);
-        Reservation updatedReservation= reservationRepository.save(reservation);
-        logger.log(Level.INFO, "Reservation {0} marked as {1}",new Object[]{reservationId, status});
-        return updatedReservation;
     }
 
     public int getAvailableQuantity(Long equipmentId, LocalDateTime startDateTime, LocalDateTime endDateTime){
