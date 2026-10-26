@@ -7,10 +7,13 @@ import com.ga.arqemio.repository.EquipmentRepository;
 import com.ga.arqemio.repository.ProjectRepository;
 import com.ga.arqemio.repository.ReservationRepository;
 import com.ga.arqemio.security.MyUserDetails;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -29,47 +32,55 @@ public class ReservationService {
     private CompanyMembershipRepository companyMembershipRepository;
     private AuditLogService auditLogService;
     private static final ReentrantLock reservationLock= new ReentrantLock();
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return userDetails.getUser();
     }
 
+    @Transactional
     public Reservation createReservation(ReservationRequest reservationRequest){
         User currentUser= getCurrentLoggedInUser();
-        Equipment equipment= equipmentRepository.findById(reservationRequest.getEquipmentId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
-        Project project= projectRepository.findById(reservationRequest.getProjectId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
-
-        if (!equipment.getCompany().getId().equals(project.getCompany().getId())){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Equipment and project must belong to the same company.");
-        }
-
-        if (!canManageReservation(currentUser, project)){
-            logger.log(Level.WARNING,"User {0} attempted to reserve equipment for project {1} without permission", new Object[]{currentUser.getId(), project.getId()});
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"You're not allowed to reserve equipment for this project.");
-        }
-
-        CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(), equipment.getCompany().getId(), "ACTIVE")
-                .orElseThrow(()->new ResponseStatusException(HttpStatus.FORBIDDEN, "Active company membership is not found."));
-
-        if (!equipment.getStatus().equals("AVAILABLE")){
-            logger.log(Level.WARNING,"Equipment {0} is not available for reservation", equipment.getId());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Equipment is not available for reservation.");
-        }
-
-        if (reservationRequest.getQuantity()<=0){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation quantity must be greater than 0.");
-        }
-
-        validateReservationDates(reservationRequest.getStartDateTime(),reservationRequest.getEndDateTime());
 
         //Reservation lock
         reservationLock.lock();
+        logger.info("["+ Thread.currentThread().getName()+ "] LOCK ACQUIRED");
         try {
-            int availableQuantity= calculateAvailableQuantity(equipment, reservationRequest.getStartDateTime(), reservationRequest.getEndDateTime());
+            logger.info("["+ Thread.currentThread().getName()+ "] Manager "+ currentUser.getName()+ " requesting equipment "+reservationRequest.getEquipmentId());
+            Equipment equipment= equipmentRepository.findByIdForUpdate(reservationRequest.getEquipmentId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
+            logger.info("["+ Thread.currentThread().getName()+ "] DATABASE LOCK ACQUIRED for equipment "+ equipment.getId());
+            Project project= projectRepository.findById(reservationRequest.getProjectId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
 
+            if (!equipment.getCompany().getId().equals(project.getCompany().getId())){
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Equipment and project must belong to the same company.");
+            }
+
+            if (!canManageReservation(currentUser, project)){
+                logger.log(Level.WARNING,"User {0} attempted to reserve equipment for project {1} without permission", new Object[]{currentUser.getId(), project.getId()});
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,"You're not allowed to reserve equipment for this project.");
+            }
+
+            CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(), equipment.getCompany().getId(), "ACTIVE")
+                    .orElseThrow(()->new ResponseStatusException(HttpStatus.FORBIDDEN, "Active company membership is not found."));
+
+            if (!equipment.getStatus().equals("AVAILABLE")){
+                logger.log(Level.WARNING,"Equipment {0} is not available for reservation", equipment.getId());
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Equipment is not available for reservation.");
+            }
+
+            if (reservationRequest.getQuantity()<=0){
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation quantity must be greater than 0.");
+            }
+
+            validateReservationDates(reservationRequest.getStartDateTime(),reservationRequest.getEndDateTime());
+
+            int availableQuantity= calculateAvailableQuantity(equipment, reservationRequest.getStartDateTime(), reservationRequest.getEndDateTime());
+            logger.info("[" + Thread.currentThread().getName()+ "] Available quantity: "+ availableQuantity);
             if (reservationRequest.getQuantity()> availableQuantity){
                 logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{equipment.getId(), reservationRequest.getQuantity(), availableQuantity});
+                logger.warning("[" + Thread.currentThread().getName()+ "] RESERVATION REJECTED - Not enough equipment");
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");
             }
 
@@ -84,6 +95,7 @@ public class ReservationService {
             reservation.setStatus("RESERVED");
 
             Reservation savedReservation = reservationRepository.save(reservation);
+            logger.info("["+ Thread.currentThread().getName()+"] RESERVATION SAVED - ID: "+ savedReservation.getId());
             logger.log(Level.INFO,"Reservation {0} created for equipment {1}", new Object[]{savedReservation.getId(), equipment.getId()});
             auditLogService.createAuditLog(currentUser, project.getCompany(),
                     "CREATE", "RESERVATION", savedReservation.getId(),
@@ -114,6 +126,7 @@ public class ReservationService {
         return reservation;
     }
 
+    @Transactional
     public Reservation updateReservation(Long reservationId, ReservationRequest reservationRequest){
         User currentUser= getCurrentLoggedInUser();
         //Reservation lock
@@ -121,6 +134,9 @@ public class ReservationService {
 
         try {
             Reservation reservation= findReservationById(reservationId);
+            equipmentRepository.findByIdForUpdate(reservation.getEquipment().getId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found"));
+            entityManager.refresh(reservation);
+
             if (!reservation.getStatus().equals("RESERVED")){
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Only reserved reservations can be updated.");
             }
@@ -170,6 +186,7 @@ public class ReservationService {
         }
     }
 
+    @Transactional
     public Reservation cancelReservation(Long reservationId){
         User currentUser= getCurrentLoggedInUser();
 
@@ -177,6 +194,8 @@ public class ReservationService {
         reservationLock.lock();
         try {
             Reservation reservation= findReservationById(reservationId);
+            equipmentRepository.findByIdForUpdate(reservation.getEquipment().getId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found"));
+            entityManager.refresh(reservation);
 
             if (!canManageReservation(currentUser, reservation.getProject())){
                 logger.log(Level.WARNING,"User {0} attempted to cancel reservation {1} without permission", new Object[]{currentUser.getId(), reservationId});
@@ -202,12 +221,16 @@ public class ReservationService {
 
     }
 
+    @Transactional
     public Reservation updateReservationStatus(Long reservationId, String status){
         User currentUser= getCurrentLoggedInUser();
         //Reservation lock
         reservationLock.lock();
         try {
             Reservation reservation= findReservationById(reservationId);
+            equipmentRepository.findByIdForUpdate(reservation.getEquipment().getId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found"));
+            entityManager.refresh(reservation);
+
             CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(), reservation.getProject().getCompany().getId(), "ACTIVE").orElseThrow(()-> new ResponseStatusException(HttpStatus.FORBIDDEN, "Active company membership not found."));
             boolean isAssignedWorker= projectRepository.existsByIdAndWorkersId(reservation.getProject().getId(), membership.getId());
 
