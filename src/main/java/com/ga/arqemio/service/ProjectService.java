@@ -24,7 +24,7 @@ import java.util.logging.Logger;
 @Service
 @AllArgsConstructor
 public class ProjectService {
-    private final Logger logger= Logger.getLogger(ProjectService.class.getName());
+    private static final Logger logger= Logger.getLogger(ProjectService.class.getName());
     private ProjectRepository projectRepository;
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
@@ -40,6 +40,7 @@ public class ProjectService {
         Company company= companyRepository.findById(projectRequest.getCompanyId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
 
         if (!isCompanyOwner(currentUser, company.getId())){
+            logger.log(Level.WARNING,"User {0} attempted to create a project for company {1} without permission", new Object[]{currentUser.getId(), company.getId()});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to create projects for this company.");
         }
 
@@ -87,6 +88,7 @@ public class ProjectService {
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), project.getCompany().getId(), "ACTIVE");
 
          if (!isActiveMember){
+             logger.log(Level.WARNING,"User {0} attempted to view project {1} without permission", new Object[]{currentUser.getId(), projectId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this project.");
         }
         return project;
@@ -97,14 +99,17 @@ public class ProjectService {
         Project project= findProjectById(projectId);
 
         if (!isCompanyOwner(currentUser, project.getCompany().getId())){
+            logger.log(Level.WARNING,"User {0} attempted to update project {1} without permission", new Object[]{currentUser.getId(),projectId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this project.");
         }
 
         validateProjectDates(projectRequest);
         setProjectFields(project,projectRequest);
 
-        return projectRepository.save(project);
+        Project updateProject= projectRepository.save(project);
+        logger.log(Level.INFO, "Project {0} updated successfully", updateProject.getId());
 
+        return updateProject;
     }
 
     public Project archiveProject(Long projectId){
@@ -112,10 +117,14 @@ public class ProjectService {
         Project project= findProjectById(projectId);
 
         if (!isCompanyOwner(currentUser, project.getCompany().getId())){
+            logger.log(Level.WARNING,"User {0} attempted to archive project {1} without permission", new Object[]{currentUser.getId(), projectId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to delete this project.");
         }
         project.setStatus("ARCHIVED");
-        return projectRepository.save(project);
+        Project archivedProject= projectRepository.save(project);
+
+        logger.log(Level.INFO, "Project {0} archived successfully", archivedProject.getId());
+        return archivedProject;
     }
 
 
@@ -125,6 +134,7 @@ public class ProjectService {
         CompanyMembership membership= findMembershipById(membershipId);
 
         if (!isCompanyOwner(currentUser, project.getCompany().getId())) {
+            logger.log(Level.WARNING,"User {0} attempted to assign a manager to project {1} without permission", new Object[]{currentUser.getId(), projectId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to assign managers to this project.");
         }
 
@@ -147,6 +157,7 @@ public class ProjectService {
         project.getManagers().add(membership);
         projectRepository.save(project);
 
+        logger.log(Level.INFO, "Manager membership {0} assigned to project {1}", new Object[]{membershipId,projectId});
         return membership;
     }
 
@@ -156,6 +167,7 @@ public class ProjectService {
         CompanyMembership membership= findMembershipById(membershipId);
 
         if (!isCompanyOwner(currentUser, project.getCompany().getId())) {
+            logger.log(Level.WARNING,"User {0} attempted to remove a manager from project {1} without permission.", new Object[]{currentUser.getId(),projectId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to remove managers from this project.");
         }
 
@@ -166,6 +178,7 @@ public class ProjectService {
         project.getManagers().remove(membership);
         projectRepository.save(project);
 
+        logger.log(Level.INFO,"Manager membership {0} removed from project {1}", new Object[]{membershipId, projectId});
         return membership;
     }
 
@@ -175,6 +188,7 @@ public class ProjectService {
         CompanyMembership membership= findMembershipById(membershipId);
 
         if (!isCompanyOwner(currentUser, project.getCompany().getId())) {
+            logger.log(Level.WARNING,"User {0} attempted to assign a worker to project {1} without permission", new Object[]{currentUser.getId(), projectId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to assign workers to this project.");
         }
 
@@ -197,6 +211,7 @@ public class ProjectService {
         project.getWorkers().add(membership);
         projectRepository.save(project);
 
+        logger.log(Level.INFO,"Worker membership {0} assigned project {1}", new Object[]{membershipId,projectId});
         return membership;
     }
 
@@ -206,6 +221,7 @@ public class ProjectService {
         CompanyMembership membership= findMembershipById(membershipId);
 
         if (!isCompanyOwner(currentUser, project.getCompany().getId())) {
+            logger.log(Level.WARNING,"User {0} attempted to remove a worker from project {1} without permission", new Object[]{currentUser.getId(),projectId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to remove workers from this project.");
         }
 
@@ -216,6 +232,7 @@ public class ProjectService {
         project.getWorkers().remove(membership);
         projectRepository.save(project);
 
+        logger.log(Level.INFO,"Worker membership {0} removed from project {1}", new Object[]{membershipId, projectId});
         return membership;
     }
 
@@ -229,6 +246,7 @@ public class ProjectService {
 
     private void validateProjectDates(ProjectRequest projectRequest){
         if (projectRequest.getStartDate() == null || projectRequest.getExpectedEndDate()== null || projectRequest.getExpectedEndDate().isBefore(projectRequest.getStartDate())){
+            logger.log(Level.WARNING,"Invalid project dates: start = {0}, expectedEnd={1}", new Object[]{projectRequest.getStartDate(), projectRequest.getExpectedEndDate()});
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expected end date cannot be before start date.");
         }
     }

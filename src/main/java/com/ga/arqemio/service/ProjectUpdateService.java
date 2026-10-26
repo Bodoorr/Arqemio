@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Service
 @AllArgsConstructor
@@ -24,6 +26,7 @@ public class ProjectUpdateService {
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private NotificationService notificationService;
+    private static final Logger logger= Logger.getLogger(ProjectUpdateService.class.getName());
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -54,6 +57,7 @@ public class ProjectUpdateService {
         projectUpdate.setStatus("PENDING");
 
         ProjectUpdate savedProjectUpdate = projectUpdateRepository.save(projectUpdate);
+        logger.log(Level.INFO,"Project update {0} created for project {1} by user {2}", new Object[]{savedProjectUpdate.getId(), project.getId(), currentUser.getId()});
         for (CompanyMembership manager: project.getManagers()){
             notificationService.sendNotification(manager.getUser().getId(), "New project update submitted for "+ project.getName());
         }
@@ -87,6 +91,7 @@ public class ProjectUpdateService {
         ProjectUpdate projectUpdate= findProjectUpdateById(updateId);
         Project project= projectUpdate.getProject();
         if (!canManageProjectUpdate(currentUser, project)){
+            logger.log(Level.WARNING, "User {0} attempted to review project update {1} without permission", new Object[]{currentUser.getId(), updateId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to review this project update.");
         }
 
@@ -106,7 +111,9 @@ public class ProjectUpdateService {
         projectUpdate.setReviewNote(reviewNote);
 
 
-        return projectUpdateRepository.save(projectUpdate);
+        ProjectUpdate reviewedUpdate= projectUpdateRepository.save(projectUpdate);
+        logger.log(Level.INFO, "Project update {0} reviewed with status {1} by user {2}", new Object[]{updateId, status,currentUser.getId()});
+        return reviewedUpdate;
     }
 
     public ProjectUpdate updateProjectUpdate(Long updateId, ProjectUpdateRequest projectUpdateRequest){
@@ -125,7 +132,9 @@ public class ProjectUpdateService {
         projectUpdate.setTitle(projectUpdateRequest.getTitle());
         projectUpdate.setDescription(projectUpdateRequest.getDescription());
 
-        return projectUpdateRepository.save(projectUpdate);
+        ProjectUpdate updatedProjectUpdate= projectUpdateRepository.save(projectUpdate);
+        logger.log(Level.INFO, "Project update {0} edited by user {1}", new Object[]{updateId, currentUser.getId()});
+        return updatedProjectUpdate;
     }
 
     public ProjectUpdate archiveProjectUpdate(Long updateId){
@@ -142,7 +151,9 @@ public class ProjectUpdateService {
 
         projectUpdate.setStatus("ARCHIVED");
 
-        return projectUpdateRepository.save(projectUpdate);
+        ProjectUpdate archivedUpdate= projectUpdateRepository.save(projectUpdate);
+        logger.log(Level.INFO,"Project update {0} archived by user {1}", new Object[]{updateId, currentUser.getId()});
+        return archivedUpdate;
     }
 
     private ProjectUpdate findProjectUpdateById(Long updateId){

@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Service
 @AllArgsConstructor
@@ -24,6 +26,7 @@ public class TaskAssignmentService {
     private TaskRepository taskRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private ProjectRepository projectRepository;
+    private static final Logger logger= Logger.getLogger(TaskAssignmentService.class.getName());
 
     public static User getCurrentLoggedInUser() {
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -37,6 +40,7 @@ public class TaskAssignmentService {
         CompanyMembership worker = companyMembershipRepository.findById(workerMembershipId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker membership not found."));
 
         if (!canManageTaskAssignments(currentUser, task)) {
+            logger.log(Level.WARNING, "User {0} attempted to assign a worker to task {1} without permission", new Object[]{currentUser.getId(), taskId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to assign workers to this task.");
         }
 
@@ -65,7 +69,7 @@ public class TaskAssignmentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This worker is already assigned to this task.");
         }
 
-        if (dueAt.isBefore(assignedAt)) {
+        if (assignedAt != null && dueAt != null && dueAt.isBefore(assignedAt)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Due date cannot be before assigned date.");
         }
 
@@ -81,7 +85,9 @@ public class TaskAssignmentService {
         taskAssignment.setAssignedAt(assignedAt);
         taskAssignment.setDueAt(dueAt);
 
-        return taskAssignmentRepository.save(taskAssignment);
+        TaskAssignment savedAssignment= taskAssignmentRepository.save(taskAssignment);
+        logger.log(Level.INFO,"Worker membership {0} assigned to task {1} by user {2}", new Object[]{workerMembershipId, taskId, currentUser.getId()});
+        return savedAssignment;
     }
 
     public TaskAssignment removeAssignedWorker(Long taskId, Long workerMembershipId) {
@@ -89,6 +95,7 @@ public class TaskAssignmentService {
         Task task = findTaskById(taskId);
 
         if (!canManageTaskAssignments(currentUser, task)) {
+            logger.log(Level.WARNING,"User {0} attempted to remove worker from task {1} without permission", new Object[]{currentUser.getId(), taskId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to remove workers from this task.");
         }
 
@@ -97,6 +104,7 @@ public class TaskAssignmentService {
                                 "This worker is not assigned to this task."));
 
         taskAssignmentRepository.delete(taskAssignment);
+        logger.log(Level.INFO,"Worker membership {0} removed from task {1} by user {2}", new Object[]{workerMembershipId, taskId, currentUser.getId()});
         return taskAssignment;
     }
 
