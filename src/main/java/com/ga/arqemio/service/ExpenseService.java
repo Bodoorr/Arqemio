@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Service
 @AllArgsConstructor
@@ -23,6 +25,7 @@ public class ExpenseService {
     private ExpenseRepository expenseRepository;
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
+    private static final Logger logger= Logger.getLogger(ExpenseService.class.getName());
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -49,7 +52,9 @@ public class ExpenseService {
         expense.setExpenseDateTime(expenseRequest.getExpenseDateTime());
         expense.setStatus("ACTIVE");
 
-        return expenseRepository.save(expense);
+        Expense savedExpense= expenseRepository.save(expense);
+        logger.log(Level.INFO, "Expense {0} created for project {1} by user {2}", new Object[]{savedExpense.getId(), project.getId(), currentUser.getId()});
+        return savedExpense;
     }
 
     public List<Expense> getAllExpenses(){
@@ -62,6 +67,7 @@ public class ExpenseService {
         Expense expense= expenseRepository.findById(expenseId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found."));
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), expense.getProject().getCompany().getId(), "ACTIVE");
         if (!isActiveMember){
+            logger.log(Level.WARNING,"User {0} attempted to view expense {1} without permission", new Object[]{currentUser.getId(), expenseId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this expense.");
         }
         return expense;
@@ -80,7 +86,9 @@ public class ExpenseService {
         expense.setDescription(expenseRequest.getDescription());
         expense.setExpenseDateTime(expenseRequest.getExpenseDateTime());
 
-        return expenseRepository.save(expense);
+        Expense updatedExpense= expenseRepository.save(expense);
+        logger.log(Level.INFO,"Expense {0} updated by user {1}", new Object[]{expenseId, currentUser.getId()});
+        return updatedExpense;
     }
 
     public Expense archiveExpense(Long expenseId){
@@ -88,7 +96,10 @@ public class ExpenseService {
         Expense expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
         validateExpenseManagementAccess(currentUser, expense.getProject());
         expense.setStatus("ARCHIVED");
-        return expenseRepository.save(expense);
+
+        Expense archivedExpense= expenseRepository.save(expense);
+        logger.log(Level.INFO,"Expense {0} archived by user {1}", new Object[]{expenseId, currentUser.getId()});
+        return archivedExpense;
     }
 
     private void validateExpenseManagementAccess(User user, Project project){
@@ -96,6 +107,7 @@ public class ExpenseService {
         boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
 
         if (!isCompanyOwner && !isAssignedManager){
+            logger.log(Level.WARNING,"User {0} attempted to manage expenses for project {1} without permission",new Object[]{user.getId(), project.getId()});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to manage expenses for this project.");
         }
     }
