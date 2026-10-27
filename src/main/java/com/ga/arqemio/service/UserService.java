@@ -297,7 +297,8 @@ public class UserService {
                 user.getEmail(),
                 user.getMobileNumber(),
                 user.getProfilePicture(),
-                membershipResponses
+                membershipResponses,
+                user.getIsCustomer()
         );
     }
 }
