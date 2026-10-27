@@ -41,6 +41,7 @@ public class SecurityConfiguration {
                         "/invitation/validate/**",
                         "/invitation/register",
                         "/project-share/customer/**",
+                        "/project-share/register/**",
                         "/swagger-ui/**",
                         "/v3/api-docs/**"
                 ).permitAll().anyRequest().authenticated());

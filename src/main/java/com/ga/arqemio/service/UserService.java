@@ -71,6 +71,17 @@ public class UserService {
         }
     }
 
+    public User registerCustomer(String name, String email, String password) {
+        User customer = new User();
+        customer.setName(name);
+        customer.setEmail(email);
+        customer.setPassword(password);
+        customer.setStatus(true);
+        customer.setIsPlatformAdmin(false);
+        customer.setIsCustomer(true);
+        return createUser(customer);
+    }
+
     public ResponseEntity<?> loginUser(LoginRequest loginRequest) {
         try {
             Authentication authentication = authenticationManager
@@ -286,7 +297,8 @@ public class UserService {
                 user.getEmail(),
                 user.getMobileNumber(),
                 user.getProfilePicture(),
-                membershipResponses
+                membershipResponses,
+                user.getIsCustomer()
         );
     }
 }

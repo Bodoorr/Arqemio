@@ -59,6 +59,9 @@ public class User {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @Column(nullable = false)
+    private Boolean isCustomer= false;
+
     @OneToMany(mappedBy = "user")
     private List<CompanyMembership> memberships;
 

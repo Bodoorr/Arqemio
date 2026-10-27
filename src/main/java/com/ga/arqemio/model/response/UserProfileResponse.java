@@ -14,4 +14,5 @@ public class UserProfileResponse {
     private String mobileNumber;
     private String profilePicture;
     private List<UserMembershipResponse> memberships;
+    private Boolean isCustomer;
 }
