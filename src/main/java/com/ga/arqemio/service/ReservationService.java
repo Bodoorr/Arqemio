@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -31,6 +33,7 @@ public class ReservationService {
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private AuditLogService auditLogService;
+    private NotificationService notificationService;
     private static final ReentrantLock reservationLock= new ReentrantLock();
     @PersistenceContext
     private EntityManager entityManager;
@@ -249,6 +252,24 @@ public class ReservationService {
 
             reservation.setStatus(status);
             Reservation updatedReservation= reservationRepository.save(reservation);
+            //notification
+            //find the managers that will receive the notification
+            List<Long> managerIds= updatedReservation.getProject().getManagers()
+                    .stream()
+                    .map(manager->manager.getUser().getId())
+                    .toList();
+            String equipmentName= updatedReservation.getEquipment().getName();
+            //register the notification to run later
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                //call back that execute only after the transaction successfully commits.
+                @Override
+                public void afterCommit(){
+                for (Long managerId: managerIds){
+                    notificationService.sendNotification(managerId, "Equipment reservation for "+equipmentName+" has been completed.");
+                }
+            }
+            });
+
             logger.log(Level.INFO, "Reservation {0} marked as {1}",new Object[]{reservationId, status});
             return updatedReservation;
         } finally {
