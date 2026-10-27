@@ -61,7 +61,7 @@ public class AuditLogService {
         return auditLogRepository.findByActionInOrderByCreatedAtDesc(
                 List.of(
                         "CREATE_COMPANY",
-                        "CREATE_OWNER",
+                        "REGISTER_OWNER",
                         "REGISTER_MANAGER",
                         "REGISTER_WORKER",
                         "REGISTER_CUSTOMER"
