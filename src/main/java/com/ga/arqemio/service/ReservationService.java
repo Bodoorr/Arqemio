@@ -81,9 +81,11 @@ public class ReservationService {
 
             int availableQuantity= calculateAvailableQuantity(equipment, reservationRequest.getStartDateTime(), reservationRequest.getEndDateTime());
             logger.info("[" + Thread.currentThread().getName()+ "] Available quantity: "+ availableQuantity);
+
             if (reservationRequest.getQuantity()> availableQuantity){
                 logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{equipment.getId(), reservationRequest.getQuantity(), availableQuantity});
                 logger.warning("[" + Thread.currentThread().getName()+ "] RESERVATION REJECTED - Not enough equipment");
+                notificationService.sendNotification(currentUser.getId(), "Reservation failed! Not enough "+ equipment.getName()+" available. Only "+availableQuantity+" remaining.");
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");
             }
 
@@ -100,6 +102,13 @@ public class ReservationService {
             Reservation savedReservation = reservationRepository.save(reservation);
             logger.info("["+ Thread.currentThread().getName()+"] RESERVATION SAVED - ID: "+ savedReservation.getId());
             logger.log(Level.INFO,"Reservation {0} created for equipment {1}", new Object[]{savedReservation.getId(), equipment.getId()});
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit(){
+                    notificationService.sendNotification(currentUser.getId(), "Your reservation for "+equipment.getName()+" was successful.");
+                }
+            });
+
             auditLogService.createAuditLog(currentUser, project.getCompany(),
                     "CREATE", "RESERVATION", savedReservation.getId(),
                     "Created equipment reservation for " + equipment.getName()
