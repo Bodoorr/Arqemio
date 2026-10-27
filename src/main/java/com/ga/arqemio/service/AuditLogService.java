@@ -4,6 +4,7 @@ import com.ga.arqemio.model.AuditLog;
 import com.ga.arqemio.model.Company;
 import com.ga.arqemio.model.User;
 import com.ga.arqemio.repository.AuditLogRepository;
+import com.ga.arqemio.repository.CompanyMembershipRepository;
 import com.ga.arqemio.security.MyUserDetails;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import java.util.logging.Logger;
 public class AuditLogService {
     private AuditLogRepository auditLogRepository;
     private static final Logger logger= Logger.getLogger(AuditLogService.class.getName());
+    private CompanyMembershipRepository companyMembershipRepository;
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -41,6 +43,13 @@ public class AuditLogService {
     }
 
     public List<AuditLog> getCompanyAuditLogs(Long companyId){
+        User currentUser= getCurrentLoggedInUser();
+
+        boolean isOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId, "OWNER","ACTIVE");
+        if (!isOwner){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Access denied.");
+        }
+
         return auditLogRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
     }
 
