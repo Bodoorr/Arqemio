@@ -133,6 +133,7 @@ public class InvitationService {
             logger.log(Level.WARNING, "Invitation {0} saved but email delivery failed", savedInvitation.getId());
             throw new RuntimeException("Invitation saved, but email could not be sent.");
         }
+        auditLogService.createAuditLog(currentUser, company,"CREATE_INVITATION","INVITATION", savedInvitation.getId(), "Invited "+email+" as "+role);
         logger.log(Level.INFO,"Invitation {0} created for company {1} by user {2}", new Object[]{savedInvitation.getId(), companyId, currentUser.getId()});
         return savedInvitation;
     }
@@ -217,6 +218,7 @@ public class InvitationService {
 
         invitation.setStatus("CANCELLED");
         invitationRepository.save(invitation);
+        auditLogService.createAuditLog(currentUser,invitation.getCompany(),"CANCEL_INVITATION","INVITATION",invitation.getId(),"Cancelled invitation for "+invitation.getEmail());
         logger.log(Level.INFO,"Invitation {0} cancelled by user {1}", new Object[]{invitationId, currentUser.getId()});
         return invitation;
     }
