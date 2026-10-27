@@ -54,6 +54,14 @@ public class ReservationService {
             logger.info("["+ Thread.currentThread().getName()+ "] Manager "+ currentUser.getName()+ " requesting equipment "+reservationRequest.getEquipmentId());
             Equipment equipment= equipmentRepository.findByIdForUpdate(reservationRequest.getEquipmentId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
             logger.info("["+ Thread.currentThread().getName()+ "] DATABASE LOCK ACQUIRED for equipment "+ equipment.getId());
+            //Testing concurrency
+            try {
+                logger.info("["+Thread.currentThread().getName()+"] SLEEPING FOR 10 SECONDS");
+                Thread.sleep(10000);
+            }catch (InterruptedException e){
+                throw new RuntimeException(e);
+            }
+
             Project project= projectRepository.findById(reservationRequest.getProjectId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
 
             if (!equipment.getCompany().getId().equals(project.getCompany().getId())){
