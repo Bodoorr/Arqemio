@@ -46,10 +46,11 @@ public class UserService {
     private final CompanyMembershipRepository companyMembershipRepository;
     private final FileAttachmentService fileAttachmentService;
     private final EmailService emailService;
+    private final AuditLogService auditLogService;
     private static final Logger logger= Logger.getLogger(UserService.class.getName());
 
     @Autowired
-    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, CompanyMembershipRepository companyMembershipRepository, FileAttachmentService fileAttachmentService, EmailService emailService) {
+    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, CompanyMembershipRepository companyMembershipRepository, FileAttachmentService fileAttachmentService, EmailService emailService, AuditLogService auditLogService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
@@ -57,6 +58,7 @@ public class UserService {
         this.companyMembershipRepository = companyMembershipRepository;
         this.fileAttachmentService = fileAttachmentService;
         this.emailService= emailService;
+        this.auditLogService= auditLogService;
     }
 
     public User createUser(User userObject) {
@@ -79,7 +81,10 @@ public class UserService {
         customer.setStatus(true);
         customer.setIsPlatformAdmin(false);
         customer.setIsCustomer(true);
-        return createUser(customer);
+
+        User savedCustomer= createUser(customer);
+        auditLogService.createAuditLog(savedCustomer,null,"REGISTER_CUSTOMER","USER", savedCustomer.getId(), "Customer registered: "+savedCustomer.getName());
+        return savedCustomer;
     }
 
     public ResponseEntity<?> loginUser(LoginRequest loginRequest) {

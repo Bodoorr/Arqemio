@@ -18,6 +18,7 @@ import java.util.logging.Logger;
 @AllArgsConstructor
 public class CompanyService {
     private CompanyRepository companyRepository;
+    private AuditLogService auditLogService;
     private static final Logger logger= Logger.getLogger(CompanyService.class.getName());
     public User getCurrentLoggedInUser(){
         MyUserDetails userDetails= (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -40,6 +41,7 @@ public class CompanyService {
         company.setOwner(null);
 
         Company savedCompany= companyRepository.save(company);
+        auditLogService.createAuditLog(currentUser,savedCompany,"CREATE_COMPANY","COMPANY", savedCompany.getId(), "Created company: "+ savedCompany.getName());
         logger.log(Level.INFO,"Company {0} created successfully by platform admin {1}", new Object[]{savedCompany.getId(), currentUser.getId()});
         return savedCompany;
     }

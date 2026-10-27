@@ -25,6 +25,7 @@ public class ExpenseService {
     private ExpenseRepository expenseRepository;
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
+    private AuditLogService auditLogService;
     private static final Logger logger= Logger.getLogger(ExpenseService.class.getName());
 
     public static User getCurrentLoggedInUser(){
@@ -53,6 +54,7 @@ public class ExpenseService {
         expense.setStatus("ACTIVE");
 
         Expense savedExpense= expenseRepository.save(expense);
+        auditLogService.createAuditLog(currentUser,project.getCompany(),"CREATE","EXPENSE",savedExpense.getId(),"Created expense: "+savedExpense.getTitle());
         logger.log(Level.INFO, "Expense {0} created for project {1} by user {2}", new Object[]{savedExpense.getId(), project.getId(), currentUser.getId()});
         return savedExpense;
     }
@@ -87,6 +89,7 @@ public class ExpenseService {
         expense.setExpenseDateTime(expenseRequest.getExpenseDateTime());
 
         Expense updatedExpense= expenseRepository.save(expense);
+        auditLogService.createAuditLog(currentUser, updatedExpense.getProject().getCompany(),"UPDATE", "EXPENSE",updatedExpense.getId(),"Updated expense: "+updatedExpense.getTitle());
         logger.log(Level.INFO,"Expense {0} updated by user {1}", new Object[]{expenseId, currentUser.getId()});
         return updatedExpense;
     }
@@ -98,6 +101,7 @@ public class ExpenseService {
         expense.setStatus("ARCHIVED");
 
         Expense archivedExpense= expenseRepository.save(expense);
+        auditLogService.createAuditLog(currentUser,archivedExpense.getProject().getCompany(),"ARCHIVE","EXPENSE",archivedExpense.getId(),"Archived expense: "+archivedExpense.getTitle());
         logger.log(Level.INFO,"Expense {0} archived by user {1}", new Object[]{expenseId, currentUser.getId()});
         return archivedExpense;
     }

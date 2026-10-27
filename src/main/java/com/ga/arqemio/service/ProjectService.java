@@ -108,8 +108,8 @@ public class ProjectService {
         setProjectFields(project,projectRequest);
 
         Project updateProject= projectRepository.save(project);
+        auditLogService.createAuditLog(currentUser,updateProject.getCompany(),"UPDATE","PROJECT",updateProject.getId(),"Updated project: "+updateProject.getName());
         logger.log(Level.INFO, "Project {0} updated successfully", updateProject.getId());
-
         return updateProject;
     }
 
@@ -123,7 +123,7 @@ public class ProjectService {
         }
         project.setStatus("ARCHIVED");
         Project archivedProject= projectRepository.save(project);
-
+        auditLogService.createAuditLog(currentUser,archivedProject.getCompany(),"ARCHIVE","PROJECT",archivedProject.getId(),"Archived project: "+archivedProject.getName());
         logger.log(Level.INFO, "Project {0} archived successfully", archivedProject.getId());
         return archivedProject;
     }
@@ -158,6 +158,7 @@ public class ProjectService {
         project.getManagers().add(membership);
         projectRepository.save(project);
         notificationService.sendNotification(membership.getUser().getId(), "You have been assigned as a manager to project "+project.getName());
+        auditLogService.createAuditLog(currentUser,project.getCompany(),"ASSIGN_MANAGER","PROJECT", project.getId(), "Assigned manager: "+membership.getUser().getName());
         logger.log(Level.INFO, "Manager membership {0} assigned to project {1}", new Object[]{membershipId,projectId});
         return membership;
     }
@@ -179,6 +180,7 @@ public class ProjectService {
         project.getManagers().remove(membership);
         projectRepository.save(project);
         notificationService.sendNotification(membership.getUser().getId(), "You have been removed as a manager from project "+ project.getName());
+        auditLogService.createAuditLog(currentUser,project.getCompany(),"REMOVE_MANAGER","PROJECT", project.getId(), "Remove manager: "+membership.getUser().getName());
         logger.log(Level.INFO,"Manager membership {0} removed from project {1}", new Object[]{membershipId, projectId});
         return membership;
     }
@@ -212,6 +214,7 @@ public class ProjectService {
         project.getWorkers().add(membership);
         projectRepository.save(project);
         notificationService.sendNotification(membership.getUser().getId(), "You have been assigned to project "+ project.getName());
+        auditLogService.createAuditLog(currentUser,project.getCompany(),"ASSIGN_WORKER","PROJECT", project.getId(), "Assigned worker: "+membership.getUser().getName());
         logger.log(Level.INFO,"Worker membership {0} assigned project {1}", new Object[]{membershipId,projectId});
         return membership;
     }
@@ -233,6 +236,7 @@ public class ProjectService {
         project.getWorkers().remove(membership);
         projectRepository.save(project);
         notificationService.sendNotification(membership.getUser().getId(), "You have been removed from project "+ project.getName());
+        auditLogService.createAuditLog(currentUser,project.getCompany(),"REMOVE_WORKER","PROJECT", project.getId(), "Removed worker: "+membership.getUser().getName());
         logger.log(Level.INFO,"Worker membership {0} removed from project {1}", new Object[]{membershipId, projectId});
         return membership;
     }

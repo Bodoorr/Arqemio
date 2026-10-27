@@ -199,6 +199,7 @@ public class ReservationService {
             reservation.setQuantity(reservationRequest.getQuantity());
 
             Reservation updatedReservation= reservationRepository.save(reservation);
+            auditLogService.createAuditLog(currentUser, updatedReservation.getProject().getCompany(),"UPDATE","RESERVATION", updatedReservation.getId(),"Updated equipment reservation for "+updatedReservation.getEquipment().getName());
             logger.log(Level.INFO,"Reservation {0} updated successfully", updatedReservation.getId());
             return updatedReservation;
         } finally {
@@ -269,6 +270,8 @@ public class ReservationService {
 
             reservation.setStatus(status);
             Reservation updatedReservation= reservationRepository.save(reservation);
+            auditLogService.createAuditLog(currentUser, updatedReservation.getProject().getCompany(),"COMPLETE","RESERVATION", updatedReservation.getId(),"Completed equipment reservation for "+updatedReservation.getEquipment().getName());
+
             //notification
             //find the managers that will receive the notification
             List<Long> managerIds= updatedReservation.getProject().getManagers()
