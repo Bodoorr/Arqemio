@@ -18,8 +18,8 @@ public class NotificationService {
         SseEmitter emitter=new SseEmitter(30 * 60 * 1000L);
         emitterMap.put(userId,emitter);
         logger.log(Level.INFO,"User {0} subscribed to notifications",userId);
-        emitter.onCompletion(()->emitterMap.remove(userId));
-        emitter.onTimeout(()->emitterMap.remove(userId));
+        emitter.onCompletion(()->emitterMap.remove(userId, emitter));
+        emitter.onTimeout(()->emitterMap.remove(userId, emitter));
         return emitter;
     }
 
@@ -30,7 +30,7 @@ public class NotificationService {
                 emitter.send(message);
                 logger.log(Level.INFO, "Notification sent to user {0}", userId);
             } catch (IOException e){
-                emitterMap.remove(userId);
+                emitterMap.remove(userId, emitter);
                 logger.log(Level.WARNING, "Failed to send notification to user "+ userId, e);
             }
         }
