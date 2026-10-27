@@ -4,14 +4,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Service
 public class NotificationService {
-    private Map<Long, SseEmitter> emitterMap=new HashMap<>();
+    private Map<Long, SseEmitter> emitterMap=new ConcurrentHashMap<>();
     private static final Logger logger= Logger.getLogger(NotificationService.class.getName());
 
     public SseEmitter subscribe(Long userId){
@@ -35,4 +35,5 @@ public class NotificationService {
             }
         }
     }
+
 }
