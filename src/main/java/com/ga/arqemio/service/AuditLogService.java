@@ -64,8 +64,7 @@ public class AuditLogService {
                         "CREATE_OWNER",
                         "REGISTER_MANAGER",
                         "REGISTER_WORKER",
-                        "REGISTER_CUSTOMER",
-                        "REGISTER_USER"
+                        "REGISTER_CUSTOMER"
                 )
         );
     }
