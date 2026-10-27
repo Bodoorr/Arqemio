@@ -7,6 +7,7 @@ import com.ga.arqemio.repository.AuditLogRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -28,5 +29,22 @@ public class AuditLogService {
         AuditLog savedAuditLog= auditLogRepository.save(auditLog);
         logger.log(Level.INFO, "Audit log {0} created for action {1} on {2} with ID {3}", new Object[]{savedAuditLog.getId(), action, entityType, entityId});
         return savedAuditLog;
+    }
+
+    public List<AuditLog> getCompanyAuditLogs(Long companyId){
+        return auditLogRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
+    }
+
+    public List<AuditLog> getPlatformAuditLogs(){
+        return auditLogRepository.findByActionInOrderByCreatedAtDesc(
+                List.of(
+                        "CREATE_COMPANY",
+                        "CREATE_OWNER",
+                        "REGISTER_MANAGER",
+                        "REGISTER_WORKER",
+                        "REGISTER_CUSTOMER",
+                        "REGISTER_USER"
+                )
+        );
     }
 }
