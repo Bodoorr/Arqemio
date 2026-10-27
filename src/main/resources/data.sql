@@ -1,22 +1,315 @@
-INSERT INTO users (
-    name,
-    email,
-    password,
-    status,
-    is_platform_admin,
-    created_at,
-    updated_at
-)
-SELECT
-    'Seed Platform Admin',
-    'seed.admin@arqemio.com',
-    '$2y$12$dafzDoAtVN4c15TOoypSkeYYbvBri/3TT9Y7DAXq04Lm9cLNgPTTC',
-    true,
-    true,
-    CURRENT_TIMESTAMP,
-    CURRENT_TIMESTAMP
-    WHERE NOT EXISTS (
-    SELECT 1
-    FROM users
-    WHERE email = 'seed.admin@arqemio.com'
-);
+-- -- Admin password: Admin123
+-- -- Owner password: Owner123
+-- -- Manager password: Manager123
+-- -- Worker password: Worker123
+-- -- PLATFORM ADMIN
+-- INSERT INTO users (
+--     name,
+--     email,
+--     password,
+--     status,
+--     is_platform_admin,
+--     is_customer,
+--     created_at,
+--     updated_at
+-- )
+-- SELECT
+--     'Seed Platform Admin',
+--     'seed.admin@arqemio.com',
+--     '$2a$10$mXMfRK7nU9e1yKS0K1d5O.B/5hMuMOquCGnYMiy.W.LCnbubQJaoK',
+--     TRUE,
+--     TRUE,
+--     FALSE,
+--     CURRENT_TIMESTAMP,
+--     CURRENT_TIMESTAMP
+--     WHERE NOT EXISTS (
+--     SELECT 1
+--     FROM users
+--     WHERE email = 'seed.admin@arqemio.com'
+-- );
+--
+--
+-- -- COMPANY OWNER
+-- INSERT INTO users (
+--     name,
+--     email,
+--     password,
+--     status,
+--     is_platform_admin,
+--     is_customer,
+--     created_at,
+--     updated_at
+-- )
+-- SELECT
+--     'Seed Owner',
+--     'seed.owner@arqemio.com',
+--     '$2a$10$AQZv19Gra10H6.OGGh7oreAUaVlBN.Vd5kzZB0k.Ur0HNBHcUqAB2',
+--     TRUE,
+--     FALSE,
+--     FALSE,
+--     CURRENT_TIMESTAMP,
+--     CURRENT_TIMESTAMP
+--     WHERE NOT EXISTS (
+--     SELECT 1
+--     FROM users
+--     WHERE email = 'seed.owner@arqemio.com'
+-- );
+--
+--
+-- -- MANAGER
+-- INSERT INTO users (
+--     name,
+--     email,
+--     password,
+--     status,
+--     is_platform_admin,
+--     is_customer,
+--     created_at,
+--     updated_at
+-- )
+-- SELECT
+--     'Seed Manager',
+--     'seed.manager@arqemio.com',
+--     '$2a$10$TkjrJJ/CX2HFOdcndF3jU.BSvNodPttEqfXA44fjsePWEkmnjB0FK',
+--     TRUE,
+--     FALSE,
+--     FALSE,
+--     CURRENT_TIMESTAMP,
+--     CURRENT_TIMESTAMP
+--     WHERE NOT EXISTS (
+--     SELECT 1
+--     FROM users
+--     WHERE email = 'seed.manager@arqemio.com'
+-- );
+--
+--
+-- -- WORKER
+-- INSERT INTO users (
+--     name,
+--     email,
+--     password,
+--     status,
+--     is_platform_admin,
+--     is_customer,
+--     created_at,
+--     updated_at
+-- )
+-- SELECT
+--     'Seed Worker',
+--     'seed.worker@arqemio.com',
+--     '$2a$10$ym0b.dHhRgsrKZ3rah1HoeZ.Ad2CfGdmgH061ge/9uy1C8BKq8Cbe',
+--     TRUE,
+--     FALSE,
+--     FALSE,
+--     CURRENT_TIMESTAMP,
+--     CURRENT_TIMESTAMP
+--     WHERE NOT EXISTS (
+--     SELECT 1
+--     FROM users
+--     WHERE email = 'seed.worker@arqemio.com'
+-- );
+--
+--
+-- -- COMPANY
+-- INSERT INTO companies (
+--     name,
+--     description,
+--     location,
+--     address,
+--     status,
+--     created_at,
+--     updated_at
+-- )
+-- SELECT
+--     'Arqemio Demo Construction',
+--     'Construction company for testing Arqemio',
+--     'Manama, Bahrain',
+--     'Building 100, Road 200, Manama',
+--     'ACTIVE',
+--     CURRENT_TIMESTAMP,
+--     CURRENT_TIMESTAMP
+--     WHERE NOT EXISTS (
+--     SELECT 1
+--     FROM companies
+--     WHERE name = 'Arqemio Demo Construction'
+-- );
+--
+--
+-- -- COMPANY OWNER MEMBERSHIP
+-- INSERT INTO company_memberships (
+--     user_id,
+--     company_id,
+--     role,
+--     status,
+--     created_at,
+--     updated_at
+-- )
+-- SELECT
+--     u.id,
+--     c.id,
+--     'OWNER',
+--     'ACTIVE',
+--     CURRENT_TIMESTAMP,
+--     CURRENT_TIMESTAMP
+-- FROM users u, companies c
+-- WHERE u.email = 'seed.owner@arqemio.com'
+--   AND c.name = 'Arqemio Demo Construction'
+--   AND NOT EXISTS (
+--     SELECT 1
+--     FROM company_memberships cm
+--     WHERE cm.user_id = u.id
+--       AND cm.company_id = c.id
+-- );
+--
+--
+-- -- COMPANY MANAGER MEMBERSHIP
+-- INSERT INTO company_memberships (
+--     user_id,
+--     company_id,
+--     role,
+--     status,
+--     created_at,
+--     updated_at
+-- )
+-- SELECT
+--     u.id,
+--     c.id,
+--     'MANAGER',
+--     'ACTIVE',
+--     CURRENT_TIMESTAMP,
+--     CURRENT_TIMESTAMP
+-- FROM users u, companies c
+-- WHERE u.email = 'seed.manager@arqemio.com'
+--   AND c.name = 'Arqemio Demo Construction'
+--   AND NOT EXISTS (
+--     SELECT 1
+--     FROM company_memberships cm
+--     WHERE cm.user_id = u.id
+--       AND cm.company_id = c.id
+-- );
+--
+--
+-- -- COMPANY WORKER MEMBERSHIP
+-- INSERT INTO company_memberships (
+--     user_id,
+--     company_id,
+--     role,
+--     status,
+--     created_at,
+--     updated_at
+-- )
+-- SELECT
+--     u.id,
+--     c.id,
+--     'WORKER',
+--     'ACTIVE',
+--     CURRENT_TIMESTAMP,
+--     CURRENT_TIMESTAMP
+-- FROM users u, companies c
+-- WHERE u.email = 'seed.worker@arqemio.com'
+--   AND c.name = 'Arqemio Demo Construction'
+--   AND NOT EXISTS (
+--     SELECT 1
+--     FROM company_memberships cm
+--     WHERE cm.user_id = u.id
+--       AND cm.company_id = c.id
+-- );
+--
+--
+-- -- SET COMPANY OWNER
+--
+-- UPDATE companies c
+-- SET owner_id = cm.id
+--     FROM company_memberships cm
+-- JOIN users u ON u.id = cm.user_id
+-- WHERE c.id = cm.company_id
+--   AND c.name = 'Arqemio Demo Construction'
+--   AND u.email = 'seed.owner@arqemio.com'
+--   AND cm.role = 'OWNER';
+--
+--
+-- -- PROJECT
+--
+-- INSERT INTO projects (
+--     company_id,
+--     name,
+--     description,
+--     location,
+--     start_date,
+--     expected_end_date,
+--     budget,
+--     status,
+--     created_at,
+--     updated_at
+-- )
+-- SELECT
+--     c.id,
+--     'Arqemio Demo Tower',
+--     'Construction of a commercial tower',
+--     'Manama, Bahrain',
+--     '2026-11-01',
+--     '2027-06-30',
+--     150000.00,
+--     'ACTIVE',
+--     CURRENT_TIMESTAMP,
+--     CURRENT_TIMESTAMP
+-- FROM companies c
+-- WHERE c.name = 'Arqemio Demo Construction'
+--   AND NOT EXISTS (
+--     SELECT 1
+--     FROM projects p
+--     WHERE p.company_id = c.id
+--       AND p.name = 'Arqemio Demo Tower'
+-- );
+--
+--
+-- -- ASSIGN MANAGER TO PROJECT
+--
+-- INSERT INTO project_managers (
+--     project_id,
+--     membership_id
+-- )
+-- SELECT
+--     p.id,
+--     cm.id
+-- FROM projects p
+--          JOIN companies c ON c.id = p.company_id
+--          JOIN company_memberships cm ON cm.company_id = c.id
+--          JOIN users u ON u.id = cm.user_id
+-- WHERE c.name = 'Arqemio Demo Construction'
+--   AND p.name = 'Arqemio Demo Tower'
+--   AND u.email = 'seed.manager@arqemio.com'
+--   AND cm.role = 'MANAGER'
+--   AND cm.status = 'ACTIVE'
+--   AND NOT EXISTS (
+--     SELECT 1
+--     FROM project_managers pm
+--     WHERE pm.project_id = p.id
+--       AND pm.membership_id = cm.id
+-- );
+--
+--
+-- -- ASSIGN WORKER TO PROJECT
+--
+-- INSERT INTO project_workers (
+--     project_id,
+--     membership_id
+-- )
+-- SELECT
+--     p.id,
+--     cm.id
+-- FROM projects p
+--          JOIN companies c ON c.id = p.company_id
+--          JOIN company_memberships cm ON cm.company_id = c.id
+--          JOIN users u ON u.id = cm.user_id
+-- WHERE c.name = 'Arqemio Demo Construction'
+--   AND p.name = 'Arqemio Demo Tower'
+--   AND u.email = 'seed.worker@arqemio.com'
+--   AND cm.role = 'WORKER'
+--   AND cm.status = 'ACTIVE'
+--   AND NOT EXISTS (
+--     SELECT 1
+--     FROM project_workers pw
+--     WHERE pw.project_id = p.id
+--       AND pw.membership_id = cm.id
+-- );
