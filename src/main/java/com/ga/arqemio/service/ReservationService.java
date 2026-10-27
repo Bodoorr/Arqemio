@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -31,6 +33,7 @@ public class ReservationService {
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private AuditLogService auditLogService;
+    private NotificationService notificationService;
     private static final ReentrantLock reservationLock= new ReentrantLock();
     @PersistenceContext
     private EntityManager entityManager;
@@ -78,9 +81,11 @@ public class ReservationService {
 
             int availableQuantity= calculateAvailableQuantity(equipment, reservationRequest.getStartDateTime(), reservationRequest.getEndDateTime());
             logger.info("[" + Thread.currentThread().getName()+ "] Available quantity: "+ availableQuantity);
+
             if (reservationRequest.getQuantity()> availableQuantity){
                 logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{equipment.getId(), reservationRequest.getQuantity(), availableQuantity});
                 logger.warning("[" + Thread.currentThread().getName()+ "] RESERVATION REJECTED - Not enough equipment");
+                notificationService.sendNotification(currentUser.getId(), "Reservation failed! Not enough "+ equipment.getName()+" available. Only "+availableQuantity+" remaining.");
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");
             }
 
@@ -97,6 +102,13 @@ public class ReservationService {
             Reservation savedReservation = reservationRepository.save(reservation);
             logger.info("["+ Thread.currentThread().getName()+"] RESERVATION SAVED - ID: "+ savedReservation.getId());
             logger.log(Level.INFO,"Reservation {0} created for equipment {1}", new Object[]{savedReservation.getId(), equipment.getId()});
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit(){
+                    notificationService.sendNotification(currentUser.getId(), "Your reservation for "+equipment.getName()+" was successful.");
+                }
+            });
+
             auditLogService.createAuditLog(currentUser, project.getCompany(),
                     "CREATE", "RESERVATION", savedReservation.getId(),
                     "Created equipment reservation for " + equipment.getName()
@@ -249,6 +261,24 @@ public class ReservationService {
 
             reservation.setStatus(status);
             Reservation updatedReservation= reservationRepository.save(reservation);
+            //notification
+            //find the managers that will receive the notification
+            List<Long> managerIds= updatedReservation.getProject().getManagers()
+                    .stream()
+                    .map(manager->manager.getUser().getId())
+                    .toList();
+            String equipmentName= updatedReservation.getEquipment().getName();
+            //register the notification to run later
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                //call back that execute only after the transaction successfully commits.
+                @Override
+                public void afterCommit(){
+                for (Long managerId: managerIds){
+                    notificationService.sendNotification(managerId, "Equipment reservation for "+equipmentName+" has been completed.");
+                }
+            }
+            });
+
             logger.log(Level.INFO, "Reservation {0} marked as {1}",new Object[]{reservationId, status});
             return updatedReservation;
         } finally {

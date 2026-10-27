@@ -31,6 +31,7 @@ public class ProjectShareLinkService {
     private EmailService emailService;
     private FileAttachmentRepository fileAttachmentRepository;
     private AuditLogService auditLogService;
+    private NotificationService notificationService;
     private static final Logger logger =Logger.getLogger(ProjectShareLinkService.class.getName());
 
     public static User getCurrentLoggedInUser(){
@@ -97,7 +98,7 @@ public class ProjectShareLinkService {
         );
 
         emailService.sendHtmlMail(emailDetails);
-
+        notificationService.sendNotification(projectUpdate.getUpdatedBy().getUser().getId(), "Your project update "+projectUpdate.getTitle()+" has been shared with the customer.");
         auditLogService.createAuditLog(currentUser, project.getCompany(),
                 "SHARE", "PROJECT_UPDATE", projectUpdate.getId(),
                 "Shared project update with customer " + shareLink.getCustomerEmail()

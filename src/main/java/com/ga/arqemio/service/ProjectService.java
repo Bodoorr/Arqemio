@@ -29,6 +29,7 @@ public class ProjectService {
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private AuditLogService auditLogService;
+    private NotificationService notificationService;
 
     public static User getCurrentLoggedInUser(){
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -156,7 +157,7 @@ public class ProjectService {
         }
         project.getManagers().add(membership);
         projectRepository.save(project);
-
+        notificationService.sendNotification(membership.getUser().getId(), "You have been assigned as a manager to project "+project.getName());
         logger.log(Level.INFO, "Manager membership {0} assigned to project {1}", new Object[]{membershipId,projectId});
         return membership;
     }
@@ -177,7 +178,7 @@ public class ProjectService {
 
         project.getManagers().remove(membership);
         projectRepository.save(project);
-
+        notificationService.sendNotification(membership.getUser().getId(), "You have been removed as a manager from project "+ project.getName());
         logger.log(Level.INFO,"Manager membership {0} removed from project {1}", new Object[]{membershipId, projectId});
         return membership;
     }
@@ -210,7 +211,7 @@ public class ProjectService {
 
         project.getWorkers().add(membership);
         projectRepository.save(project);
-
+        notificationService.sendNotification(membership.getUser().getId(), "You have been assigned to project "+ project.getName());
         logger.log(Level.INFO,"Worker membership {0} assigned project {1}", new Object[]{membershipId,projectId});
         return membership;
     }
@@ -231,7 +232,7 @@ public class ProjectService {
 
         project.getWorkers().remove(membership);
         projectRepository.save(project);
-
+        notificationService.sendNotification(membership.getUser().getId(), "You have been removed from project "+ project.getName());
         logger.log(Level.INFO,"Worker membership {0} removed from project {1}", new Object[]{membershipId, projectId});
         return membership;
     }
@@ -264,5 +265,4 @@ public class ProjectService {
     private boolean isCompanyOwner(User user, Long companyId){
         return companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), companyId,"OWNER","ACTIVE");
     }
-
 }
