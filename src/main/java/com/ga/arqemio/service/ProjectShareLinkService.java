@@ -154,6 +154,39 @@ public class ProjectShareLinkService {
         return userService.registerCustomer(name,email,password);
     }
 
+    public List<ProjectUpdateShareResponse> getCustomerSharedUpdates(){
+        User currentUser= getCurrentLoggedInUser();
+
+        if (!Boolean.TRUE.equals(currentUser.getIsCustomer())){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only customers can access this dashboard.");
+        }
+
+        List<ProjectShareLink> shareLinks= projectShareLinkRepository.findByCustomerEmailIgnoreCaseAndRevokedAtIsNull(currentUser.getEmail());
+        List<ProjectUpdateShareResponse> responses=new ArrayList<>();
+
+        for (ProjectShareLink shareLink: shareLinks){
+            ProjectUpdate projectUpdate= shareLink.getProjectUpdate();
+
+            List<FileAttachment> attachments=fileAttachmentRepository.findByProjectUpdateIdAndStatus(projectUpdate.getId(),"ACTIVE");
+            List<String> images= new ArrayList<>();
+
+            for (FileAttachment attachment: attachments){
+                images.add(attachment.getFileUrl());
+            }
+
+            responses.add(new ProjectUpdateShareResponse(
+                    projectUpdate.getProject().getCompany().getName(),
+                    projectUpdate.getProject().getName(),
+                    projectUpdate.getTitle(),
+                    projectUpdate.getDescription(),
+                    projectUpdate.getCreatedAt(),
+                    images,
+                    shareLink.getExpiresAt()
+            ));
+        }
+        return responses;
+    }
+
     private boolean canShareProjectUpdate(User user, Project project){
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), project.getCompany().getId(),"OWNER","ACTIVE");
         boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
