@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @AllArgsConstructor
 @RequestMapping("/project-share")
@@ -39,5 +41,10 @@ public class ProjectShareLinkController {
         }
         projectShareLinkService.registerCustomer(token, customerRegistrationRequest.getName(), customerRegistrationRequest.getPassword());
         return ResponseEntity.ok("Customer registered successfully.");
+    }
+
+    @GetMapping("/my-updates")
+    public ResponseEntity<List<ProjectUpdateShareResponse>> getCustomerSharedUpdates(){
+        return ResponseEntity.ok(projectShareLinkService.getCustomerSharedUpdates());
     }
 }
