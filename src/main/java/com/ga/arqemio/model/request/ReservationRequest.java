@@ -3,10 +3,12 @@ package com.ga.arqemio.model.request;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 @Getter
+@Setter
 public class ReservationRequest {
     @NotNull(message = "Equipment ID is required.")
     private Long equipmentId;

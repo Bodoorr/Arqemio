@@ -9,6 +9,7 @@ import com.ga.arqemio.repository.ProjectRepository;
 import com.ga.arqemio.repository.TaskAssignmentRepository;
 import com.ga.arqemio.repository.TaskRepository;
 import com.ga.arqemio.security.MyUserDetails;
+import jakarta.annotation.PreDestroy;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,12 +30,13 @@ public class TaskAssignmentService {
     private CompanyMembershipRepository companyMembershipRepository;
     private ProjectRepository projectRepository;
     private static final Logger logger= Logger.getLogger(TaskAssignmentService.class.getName());
+    private NotificationService notificationService;
+    private static final ExecutorService executorService= Executors.newFixedThreadPool(3);
 
     public static User getCurrentLoggedInUser() {
         MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return userDetails.getUser();
     }
-
 
     public TaskAssignment assignWorker(Long taskId, Long workerMembershipId, LocalDateTime assignedAt, LocalDateTime dueAt) {
         User currentUser = getCurrentLoggedInUser();
@@ -86,6 +90,7 @@ public class TaskAssignmentService {
         taskAssignment.setDueAt(dueAt);
 
         TaskAssignment savedAssignment= taskAssignmentRepository.save(taskAssignment);
+        notifyWorker(worker.getUser().getId(), savedAssignment.getTask().getId());
         logger.log(Level.INFO,"Worker membership {0} assigned to task {1} by user {2}", new Object[]{workerMembershipId, taskId, currentUser.getId()});
         return savedAssignment;
     }
@@ -119,5 +124,15 @@ public class TaskAssignmentService {
         return taskRepository.findById(taskId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found."));
     }
 
+    private void notifyWorker(Long userId, Long taskId){
+        executorService.execute(()->{
+            logger.info("Thread: "+Thread.currentThread().getName());
+            notificationService.sendNotification(userId,"You have been assigned to task "+taskId);
+        });
+    }
 
+    @PreDestroy
+    public void shutdown(){
+        executorService.shutdown();
+    }
 }
