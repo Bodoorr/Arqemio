@@ -175,6 +175,9 @@ public class InvitationService {
 
             updateCompanyOwner(invitation, savedMembership);
             markInvitationAccepted(invitation, savedUser);
+
+            String action= "REGISTER_"+invitation.getRole();
+            auditLogService.createAuditLog(savedUser, invitation.getCompany(),action,"USER", savedUser.getId(), "Registered as "+invitation.getRole()+": " +savedUser.getName());
         return savedUser;
     }
 
