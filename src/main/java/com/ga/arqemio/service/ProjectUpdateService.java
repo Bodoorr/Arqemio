@@ -112,6 +112,7 @@ public class ProjectUpdateService {
 
 
         ProjectUpdate reviewedUpdate= projectUpdateRepository.save(projectUpdate);
+        notificationService.sendNotification(reviewedUpdate.getUpdatedBy().getUser().getId(), "Your project update "+reviewedUpdate.getTitle()+" has been "+status.toLowerCase());
         logger.log(Level.INFO, "Project update {0} reviewed with status {1} by user {2}", new Object[]{updateId, status,currentUser.getId()});
         return reviewedUpdate;
     }
