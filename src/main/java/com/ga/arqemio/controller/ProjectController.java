@@ -118,6 +118,19 @@ public class ProjectController {
         return ResponseEntity.ok(members);
     }
 
+
+    @GetMapping("/{projectId}/available-members")
+    public ResponseEntity<List<ProjectMemberResponse>> getAvailableProjectMembers(@PathVariable Long projectId) {
+        List<CompanyMembership> members = projectService.getAvailableProjectMembers(projectId);
+        List<ProjectMemberResponse> memberResponses = new ArrayList<>();
+
+        for (CompanyMembership member : members) {
+            memberResponses.add(toMemberResponse(member, projectId));
+        }
+        return ResponseEntity.ok(memberResponses);
+    }
+
+
     private ProjectResponse toResponse(Project project){
         return new ProjectResponse(
                 project.getId(),
