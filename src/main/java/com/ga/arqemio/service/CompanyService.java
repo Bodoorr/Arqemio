@@ -11,6 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -44,5 +45,21 @@ public class CompanyService {
         auditLogService.createAuditLog(currentUser,savedCompany,"CREATE_COMPANY","COMPANY", savedCompany.getId(), "Created company: "+ savedCompany.getName());
         logger.log(Level.INFO,"Company {0} created successfully by platform admin {1}", new Object[]{savedCompany.getId(), currentUser.getId()});
         return savedCompany;
+    }
+
+    public List<Company> getAllCompanies(){
+        User currentUser= getCurrentLoggedInUser();
+        if (!currentUser.getIsPlatformAdmin()){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Only platform Admin can view all companies.");
+        }
+        return companyRepository.findAll();
+    }
+
+    public Company getCompanyById(Long id){
+        User currentUser= getCurrentLoggedInUser();
+        if (!currentUser.getIsPlatformAdmin()){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Only platform Admin can view company details.");
+        }
+        return companyRepository.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Company not found"));
     }
 }
