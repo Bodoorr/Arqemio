@@ -287,8 +287,10 @@ public class InvitationService {
     private void updateCompanyOwner(Invitation invitation, CompanyMembership membership){
         if ("OWNER".equals(invitation.getRole())){
             Company company= invitation.getCompany();
-            company.setOwner(membership);
-            companyRepository.save(company);
+            if (company.getOwner() == null) {
+                company.setOwner(membership);
+                companyRepository.save(company);
+            }
         }
     }
 
