@@ -10,6 +10,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @RestController
 @RequestMapping(path = "/company")
 @AllArgsConstructor
@@ -19,7 +22,6 @@ public class CompanyController {
     @PostMapping
     public ResponseEntity<CompanyResponse> createCompany(@Valid @RequestBody CompanyRequest companyRequest){
         Company company= companyService.createCompany(companyRequest);
-
         CompanyResponse companyResponse= new CompanyResponse(
                 true,
                 "Company created successfully.",
@@ -34,12 +36,32 @@ public class CompanyController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getAllCompanies() {
-        return ResponseEntity.ok(companyService.getAllCompanies());
+    public ResponseEntity<List<CompanyResponse>> getAllCompanies() {
+        List<Company> companies = companyService.getAllCompanies();
+        List<CompanyResponse> companyResponses = new ArrayList<>();
+
+        for (Company company : companies) {
+            companyResponses.add(toResponse(company));
+        }
+        return ResponseEntity.ok(companyResponses);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getCompanyById(@PathVariable Long id) {
-        return ResponseEntity.ok(companyService.getCompanyById(id));
+    @GetMapping("/{companyId}")
+    public ResponseEntity<CompanyResponse> getCompanyById(@PathVariable Long companyId) {
+        Company company = companyService.getCompanyById(companyId);
+        return ResponseEntity.ok(toResponse(company));
+    }
+
+    private CompanyResponse toResponse(Company company) {
+        return new CompanyResponse(
+                true,
+                "Company retrieved successfully",
+                company.getId(),
+                company.getName(),
+                company.getDescription(),
+                company.getLocation(),
+                company.getAddress(),
+                company.getStatus()
+        );
     }
 }
