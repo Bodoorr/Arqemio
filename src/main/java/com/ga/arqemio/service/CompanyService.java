@@ -62,4 +62,5 @@ public class CompanyService {
         }
         return companyRepository.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Company not found"));
     }
+
 }

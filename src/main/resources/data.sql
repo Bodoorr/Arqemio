@@ -3,31 +3,31 @@
 -- -- Manager password: Manager123
 -- -- Worker password: Worker123
 -- -- PLATFORM ADMIN
--- INSERT INTO users (
---     name,
---     email,
---     password,
---     status,
---     is_platform_admin,
---     is_customer,
---     created_at,
---     updated_at
--- )
--- SELECT
---     'Seed Platform Admin',
---     'seed.admin@arqemio.com',
---     '$2a$10$mXMfRK7nU9e1yKS0K1d5O.B/5hMuMOquCGnYMiy.W.LCnbubQJaoK',
---     TRUE,
---     TRUE,
---     FALSE,
---     CURRENT_TIMESTAMP,
---     CURRENT_TIMESTAMP
---     WHERE NOT EXISTS (
---     SELECT 1
---     FROM users
---     WHERE email = 'seed.admin@arqemio.com'
--- );
---
+INSERT INTO users (
+    name,
+    email,
+    password,
+    status,
+    is_platform_admin,
+    is_customer,
+    created_at,
+    updated_at
+)
+SELECT
+    'Seed Platform Admin',
+    'seed.admin@arqemio.com',
+    '$2a$10$mXMfRK7nU9e1yKS0K1d5O.B/5hMuMOquCGnYMiy.W.LCnbubQJaoK',
+    TRUE,
+    TRUE,
+    FALSE,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+    WHERE NOT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE email = 'seed.admin@arqemio.com'
+);
+
 --
 -- -- COMPANY OWNER
 -- INSERT INTO users (
