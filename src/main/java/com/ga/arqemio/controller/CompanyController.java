@@ -30,7 +30,10 @@ public class CompanyController {
                 company.getDescription(),
                 company.getLocation(),
                 company.getAddress(),
-                company.getStatus()
+                company.getStatus(),
+                company.getOwner() != null ? company.getOwner().getUser().getId() : null,
+                company.getOwner() != null ? company.getOwner().getUser().getName() : null,
+                company.getOwner() != null ? company.getOwner().getUser().getEmail() : null
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(companyResponse);
     }
@@ -61,7 +64,10 @@ public class CompanyController {
                 company.getDescription(),
                 company.getLocation(),
                 company.getAddress(),
-                company.getStatus()
+                company.getStatus(),
+                company.getOwner() != null ? company.getOwner().getUser().getId() : null,
+                company.getOwner() != null ? company.getOwner().getUser().getName() : null,
+                company.getOwner() != null ? company.getOwner().getUser().getEmail() : null
         );
     }
 }

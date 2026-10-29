@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -248,6 +249,39 @@ public class ProjectService {
     private CompanyMembership findMembershipById(Long membershipId){
         return companyMembershipRepository.findById(membershipId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membership not found."));
     }
+
+
+    public List<CompanyMembership> getAvailableProjectMembers(Long projectId) {
+        User currentUser = getCurrentLoggedInUser();
+        Project project = findProjectById(projectId);
+
+        if (!isCompanyOwner(currentUser, project.getCompany().getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You're not allowed to manage project members."
+            );
+        }
+
+        List<CompanyMembership> companyMembers =
+                companyMembershipRepository.findByCompanyIdAndStatus(
+                        project.getCompany().getId(), "ACTIVE"
+                );
+
+        List<CompanyMembership> availableMembers = new ArrayList<>();
+        for (CompanyMembership member : companyMembers) {
+            if (member.getRole().equals("MANAGER") &&
+                    !project.getManagers().contains(member)) {
+                availableMembers.add(member);
+            }
+
+            if (member.getRole().equals("WORKER") &&
+                    !project.getWorkers().contains(member)) {
+                availableMembers.add(member);
+            }
+        }
+        return availableMembers;
+    }
+
 
     private void validateProjectDates(ProjectRequest projectRequest){
         if (projectRequest.getStartDate() == null || projectRequest.getExpectedEndDate()== null || projectRequest.getExpectedEndDate().isBefore(projectRequest.getStartDate())){

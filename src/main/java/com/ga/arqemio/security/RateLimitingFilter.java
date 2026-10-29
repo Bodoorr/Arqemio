@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 //filter checks the HTTP requests before they reach controller.
 public class RateLimitingFilter implements Filter {
 
-    private static final int MAX_REQUESTS_PER_MINUTE = 10;
+    private static final int MAX_REQUESTS_PER_MINUTE = 300;
     //ConcurrentHashMap keeps the map thread safe when processed requests at the same time
     private final Map<String, AtomicInteger> requestCounts = new ConcurrentHashMap<>();
     private final Map<String, Long> requestTimes= new ConcurrentHashMap<>();

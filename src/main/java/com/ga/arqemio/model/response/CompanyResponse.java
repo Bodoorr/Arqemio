@@ -14,5 +14,8 @@ public class CompanyResponse {
     private String location;
     private String address;
     private String status;
+    private Long ownerId;
+    private String ownerName;
+    private String ownerEmail;
 
 }

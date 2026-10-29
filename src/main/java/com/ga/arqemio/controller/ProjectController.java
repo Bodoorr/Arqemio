@@ -103,6 +103,34 @@ public class ProjectController {
         return ResponseEntity.ok(toMemberResponse(worker, projectId));
     }
 
+    @GetMapping("/{projectId}/members")
+    public ResponseEntity<List<ProjectMemberResponse>> getProjectMembers(@PathVariable Long projectId) {
+        Project project = projectService.getProjectById(projectId);
+        List<ProjectMemberResponse> members = new ArrayList<>();
+
+        for (CompanyMembership manager : project.getManagers()) {
+            members.add(toMemberResponse(manager, projectId));
+        }
+
+        for (CompanyMembership worker : project.getWorkers()) {
+            members.add(toMemberResponse(worker, projectId));
+        }
+        return ResponseEntity.ok(members);
+    }
+
+
+    @GetMapping("/{projectId}/available-members")
+    public ResponseEntity<List<ProjectMemberResponse>> getAvailableProjectMembers(@PathVariable Long projectId) {
+        List<CompanyMembership> members = projectService.getAvailableProjectMembers(projectId);
+        List<ProjectMemberResponse> memberResponses = new ArrayList<>();
+
+        for (CompanyMembership member : members) {
+            memberResponses.add(toMemberResponse(member, projectId));
+        }
+        return ResponseEntity.ok(memberResponses);
+    }
+
+
     private ProjectResponse toResponse(Project project){
         return new ProjectResponse(
                 project.getId(),
