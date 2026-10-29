@@ -41,7 +41,7 @@ public class ProjectShareLinkService {
         return userDetails.getUser();
     }
 
-    public String getProjectShareEmail(String projectName, String message, String companyName, String shareLink, String registrationLink) {
+    public String getProjectShareEmail(String projectName, String message, String companyName, String shareLink, String registrationLink, List<FileAttachment> attachments) {
         try {
             ClassPathResource resource =
                     new ClassPathResource("templates/project-share-email.html");
@@ -49,13 +49,24 @@ public class ProjectShareLinkService {
             String html = new String(
                     resource.getInputStream().readAllBytes(),
                     StandardCharsets.UTF_8);
-            html = html.replace("{{projectName}}", projectName);
-            html = html.replace("{{message}}", message);
-            html = html.replace("{{companyName}}", companyName);
-            html = html.replace("{{shareLink}}", shareLink);
-            html = html.replace("{{registrationLink}}", registrationLink);
+            StringBuilder imagesHtml = new StringBuilder();
+            for (FileAttachment attachment : attachments) {
+                if (attachment.getFileType() != null &&
+                        attachment.getFileType().startsWith("image/")) {
 
-            return html;
+                    imagesHtml.append(
+                            "<img src=\"" + attachment.getFileUrl() +
+                                    "\" style=\"width:100%;max-width:550px;border-radius:10px;margin:10px 0;\" alt=\"Construction Progress\" />"
+                    );
+                }
+            }
+            return html
+                    .replace("{{projectName}}", projectName)
+                    .replace("{{message}}", message)
+                    .replace("{{companyName}}", companyName)
+                    .replace("{{shareLink}}", shareLink)
+                    .replace("{{registrationLink}}", registrationLink)
+                    .replace("{{images}}", imagesHtml.toString());
 
         } catch (IOException e) {
             throw new RuntimeException("Could not load project share email.");
@@ -91,7 +102,8 @@ public class ProjectShareLinkService {
 
         String link= "http://localhost:5173/project-preview/"+ shareLink.getToken();
         String registrationLink= "http://localhost:5173/customer/register/"+ savedShareLink.getToken();
-        String emailBody = getProjectShareEmail(project.getName(), shareLink.getMessage(), project.getCompany().getName(), link, registrationLink);
+        List<FileAttachment> attachments = fileAttachmentRepository.findByProjectUpdateIdAndStatus(projectUpdate.getId(), "ACTIVE");
+        String emailBody = getProjectShareEmail(project.getName(), shareLink.getMessage(), project.getCompany().getName(), link, registrationLink, attachments);
 
         EmailDetails emailDetails = new EmailDetails(
                 shareLink.getCustomerEmail(),
