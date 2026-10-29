@@ -53,10 +53,12 @@ public class ProjectShareLinkService {
             for (FileAttachment attachment : attachments) {
                 if (attachment.getFileType() != null &&
                         attachment.getFileType().startsWith("image/")) {
-
                     imagesHtml.append(
                             "<img src=\"" + attachment.getFileUrl() +
-                                    "\" style=\"width:100%;max-width:550px;border-radius:10px;margin:10px 0;\" alt=\"Construction Progress\" />"
+                                    "\" class=\"email-image\" " +
+                                    "style=\"display:block;width:100%;max-width:100%;height:auto;" +
+                                    "border-radius:10px;margin:10px 0;\" " +
+                                    "alt=\"Construction Progress\" />"
                     );
                 }
             }

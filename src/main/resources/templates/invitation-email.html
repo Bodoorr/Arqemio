@@ -1,67 +1,182 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Arqemio Invitation</title>
+
+    <style>
+        @media only screen and (max-width: 600px) {
+            .email-wrapper {
+                padding: 12px !important;
+            }
+
+            .email-header {
+                padding: 22px !important;
+            }
+
+            .email-content {
+                padding: 22px !important;
+            }
+
+            .email-footer {
+                padding: 18px !important;
+            }
+
+            .email-title {
+                font-size: 22px !important;
+            }
+
+            .email-logo {
+                font-size: 20px !important;
+            }
+
+            .email-subtitle {
+                font-size: 9px !important;
+            }
+
+            .email-badge {
+                display: none !important;
+            }
+        }
+    </style>
 </head>
 
-<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+<body style="margin:0;padding:0;background-color:#e2e4e6;font-family:Arial,Helvetica,sans-serif;color:#35362c;">
 
-<div style="max-width: 580px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#e2e4e6;">
+    <tr>
+        <td class="email-wrapper" align="center" style="padding:32px 14px;">
 
-    <div style="background-color: #0f172a; padding: 28px 40px; border-bottom: 3px solid #2563eb;">
-        <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 700; letter-spacing: -0.5px;">
-            Arqemio
-        </h1>
-    </div>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                   style="width:100%;max-width:700px;background-color:#ffffff;border:1px solid #c3c8c1;border-radius:14px;">
 
-    <div style="padding: 40px; color: #334155;">
+                <tr>
+                    <td class="email-header" style="padding:28px 30px 22px;">
 
-        <h2 style="margin-top: 0; margin-bottom: 20px; color: #0f172a; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">
-            You've been invited!
-        </h2>
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td>
+                                    <table role="presentation" cellpadding="0" cellspacing="0">
+                                        <tr>
+                                            <td style="background-color:#d4e14b;border-radius:9px;padding:11px;font-size:20px;font-weight:bold;color:#35362c;">
+                                                A
+                                            </td>
 
-        <p style="margin: 0 0 16px 0; line-height: 1.6; font-size: 15px; color: #334155;">
-            You have been invited to join
-            <strong style="color: #0f172a;">{{companyName}}</strong>
-            on Arqemio as a
-            <strong style="color: #0f172a;">{{role}}</strong>.
-        </p>
+                                            <td style="padding-left:12px;">
+                                                <p class="email-logo" style="margin:0;font-size:23px;font-weight:bold;color:#35362c;">
+                                                    Arqemio
+                                                </p>
 
-        <p style="margin: 0 0 28px 0; line-height: 1.6; font-size: 15px; color: #475569;">
-            Accept your invitation to create your account and join your company workspace.
-        </p>
+                                                <p class="email-subtitle" style="margin:4px 0 0;font-size:10px;letter-spacing:1px;color:#7a7359;">
+                                                    CONSTRUCTION MANAGEMENT
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
 
-        <div style="margin: 0 0 28px 0;">
-            <a href="{{invitationLink}}"
-               style="
-                    background-color: #2563eb;
-                    color: #ffffff;
-                    padding: 14px 28px;
-                    text-decoration: none;
-                    border-radius: 8px;
-                    display: inline-block;
-                    font-weight: 600;
-                    font-size: 15px;
-               ">
-                Accept Invitation
-            </a>
-        </div>
+                                <td class="email-badge" align="right" style="font-size:10px;color:#7a7359;">
+                                    INVITATION
+                                </td>
+                            </tr>
+                        </table>
 
-        <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: 500;">
-            This invitation will expire in 48 hours.
-        </p>
+                    </td>
+                </tr>
 
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;">
+                <tr>
+                    <td style="padding:0 30px;">
+                        <div style="border-top:1px solid #e2e4e6;"></div>
+                    </td>
+                </tr>
 
-        <p style="margin: 0; font-size: 13px; color: #94a3b8; line-height: 1.5;">
-            Arqemio<br>
-            Construction Project Management
-        </p>
+                <tr>
+                    <td class="email-content" style="padding:30px;">
 
-    </div>
+                        <p style="margin:0 0 12px;font-size:11px;font-weight:bold;letter-spacing:1px;color:#7a7359;">
+                            WORKSPACE INVITATION
+                        </p>
 
-</div>
+                        <h1 class="email-title" style="margin:0 0 15px;font-size:25px;line-height:1.3;color:#35362c;">
+                            You're invited to join Arqemio.
+                        </h1>
+
+                        <p style="margin:0 0 24px;font-size:14px;line-height:1.8;color:#7a7359;">
+                            You've been invited to collaborate on a construction management workspace.
+                            Accept your invitation to get started.
+                        </p>
+
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                               style="background-color:#f5f6f3;border:1px solid #e2e4e6;border-radius:10px;">
+
+                            <tr>
+                                <td style="padding:20px;">
+
+                                    <p style="margin:0 0 8px;font-size:11px;color:#7a7359;">
+                                        COMPANY
+                                    </p>
+
+                                    <p style="margin:0 0 18px;font-size:17px;font-weight:bold;color:#35362c;">
+                                        {{companyName}}
+                                    </p>
+
+                                    <p style="margin:0 0 9px;font-size:11px;color:#7a7359;">
+                                        YOUR ROLE
+                                    </p>
+
+                                    <span style="display:inline-block;background-color:#d4e14b;color:#35362c;padding:7px 13px;border-radius:6px;font-size:12px;font-weight:bold;">
+                                        {{role}}
+                                    </span>
+
+                                </td>
+                            </tr>
+
+                        </table>
+
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+                            <tr>
+                                <td align="center" bgcolor="#d4e14b" style="border-radius:9px;">
+
+                                    <a href="{{invitationLink}}"
+                                       style="display:block;padding:15px 20px;color:#35362c;text-decoration:none;font-size:14px;font-weight:bold;">
+                                        Accept Invitation
+                                    </a>
+
+                                </td>
+                            </tr>
+                        </table>
+
+                        <p style="margin:16px 0 0;font-size:12px;line-height:1.7;color:#7a7359;text-align:center;">
+                            This invitation expires in 48 hours.
+                        </p>
+
+                        <div style="border-top:1px solid #e2e4e6;margin:28px 0 20px;"></div>
+
+                        <p style="margin:0;font-size:12px;line-height:1.7;color:#7a7359;">
+                            If you weren't expecting this invitation, you can safely ignore this email.
+                        </p>
+
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="email-footer" align="center"
+                        style="padding:20px;background-color:#f5f6f3;border-top:1px solid #e2e4e6;border-radius:0 0 14px 14px;">
+
+                        <p style="margin:0;font-size:12px;color:#7a7359;">
+                            Powered by Arqemio · Building better projects, together.
+                        </p>
+
+                    </td>
+                </tr>
+
+            </table>
+
+        </td>
+    </tr>
+</table>
 
 </body>
 </html>
