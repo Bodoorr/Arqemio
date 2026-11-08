@@ -91,7 +91,7 @@ public class ReservationService {
             logger.info("[" + Thread.currentThread().getName()+ "] Available quantity: "+ availableQuantity);
 
             if (reservationRequest.getQuantity()> availableQuantity){
-                logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{equipment.getId(), reservationRequest.getQuantity(), availableQuantity});
+//                logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{equipment.getId(), reservationRequest.getQuantity(), availableQuantity});
                 logger.warning("[" + Thread.currentThread().getName()+ "] RESERVATION REJECTED - Not enough equipment");
                 notificationService.sendNotification(currentUser.getId(), "Reservation failed! Not enough "+ equipment.getName()+" available. Only "+availableQuantity+" remaining.");
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");

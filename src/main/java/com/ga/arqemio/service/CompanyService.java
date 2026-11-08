@@ -3,6 +3,7 @@ package com.ga.arqemio.service;
 import com.ga.arqemio.model.Company;
 import com.ga.arqemio.model.User;
 import com.ga.arqemio.model.request.CompanyRequest;
+import com.ga.arqemio.repository.CompanyMembershipRepository;
 import com.ga.arqemio.repository.CompanyRepository;
 import com.ga.arqemio.security.MyUserDetails;
 import lombok.AllArgsConstructor;
@@ -20,6 +21,8 @@ import java.util.logging.Logger;
 public class CompanyService {
     private CompanyRepository companyRepository;
     private AuditLogService auditLogService;
+    private CompanyMembershipRepository companyMembershipRepository;
+
     private static final Logger logger= Logger.getLogger(CompanyService.class.getName());
     public User getCurrentLoggedInUser(){
         MyUserDetails userDetails= (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -57,10 +60,15 @@ public class CompanyService {
 
     public Company getCompanyById(Long id){
         User currentUser= getCurrentLoggedInUser();
-        if (!currentUser.getIsPlatformAdmin()){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Only platform Admin can view company details.");
+        Company company= companyRepository.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Company not found"));
+
+        boolean isPlatformAdmin= Boolean.TRUE.equals(currentUser.getIsPlatformAdmin());
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), id, "ACTIVE");
+
+        if (!isPlatformAdmin && !isActiveMember){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this company.");
         }
-        return companyRepository.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Company not found"));
+        return company;
     }
 
 }
