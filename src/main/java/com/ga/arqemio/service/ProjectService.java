@@ -87,9 +87,13 @@ public class ProjectService {
     public Project getProjectById(Long projectId){
         User currentUser= getCurrentLoggedInUser();
         Project project= findProjectById(projectId);
-        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), project.getCompany().getId(), "ACTIVE");
 
-         if (!isActiveMember){
+        boolean isOwner= isCompanyOwner(currentUser,project.getCompany().getId());
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), project.getCompany().getId(), "ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(projectId, currentUser.getId(),"ACTIVE");
+        boolean isAssignedWorker= projectRepository.existsByIdAndWorkersUserIdAndWorkersStatus(projectId, currentUser.getId(), "ACTIVE");
+
+         if (!isOwner && (!isActiveMember || (!isAssignedManager && !isAssignedWorker))){
              logger.log(Level.WARNING,"User {0} attempted to view project {1} without permission", new Object[]{currentUser.getId(), projectId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this project.");
         }
