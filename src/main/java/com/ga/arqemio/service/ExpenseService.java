@@ -86,6 +86,10 @@ public class ExpenseService {
         Expense expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
         validateExpenseManagementAccess(currentUser, expense.getProject());
 
+        if (!expense.getMember().getUser().getId().equals(currentUser.getId())){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only update your own expenses.");
+        }
+
         validateExpenseAmount(expenseRequest);
 
         expense.setTitle(expenseRequest.getTitle());
@@ -104,6 +108,9 @@ public class ExpenseService {
         User currentUser= getCurrentLoggedInUser();
         Expense expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
         validateExpenseManagementAccess(currentUser, expense.getProject());
+        if (!expense.getMember().getUser().getId().equals(currentUser.getId())){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only archive your own expenses.");
+        }
         expense.setStatus("ARCHIVED");
 
         Expense archivedExpense= expenseRepository.save(expense);
