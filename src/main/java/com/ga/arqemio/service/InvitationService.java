@@ -232,7 +232,7 @@ public class InvitationService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to resend the invitation.");
 
         }
-        if (invitation.getStatus().equals("ACCEPTED")){
+        if (invitation.getStatus().equals("ACCEPTED") || invitation.getStatus().equals("CANCELLED")){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You can't resend this invitation.");
         }
 
