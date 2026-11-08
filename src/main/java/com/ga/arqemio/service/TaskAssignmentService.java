@@ -115,9 +115,10 @@ public class TaskAssignmentService {
 
     private boolean canManageTaskAssignments(User user, Task task){
         boolean isCompanyOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), task.getProject().getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(), task.getProject().getCompany().getId(), "ACTIVE");
         boolean isAssignedManager = projectRepository.existsByIdAndManagersUserIdAndManagersStatus(task.getProject().getId(), user.getId(), "ACTIVE");
 
-        return isCompanyOwner || isAssignedManager;
+        return isCompanyOwner || (isAssignedManager && isActiveMember);
     }
 
     private Task findTaskById(Long taskId){
