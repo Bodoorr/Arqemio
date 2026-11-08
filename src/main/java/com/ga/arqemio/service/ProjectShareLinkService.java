@@ -137,7 +137,11 @@ public class ProjectShareLinkService {
 
         ProjectUpdate projectUpdate= shareLink.getProjectUpdate();
 
-        List<FileAttachment> attachments= fileAttachmentRepository.findByProjectUpdateIdAndStatus(projectUpdate.getId(),"ACTIVE");
+        if (!projectUpdate.getStatus().equals("APPROVED")){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This project update is no longer available for sharing.");
+        }
+
+            List<FileAttachment> attachments= fileAttachmentRepository.findByProjectUpdateIdAndStatus(projectUpdate.getId(),"ACTIVE");
         List<String> images= new ArrayList<>();
 
         for (FileAttachment attachment: attachments){
@@ -160,6 +164,10 @@ public class ProjectShareLinkService {
         if (shareLink.getRevokedAt()!=null){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This registration link has been revoked");
         }
+
+        if (!shareLink.getExpiresAt().isAfter(LocalDateTime.now())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This registration link has expired.");
+        }
         return shareLink.getCustomerEmail();
     }
 
@@ -180,6 +188,9 @@ public class ProjectShareLinkService {
 
         for (ProjectShareLink shareLink: shareLinks){
             ProjectUpdate projectUpdate= shareLink.getProjectUpdate();
+            if (!projectUpdate.getStatus().equals("APPROVED")){
+                continue;
+            }
 
             List<FileAttachment> attachments=fileAttachmentRepository.findByProjectUpdateIdAndStatus(projectUpdate.getId(),"ACTIVE");
             List<String> images= new ArrayList<>();
@@ -204,8 +215,9 @@ public class ProjectShareLinkService {
     private boolean canShareProjectUpdate(User user, Project project){
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), project.getCompany().getId(),"OWNER","ACTIVE");
         boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(), project.getCompany().getId(), "ACTIVE");
 
-        return isCompanyOwner || isAssignedManager;
+        return isActiveMember && (isCompanyOwner || isAssignedManager);
     }
 
 }
