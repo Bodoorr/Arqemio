@@ -15,8 +15,5 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
     @Query("SELECT e FROM Equipment e WHERE e.id = :equipmentId")
     Optional<Equipment> findByIdForUpdate(@Param("equipmentId") Long equipmentId);
 
-    List<Equipment> findByCompanyMembershipsUserIdAndCompanyMembershipsStatus(
-            Long userId,
-            String status
-    );
+    List<Equipment> findByCompanyId(Long companyId);
 }

@@ -124,6 +124,14 @@ public class ProjectUpdateService {
 
         ProjectUpdate projectUpdate= findProjectUpdateById(updateId);
 
+        Project project= projectUpdate.getProject();
+        boolean isActiveWorker= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(), "WORKER", "ACTIVE");
+        boolean isAssignedWorker= projectRepository.existsByIdAndWorkersUserIdAndWorkersStatus(project.getId(), currentUser.getId(), "ACTIVE");
+
+        if (!isActiveWorker || !isAssignedWorker) {
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to modify this project update.");
+        }
+
         if (!projectUpdate.getUpdatedBy().getUser().getId().equals(currentUser.getId())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this project update.");
         }
@@ -145,6 +153,13 @@ public class ProjectUpdateService {
         User currentUser= getCurrentLoggedInUser();
         ProjectUpdate projectUpdate= findProjectUpdateById(updateId);
 
+        Project project= projectUpdate.getProject();
+        boolean isActiveWorker= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(), "WORKER", "ACTIVE");
+        boolean isAssignedWorker= projectRepository.existsByIdAndWorkersUserIdAndWorkersStatus(project.getId(), currentUser.getId(), "ACTIVE");
+
+        if (!isActiveWorker || !isAssignedWorker){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to archive this project update.");
+        }
         if (!projectUpdate.getUpdatedBy().getUser().getId().equals(currentUser.getId())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to archive this project update.");
         }
@@ -169,15 +184,17 @@ public class ProjectUpdateService {
 
     private boolean canManageProjectUpdate(User user, Project project){
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(),project.getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(), project.getCompany().getId(), "ACTIVE");
         boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
 
-        return isAssignedManager || isCompanyOwner;
+        return isCompanyOwner|| (isActiveMember && isAssignedManager);
     }
 
     private boolean canViewProjectUpdate(User user, Project project){
         boolean canManage= canManageProjectUpdate(user,project);
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(), project.getCompany().getId(), "ACTIVE");
         boolean isAssignedWorker = projectRepository.existsByIdAndWorkersUserIdAndWorkersStatus(project.getId(), user.getId(), "ACTIVE");
 
-        return canManage || isAssignedWorker;
+        return canManage || (isAssignedWorker && isActiveMember);
     }
 }

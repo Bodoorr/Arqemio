@@ -115,21 +115,48 @@ public class TaskAssignmentService {
 
     private boolean canManageTaskAssignments(User user, Task task){
         boolean isCompanyOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), task.getProject().getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(), task.getProject().getCompany().getId(), "ACTIVE");
         boolean isAssignedManager = projectRepository.existsByIdAndManagersUserIdAndManagersStatus(task.getProject().getId(), user.getId(), "ACTIVE");
 
-        return isCompanyOwner || isAssignedManager;
+        return isCompanyOwner || (isAssignedManager && isActiveMember);
     }
 
     private Task findTaskById(Long taskId){
         return taskRepository.findById(taskId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found."));
     }
 
-    private void notifyWorker(Long userId, Long taskId){
-        executorService.execute(()->{
-            logger.info("Thread: "+Thread.currentThread().getName());
-            notificationService.sendNotification(userId,"You have been assigned to task "+taskId);
+
+    private void notifyWorker(Long userId, Long taskId) {
+        logger.info("Notification submitted for User " + userId
+                + " | Task " + taskId);
+
+        executorService.execute(() -> {
+            String threadName = Thread.currentThread().getName();
+
+            logger.info("[" + threadName + "] START sending notification"
+                    + " | User: " + userId
+                    + " | Task: " + taskId);
+
+            try {
+                notificationService.sendNotification(
+                        userId,
+                        "You have been assigned to task " + taskId
+                );
+
+                logger.info("[" + threadName + "] SUCCESS notification sent"
+                        + " | User: " + userId
+                        + " | Task: " + taskId);
+
+            } catch (Exception e) {
+                logger.log(Level.SEVERE,
+                        "[" + threadName + "] FAILED notification"
+                                + " | User: " + userId
+                                + " | Task: " + taskId,
+                        e);
+            }
         });
-    }
+
+}
 
     @PreDestroy
     public void shutdown(){

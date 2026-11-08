@@ -58,7 +58,6 @@ public class SecurityConfiguration {
                 .sessionManagement(session-> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth-> auth.requestMatchers(
                         "/auth/users/login",
-                        "/auth/users/register",
                         "/auth/users/forget-password",
                         "/auth/users/reset-password",
                         "/invitation/validate/**",

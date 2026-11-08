@@ -26,6 +26,7 @@ public class FileAttachmentService {
     private final Cloudinary cloudinary = new Cloudinary(dotenv.get("CLOUDINARY_URL"));
     private FileAttachmentRepository fileAttachmentRepository;
     private ProjectRepository projectRepository;
+    private ProjectService projectService;
     private ProjectUpdateRepository projectUpdateRepository;
     private ExpenseRepository expenseRepository;
     private  CompanyMembershipRepository companyMembershipRepository;
@@ -82,7 +83,12 @@ public class FileAttachmentService {
             if (!projectUpdate.getProject().getId().equals(projectId)){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Project update does not belong to this project.");
             }
+
+            if (!projectUpdate.getUpdatedBy().getUser().getId().equals(currentUser.getId())){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only attach files to your own project updates.");
+            }
         }
+
 
         Expense expense= null;
         if (expenseId != null){
@@ -90,6 +96,10 @@ public class FileAttachmentService {
 
             if (!expense.getProject().getId().equals(projectId)){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Expense does not belong to this project.");
+            }
+
+            if (!expense.getMember().getUser().getId().equals(currentUser.getId())){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only attach files to your own expenses.");
             }
         }
 
@@ -113,33 +123,25 @@ public class FileAttachmentService {
     }
 
     public List<FileAttachment> getAllProjectAttachments(Long projectId){
-        User currentUser= getCurrentLoggedInUser();
-        Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Project not found."));
-        validateCompanyAccess(currentUser, project.getCompany().getId());
-
+        projectService.getProjectById(projectId);
         return fileAttachmentRepository.findByProjectIdAndStatus(projectId, "ACTIVE");
     }
 
     public List<FileAttachment> getAllProjectUpdateAttachments(Long projectUpdateId){
-        User currentUser= getCurrentLoggedInUser();
         ProjectUpdate projectUpdate= projectUpdateRepository.findById(projectUpdateId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Project update not found."));
-        validateCompanyAccess(currentUser, projectUpdate.getProject().getCompany().getId());
-
+        projectService.getProjectById(projectUpdate.getProject().getId());
         return fileAttachmentRepository.findByProjectUpdateIdAndStatus(projectUpdateId, "ACTIVE");
     }
 
     public List<FileAttachment> getAllProjectExpenseAttachments(Long expenseId){
-        User currentUser= getCurrentLoggedInUser();
         Expense expense= expenseRepository.findById(expenseId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
-        validateCompanyAccess(currentUser, expense.getProject().getCompany().getId());
-
+        projectService.getProjectById(expense.getProject().getId());
         return fileAttachmentRepository.findByExpenseIdAndStatus(expenseId, "ACTIVE");
     }
 
     public FileAttachment getFileAttachmentById(Long attachmentId){
-        User currentUser= getCurrentLoggedInUser();
         FileAttachment fileAttachment= fileAttachmentRepository.findById(attachmentId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "File attachment not found."));
-        validateCompanyAccess(currentUser, fileAttachment.getProject().getCompany().getId());
+        projectService.getProjectById(fileAttachment.getProject().getId());
         if (!fileAttachment.getStatus().equals("ACTIVE")) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File attachment not found.");
         }
@@ -156,12 +158,11 @@ public class FileAttachmentService {
 
         Project project = fileAttachment.getProject();
 
+        projectService.getProjectById(project.getId());
         boolean isUploader = fileAttachment.getUploadedBy().getUser().getId().equals(currentUser.getId());
-        boolean isOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
-        boolean isManager = projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), currentUser.getId(), "ACTIVE");
 
-        if (!currentUser.getIsPlatformAdmin() && !isUploader && !isOwner && !isManager) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to archive this attachment.");
+        if (!isUploader){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only archive your own attachments.");
         }
 
         fileAttachment.setStatus("ARCHIVED");
@@ -170,11 +171,5 @@ public class FileAttachmentService {
         return archivedAttachment;
     }
 
-    private void validateCompanyAccess(User user, Long companyId){
-        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(),companyId, "ACTIVE");
-        if (!Boolean.TRUE.equals(user.getIsPlatformAdmin()) && !isActiveMember){
-            logger.log(Level.WARNING, "User {0} attempted to access company {1} attachments without permission", new Object[]{user.getId(), companyId});
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this project.");
-        }
-    }
+
 }

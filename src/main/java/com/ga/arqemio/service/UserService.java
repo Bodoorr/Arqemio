@@ -94,7 +94,7 @@ public class UserService {
             SecurityContextHolder.getContext().setAuthentication(authentication);
             MyUserDetails myUserDetails = (MyUserDetails) authentication.getPrincipal();
             final String JWT = jwtUtils.generateJwtToken(myUserDetails);
-            logger.log(Level.INFO,"User {0} logged in successfully", myUserDetails.getUser().getId());
+//            logger.log(Level.INFO,"User {0} logged in successfully", myUserDetails.getUser().getId());
             return ResponseEntity.ok(new LoginResponse("Login successful", JWT));
         } catch (AuthenticationException e) {
             logger.log(Level.WARNING, "Login failed: invalid credentials");
