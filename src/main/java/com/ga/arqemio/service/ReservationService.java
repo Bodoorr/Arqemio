@@ -19,6 +19,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
@@ -31,6 +32,7 @@ public class ReservationService {
     private ReservationRepository reservationRepository;
     private EquipmentRepository equipmentRepository;
     private ProjectRepository projectRepository;
+    private ProjectService projectService;
     private CompanyMembershipRepository companyMembershipRepository;
     private AuditLogService auditLogService;
     private NotificationService notificationService;
@@ -129,20 +131,22 @@ public class ReservationService {
     }
 
     public List<Reservation> getAllReservation(){
-        User currentUser= getCurrentLoggedInUser();
-        return reservationRepository.findByProjectCompanyMembershipsUserIdAndProjectCompanyMembershipsStatus(currentUser.getId(), "ACTIVE");
+        List<Reservation> reservations= new ArrayList<>();
+        List<Project> projects= projectService.getAllProjects();
+
+        for (Project project: projects){
+            List<Reservation> projectReservations= reservationRepository.findByProjectId(project.getId());
+
+            for (Reservation reservation: projectReservations){
+                reservations.add(reservation);
+            }
+        }
+        return reservations;
     }
 
     public Reservation getReservationById(Long reservationId){
-        User currentUser=getCurrentLoggedInUser();
         Reservation reservation= findReservationById(reservationId);
-
-        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), reservation.getProject().getCompany().getId(), "ACTIVE");
-        if (!isActiveMember){
-            logger.log(Level.WARNING,"User {0} attempted to view reservation {1} without permission", new Object[]{currentUser.getId(), reservationId});
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this reservation.");
-        }
-
+        projectService.getProjectById(reservation.getProject().getId());
         return reservation;
     }
 
@@ -298,7 +302,14 @@ public class ReservationService {
     }
 
     public int getAvailableQuantity(Long equipmentId, LocalDateTime startDateTime, LocalDateTime endDateTime){
+        User currentUser= getCurrentLoggedInUser();
         Equipment equipment= equipmentRepository.findById(equipmentId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
+
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), equipment.getCompany().getId(), "ACTIVE");
+        if (!isActiveMember){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this equipment availability.");
+        }
+
         validateReservationDates(startDateTime,endDateTime);
 
         return calculateAvailableQuantity(equipment,startDateTime,endDateTime);
@@ -306,9 +317,10 @@ public class ReservationService {
 
     private boolean canManageReservation(User user, Project project){
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(),project.getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(), project.getCompany().getId(), "ACTIVE");
         boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
 
-        return isCompanyOwner || isAssignedManager;
+        return isCompanyOwner || (isAssignedManager && isActiveMember);
     }
 
     private Reservation findReservationById(Long reservationId){
