@@ -1,6 +1,7 @@
 package com.ga.arqemio.service;
 
 import com.ga.arqemio.model.Company;
+import com.ga.arqemio.model.CompanyMembership;
 import com.ga.arqemio.model.Equipment;
 import com.ga.arqemio.model.User;
 import com.ga.arqemio.model.request.EquipmentRequest;
@@ -14,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -51,7 +53,17 @@ public class EquipmentService {
 
     public List<Equipment> getAllEquipment(){
         User currentUser= getCurrentLoggedInUser();
-        return equipmentRepository.findByCompanyMembershipsUserIdAndCompanyMembershipsStatus(currentUser.getId(), "ACTIVE");
+        List<Equipment> equipments=new ArrayList<>();
+        List<CompanyMembership> memberships= companyMembershipRepository.findByUserIdAndStatus(currentUser.getId(), "ACTIVE");
+
+        for (CompanyMembership membership: memberships){
+            List <Equipment> companyEquipments= equipmentRepository.findByCompanyId(membership.getCompany().getId());
+
+            for (Equipment equipment: companyEquipments){
+                equipments.add(equipment);
+            }
+        }
+        return equipments;
     }
 
     public Equipment getEquipmentById(Long equipmentId){
