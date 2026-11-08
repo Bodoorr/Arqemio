@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -24,6 +25,7 @@ import java.util.logging.Logger;
 public class TaskService {
     private TaskRepository taskRepository;
     private ProjectRepository projectRepository;
+    private ProjectService projectService;
     private CompanyMembershipRepository companyMembershipRepository;
     private TaskAssignmentRepository taskAssignmentRepository;
     private static final Logger logger = Logger.getLogger(TaskService.class.getName());
@@ -45,6 +47,7 @@ public class TaskService {
         Task task=new Task();
         task.setProject(project);
         setTaskFields(task, taskRequest);
+        task.setStatus("TODO");
 
         Task savedTask= taskRepository.save(task);
         logger.log(Level.INFO, "Task {0} created in project {1} by user {2}", new Object[]{savedTask.getId(), project.getId(), currentUser.getId()});
@@ -53,23 +56,22 @@ public class TaskService {
     }
 
     public List<Task> getAllTasks(){
-        User currentUser= getCurrentLoggedInUser();
-        return taskRepository.findByProjectCompanyMembershipsUserIdAndProjectCompanyMembershipsStatus(
-                currentUser.getId(),
-                "ACTIVE"
-        );
+      List<Project> projects= projectService.getAllProjects();
+      List<Task> tasks= new ArrayList<>();
+
+      for (Project project: projects){
+          List<Task> projectTasks= taskRepository.findByProjectId(project.getId());
+
+          for (Task task: projectTasks){
+              tasks.add(task);
+          }
+      }
+      return tasks;
     }
 
     public Task getTaskById(Long taskId){
-        User currentUser= getCurrentLoggedInUser();
         Task task= findTaskById(taskId);
-
-        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), task.getProject().getCompany().getId(), "ACTIVE");
-        if (!isActiveMember){
-            logger.log(Level.WARNING,"User {0} attempted to view task {1} without permission", new Object[]{currentUser.getId(), taskId});
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this task.");
-        }
-
+        projectService.getProjectById(task.getProject().getId());
         return task;
     }
 
@@ -113,9 +115,11 @@ public class TaskService {
     public Task updateTaskStatus(Long taskId, String status){
         User currentUser= getCurrentLoggedInUser();
         Task task= findTaskById(taskId);
-        boolean isAssignedWorker= taskAssignmentRepository.existsByTaskIdAndAssignedToUserIdAndAssignedToStatus(taskId,currentUser.getId(),"ACTIVE");
 
-        if (!isAssignedWorker){
+        boolean isAssignedWorker= taskAssignmentRepository.existsByTaskIdAndAssignedToUserIdAndAssignedToStatus(taskId,currentUser.getId(),"ACTIVE");
+        boolean isActiveWorker= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), task.getProject().getCompany().getId(), "WORKER", "ACTIVE");
+
+        if (!isAssignedWorker || !isActiveWorker){
             logger.log(Level.WARNING,"User {0} attempted to change status of task {1} without assignment", new Object[]{currentUser.getId(), taskId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not assigned to this task.");
         }
@@ -130,21 +134,20 @@ public class TaskService {
 
     private boolean canManageTask(User user, Project project){
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(), project.getCompany().getId(), "ACTIVE");
         boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
-        return isCompanyOwner || isAssignedManager;
+        return isCompanyOwner || (isActiveMember && isAssignedManager);
     }
 
     private Task findTaskById(Long taskId){
         return taskRepository.findById(taskId)
                 .orElseThrow(()->new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Task not found."));
-
     }
 
     private void setTaskFields(Task task, TaskRequest taskRequest){
         task.setTitle(taskRequest.getTitle());
         task.setDescription(taskRequest.getDescription());
-        task.setStatus(taskRequest.getStatus());
         task.setPriority(taskRequest.getPriority());
         task.setDueDateTime(taskRequest.getDueDateTime());
     }
