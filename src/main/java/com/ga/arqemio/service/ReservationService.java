@@ -170,6 +170,10 @@ public class ReservationService {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this reservation.");
             }
 
+            if (!reservation.getMembership().getUser().getId().equals(currentUser.getId())){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,"You can only cancel your own reservations.");
+            }
+
             if (reservationRequest.getQuantity()<=0){
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation quantity must be greater than 0.");
             }
@@ -225,6 +229,10 @@ public class ReservationService {
             if (!canManageReservation(currentUser, reservation.getProject())){
                 logger.log(Level.WARNING,"User {0} attempted to cancel reservation {1} without permission", new Object[]{currentUser.getId(), reservationId});
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to cancel this reservation.");
+            }
+
+            if (!reservation.getMembership().getUser().getId().equals(currentUser.getId())){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,"You can only update your own reservations.");
             }
 
             if (!reservation.getStatus().equals("RESERVED")){
