@@ -8,17 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ProjectRepository extends JpaRepository<Project, Long> {
-    List<Project> findByCompanyMembershipsUserIdAndCompanyMembershipsStatus(
-            Long userId,
-            String status
-    );
-
-    Page<Project> findByCompanyMembershipsUserIdAndCompanyMembershipsStatus(
-            Long userId,
-            String status,
-            Pageable pageable
-    );
-
     boolean existsByIdAndManagersUserIdAndManagersStatus(
             Long projectId,
             Long userId,
@@ -36,22 +25,17 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
             String status
     );
 
-    Page<Project> findByNameContainingIgnoreCase(String name, Pageable pageable);
+    Page<Project> findByIdIn(List<Long> ids, Pageable pageable);
 
-    Page<Project> findByStatus(String status, Pageable pageable);
+    Page<Project> findByIdInAndNameContainingIgnoreCase(
+            List<Long> ids, String name, Pageable pageable);
 
-    Page<Project> findByCompanyMembershipsUserIdAndCompanyMembershipsStatusAndNameContainingIgnoreCase(
-            Long userId,
-            String membershipStatus,
-            String name,
-            Pageable pageable
-    );
+    Page<Project> findByIdInAndStatus(
+            List<Long> ids, String status, Pageable pageable);
 
-    Page<Project> findByCompanyMembershipsUserIdAndCompanyMembershipsStatusAndStatus(
-            Long userId,
-            String membershipStatus,
-            String projectStatus,
-            Pageable pageable
-    );
+    List<Project> findByCompanyId(Long companyId);
 
+    List<Project> findByManagersId(Long membershipId);
+
+    List<Project> findByWorkersId(Long membershipId);
 }

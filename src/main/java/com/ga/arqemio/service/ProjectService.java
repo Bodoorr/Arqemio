@@ -66,21 +66,49 @@ public class ProjectService {
 
     public List<Project> getAllProjects(){
         User currentUser= getCurrentLoggedInUser();
-        return projectRepository.findByCompanyMembershipsUserIdAndCompanyMembershipsStatus(currentUser.getId(), "ACTIVE");
+        List<Project> projects= new ArrayList<>();
+        List<CompanyMembership> memberships= companyMembershipRepository.findByUserIdAndStatus(currentUser.getId(), "ACTIVE");
+
+        for (CompanyMembership membership: memberships){
+            List<Project> accessibleProjects= new ArrayList<>();
+
+            if (membership.getRole().equals("OWNER")){
+                accessibleProjects= projectRepository.findByCompanyId(membership.getCompany().getId());
+            }
+
+            if (membership.getRole().equals("MANAGER")){
+                accessibleProjects= projectRepository.findByManagersId(membership.getId());
+            }
+
+            if (membership.getRole().equals("WORKER")){
+                accessibleProjects= projectRepository.findByWorkersId(membership.getId());
+            }
+
+            for (Project project: accessibleProjects){
+                if (!projects.contains(project)){
+                    projects.add(project);
+                }
+            }
+        }
+        return projects;
     }
 
     public Page<Project> getProjects(Pageable pageable, String name, String status) {
-        User currentUser= getCurrentLoggedInUser();
-        if (name!=null && !name.isBlank()){
-            return projectRepository.findByCompanyMembershipsUserIdAndCompanyMembershipsStatusAndNameContainingIgnoreCase
-                    (currentUser.getId(), "ACTIVE", name, pageable);
-        }
-        if (status!=null && !status.isBlank()){
-            return projectRepository.findByCompanyMembershipsUserIdAndCompanyMembershipsStatusAndStatus
-                    (currentUser.getId(), "ACTIVE", status, pageable);
-        }
+       List<Project> projects= getAllProjects();
+       List<Long> projectIds= new ArrayList<>();
 
-        return projectRepository.findByCompanyMembershipsUserIdAndCompanyMembershipsStatus(currentUser.getId(),"ACTIVE",pageable);
+       for (Project project: projects){
+           projectIds.add(project.getId());
+       }
+
+       if (name!=null && !name.isBlank()){
+           return projectRepository.findByIdInAndNameContainingIgnoreCase(projectIds,name,pageable);
+       }
+
+       if (status != null && !status.isBlank()){
+           return projectRepository.findByIdInAndStatus(projectIds, status,pageable);
+       }
+       return projectRepository.findByIdIn(projectIds, pageable);
     }
 
 
