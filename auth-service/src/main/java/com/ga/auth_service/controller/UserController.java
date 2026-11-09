@@ -1,5 +1,6 @@
 package com.ga.auth_service.controller;
 
+import com.ga.auth_service.model.User;
 import com.ga.auth_service.model.request.ForgetPasswordRequest;
 import com.ga.auth_service.model.request.LoginRequest;
 import com.ga.auth_service.model.request.ResetPasswordRequest;
@@ -7,10 +8,7 @@ import com.ga.auth_service.service.UserService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @AllArgsConstructor
@@ -32,6 +30,12 @@ public class UserController {
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest resetPasswordRequest){
         return ResponseEntity.ok(userService.resetPassword(resetPasswordRequest));
+    }
+
+    //connect to Auth service
+    @GetMapping("/{id}")
+    public ResponseEntity<User> getUserById(@PathVariable Long id){
+        return ResponseEntity.ok(userService.getUserById(id));
     }
 
 
