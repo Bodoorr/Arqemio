@@ -16,7 +16,7 @@ import java.util.List;
 @Setter
 @Entity
 @Table(name = "company_memberships")
-@ToString(exclude = {"user","company","reservations"})
+@ToString(exclude = {"company","reservations"})
 public class CompanyMembership {
     @Id
     @Column
@@ -25,7 +25,7 @@ public class CompanyMembership {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private Long userId;
 
     @ManyToOne
     @JoinColumn(name = "company_id", nullable = false)
