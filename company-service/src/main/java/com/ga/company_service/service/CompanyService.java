@@ -1,0 +1,74 @@
+package com.ga.company_service.service;
+
+import com.ga.company_service.model.Company;
+import com.ga.company_service.model.User;
+import com.ga.company_service.model.request.CompanyRequest;
+import com.ga.company_service.repository.CompanyMembershipRepository;
+import com.ga.company_service.repository.CompanyRepository;
+import com.ga.company_service.security.MyUserDetails;
+import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+@Service
+@AllArgsConstructor
+public class CompanyService {
+    private CompanyRepository companyRepository;
+    private AuditLogService auditLogService;
+    private CompanyMembershipRepository companyMembershipRepository;
+
+    private static final Logger logger= Logger.getLogger(CompanyService.class.getName());
+    public User getCurrentLoggedInUser(){
+        MyUserDetails userDetails= (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return userDetails.getUser();
+    }
+
+    public Company createCompany(CompanyRequest companyRequest){
+        User currentUser= getCurrentLoggedInUser();
+        if (!currentUser.getIsPlatformAdmin()){
+            logger.log(Level.WARNING, "User {0} attempted to create a company without platform admin permission", currentUser.getId());
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only Platform Admin can create companies.");
+        }
+
+        Company company=new Company();
+        company.setName(companyRequest.getName());
+        company.setDescription(companyRequest.getDescription());
+        company.setLocation(companyRequest.getLocation());
+        company.setAddress(companyRequest.getAddress());
+        company.setStatus("ACTIVE");
+        company.setOwner(null);
+
+        Company savedCompany= companyRepository.save(company);
+        auditLogService.createAuditLog(currentUser,savedCompany,"CREATE_COMPANY","COMPANY", savedCompany.getId(), "Created company: "+ savedCompany.getName());
+        logger.log(Level.INFO,"Company {0} created successfully by platform admin {1}", new Object[]{savedCompany.getId(), currentUser.getId()});
+        return savedCompany;
+    }
+
+    public List<Company> getAllCompanies(){
+        User currentUser= getCurrentLoggedInUser();
+        if (!currentUser.getIsPlatformAdmin()){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Only platform Admin can view all companies.");
+        }
+        return companyRepository.findAll();
+    }
+
+    public Company getCompanyById(Long id){
+        User currentUser= getCurrentLoggedInUser();
+        Company company= companyRepository.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Company not found"));
+
+        boolean isPlatformAdmin= Boolean.TRUE.equals(currentUser.getIsPlatformAdmin());
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), id, "ACTIVE");
+
+        if (!isPlatformAdmin && !isActiveMember){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this company.");
+        }
+        return company;
+    }
+
+}

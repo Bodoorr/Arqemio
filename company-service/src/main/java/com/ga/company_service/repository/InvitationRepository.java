@@ -1,0 +1,12 @@
+package com.ga.company_service.repository;
+
+import com.ga.company_service.model.Invitation;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+
+public interface InvitationRepository extends JpaRepository<Invitation,Long> {
+Optional<Invitation> findByToken(String token);
+boolean existsByEmailIgnoreCaseAndCompanyIdAndRoleAndStatus(String email, Long companyId, String role, String status);
+
+}
