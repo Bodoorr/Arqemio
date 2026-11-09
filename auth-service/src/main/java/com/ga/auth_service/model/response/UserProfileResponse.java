@@ -1,0 +1,18 @@
+package com.ga.auth_service.model.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+import java.util.List;
+
+@Getter
+@AllArgsConstructor
+public class UserProfileResponse {
+    private Long id;
+    private String name;
+    private String email;
+    private String mobileNumber;
+    private String profilePicture;
+    private List<UserMembershipResponse> memberships;
+    private Boolean isCustomer;
+}
