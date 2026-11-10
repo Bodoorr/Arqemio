@@ -4,6 +4,7 @@ import com.ga.auth_service.model.User;
 import com.ga.auth_service.model.request.ForgetPasswordRequest;
 import com.ga.auth_service.model.request.LoginRequest;
 import com.ga.auth_service.model.request.ResetPasswordRequest;
+import com.ga.auth_service.model.response.UserResponse;
 import com.ga.auth_service.service.UserService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -38,5 +39,16 @@ public class UserController {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
+    @GetMapping("/current-user")
+    public ResponseEntity<UserResponse> getCurrentUser(){
+        User user= userService.getCurrentLoggedInUser();
 
+        UserResponse response= new UserResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getIsPlatformAdmin()
+        );
+
+        return ResponseEntity.ok(response);
+    }
 }

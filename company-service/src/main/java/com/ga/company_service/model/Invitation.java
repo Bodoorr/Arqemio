@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Setter
 @Entity
 @Table(name = "invitations")
-@ToString(exclude = {"user","company"})
+@ToString(exclude = {"company"})
 public class Invitation {
     @Id
     @Column
@@ -35,9 +35,8 @@ public class Invitation {
     @Column(nullable = false)
     private String status;
 
-    @ManyToOne
-    @JoinColumn(name = "invited_by", nullable = false)
-    private User user;
+    @Column(name = "invited_by", nullable = false)
+    private Long invitedBy;
 
     @Column
     @CreationTimestamp

@@ -1,5 +1,6 @@
 package com.ga.company_service.client;
 
+import com.ga.company_service.model.response.UserResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -19,4 +20,13 @@ public class AuthClient {
                 .retrieve()
                 .body(String.class);
     }
+
+    public UserResponse getCurrentUser(String token){
+        return restClient.get()
+                .uri("/users/current-user")
+                .headers(headers->headers.setBearerAuth(token))
+                .retrieve()
+                .body(UserResponse.class);
+    }
+
 }

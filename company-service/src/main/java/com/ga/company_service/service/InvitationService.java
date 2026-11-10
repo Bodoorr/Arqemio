@@ -1,9 +1,11 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.client.AuthClient;
 import com.ga.company_service.model.Company;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Invitation;
 import com.ga.company_service.model.request.InvitationRegistrationRequest;
+import com.ga.company_service.model.response.UserResponse;
 import com.ga.company_service.repository.CompanyMembershipRepository;
 import com.ga.company_service.repository.CompanyRepository;
 import com.ga.company_service.repository.InvitationRepository;
@@ -30,14 +32,14 @@ public class InvitationService {
     private EmailService emailService;
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
+    private AuthClient authClient;
     private UserRepository userRepository;
     private UserService userService;
     private AuditLogService auditLogService;
     private static final Logger logger= Logger.getLogger(InvitationService.class.getName());
 
-    public User getCurrentLoggedInUser(){
-        MyUserDetails userDetails= (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return userDetails.getUser();
+    public UserResponse getCurrentLoggedInUser(String token){
+        return authClient.getCurrentUser(token);
     }
 
     public String getInvitationEmail(
@@ -122,7 +124,7 @@ public class InvitationService {
 
         invitation.setEmail(email);
         invitation.setRole(role);
-        invitation.setUser(currentUser);
+        invitation.setInvitedBy(currentUser.getId());
         invitation.setCompany(company);
         invitation.setToken(UUID.randomUUID().toString());
         invitation.setStatus("PENDING");
@@ -174,7 +176,7 @@ public class InvitationService {
             newUser.setIsPlatformAdmin(false);
             User savedUser= userService.createUser(newUser);
 
-            CompanyMembership savedMembership= createMembership(savedUser, invitation);
+            CompanyMembership savedMembership= createMembership(savedUser.getId(), invitation);
 
             updateCompanyOwner(invitation, savedMembership);
             markInvitationAccepted(invitation, savedUser);
@@ -199,7 +201,7 @@ public class InvitationService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "You are already an active member of this company.");
         }
 
-        CompanyMembership savedMembership= createMembership(currentUser, invitation);
+        CompanyMembership savedMembership= createMembership(currentUser.getId(), invitation);
         updateCompanyOwner(invitation, savedMembership);
 
        return markInvitationAccepted(invitation, currentUser);
@@ -276,9 +278,9 @@ public class InvitationService {
         return emailService.sendHtmlMail(emailDetails);
     }
 
-    private CompanyMembership createMembership(User user, Invitation invitation){
+    private CompanyMembership createMembership(Long userId, Invitation invitation){
         CompanyMembership membership= new CompanyMembership();
-        membership.setUser(user);
+        membership.setUserId(userId);
         membership.setCompany(invitation.getCompany());
         membership.setRole(invitation.getRole());
         membership.setStatus("ACTIVE");
