@@ -10,8 +10,9 @@ import org.springframework.web.client.RestClient;
 public class CompanyClient {
     private RestClient restClient;
 
-    public CompanyClient(RestClient.Builder builder, @Value("${company.service.url}") String companyServiceUrl){
-        this.restClient= builder.baseUrl(companyServiceUrl).build();
+    public CompanyClient(@Value("${company.service.url}") String companyServiceUrl){
+        this.restClient= RestClient.builder()
+                .baseUrl(companyServiceUrl).build();
     }
 
     public UserMembershipResponse[] getMembershipByUserId(Long userId, String token){

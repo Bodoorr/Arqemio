@@ -16,8 +16,9 @@ public class AuthClient {
     @Value("${internal.api-key}")
     private String internalApiKey;
 
-    public AuthClient(RestClient.Builder builder, @Value("${auth.service.url}") String authServiceUrl){
-        this.restClient= builder.baseUrl(authServiceUrl).build();
+    public AuthClient( @Value("${auth.service.url}") String authServiceUrl){
+        this.restClient= RestClient.builder()
+                .baseUrl(authServiceUrl).build();
     }
 
     public UserProfileResponse getUserById(Long userId){
