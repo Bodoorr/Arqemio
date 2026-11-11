@@ -21,13 +21,13 @@ public class ProfileController {
     private UserService userService;
 
     @GetMapping("/profile")
-    public ResponseEntity<UserProfileResponse> getProfile(){
-        return ResponseEntity.ok(userService.getProfile());
+    public ResponseEntity<UserProfileResponse> getProfile(@RequestHeader("Authorization") String authorization){
+        return ResponseEntity.ok(userService.getProfile(authorization));
     }
 
     @PatchMapping("/profile")
-    public ResponseEntity<UserProfileResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest updateProfileRequest){
-        return ResponseEntity.ok(userService.updateProfile(updateProfileRequest));
+    public ResponseEntity<UserProfileResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest updateProfileRequest, @RequestHeader("Authorization") String authorization){
+        return ResponseEntity.ok(userService.updateProfile(updateProfileRequest, authorization));
     }
 
 //    @GetMapping("/companies/{companyId}/employees")

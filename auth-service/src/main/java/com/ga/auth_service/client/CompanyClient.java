@@ -16,8 +16,8 @@ public class CompanyClient {
 
     public UserMembershipResponse[] getMembershipByUserId(Long userId, String token){
         return restClient.get()
-                .uri("/companies/memberships/users/{id}",userId)
-                .headers(headers->headers.setBearerAuth(token))
+                .uri("/company/users/{userId}/memberships",userId)
+                .header("Authorization", token)
                 .retrieve()
                 .body(UserMembershipResponse[].class);
     }

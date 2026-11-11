@@ -1,14 +1,13 @@
 package com.ga.auth_service.service;
 
 
-import com.ga.auth_service.model.CompanyMembership;
+import com.ga.auth_service.client.CompanyClient;
 import com.ga.auth_service.model.EmailDetails;
 import com.ga.auth_service.model.User;
 import com.ga.auth_service.model.request.*;
 import com.ga.auth_service.model.response.LoginResponse;
 import com.ga.auth_service.model.response.UserMembershipResponse;
 import com.ga.auth_service.model.response.UserProfileResponse;
-import com.ga.auth_service.repository.CompanyMembershipRepository;
 import com.ga.auth_service.repository.UserRepository;
 import com.ga.auth_service.security.JWTUtils;
 import com.ga.auth_service.security.MyUserDetails;
@@ -30,10 +29,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -44,15 +40,17 @@ public class UserService {
     private final JWTUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
+    private final CompanyClient companyClient;
     private static final Logger logger= Logger.getLogger(UserService.class.getName());
 
     @Autowired
-    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, EmailService emailService) {
+    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, EmailService emailService, CompanyClient companyClient) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
         this.authenticationManager = authenticationManager;
         this.emailService= emailService;
+        this.companyClient= companyClient;
     }
 
     public User createUser(User userObject) {
@@ -205,25 +203,26 @@ public class UserService {
         return "Password reset successfully.";
     }
 
-    public UserProfileResponse getProfile() {
+    public UserProfileResponse getProfile(String token) {
         User currentUser = getCurrentLoggedInUser();
-        List<UserMembershipResponse> membershipResponses = new ArrayList<>();
-        List<CompanyMembership> memberships = companyMembershipRepository.findByUserIdAndStatus(currentUser.getId(), "ACTIVE");
+        UserMembershipResponse[] memberships= companyClient.getMembershipByUserId(currentUser.getId(), token);
+        List<UserMembershipResponse> membershipResponses= new ArrayList<>();
 
-        for (CompanyMembership membership : memberships) {
-            membershipResponses.add(toMembershipResponse(membership));
+        if (memberships!=null){
+            for (UserMembershipResponse membership : memberships){
+                membershipResponses.add(membership);
+            }
         }
-
         return toProfileResponse(currentUser, membershipResponses);
     }
 
-    public UserProfileResponse updateProfile(UpdateProfileRequest updateProfileRequest) {
+    public UserProfileResponse updateProfile(UpdateProfileRequest updateProfileRequest, String token) {
         User currentUser = getCurrentLoggedInUser();
         currentUser.setMobileNumber(updateProfileRequest.getMobileNumber());
 
         userRepository.save(currentUser);
         logger.log(Level.INFO,"User {0} updated their profile", currentUser.getId());
-        return getProfile();
+        return getProfile(token);
     }
 
 //    public UserProfileResponse updateEmployeeProfile(Long companyId, Long employeeId, String name, String mobileNumber, String email, MultipartFile profilePicture) throws IOException {

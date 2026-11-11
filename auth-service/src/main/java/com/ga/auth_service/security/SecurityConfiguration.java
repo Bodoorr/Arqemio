@@ -63,8 +63,9 @@ public class SecurityConfiguration {
                         "/auth/users/reset-password",
                         "/swagger-ui/**",
                         "/v3/api-docs/**"
-                ).permitAll().requestMatchers(HttpMethod.POST, "/auth/users/register").permitAll().
-                        anyRequest().authenticated());
+                ).permitAll().requestMatchers(HttpMethod.POST, "/auth/users/register").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/auth/users/{id}").permitAll()
+                        .anyRequest().authenticated());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
