@@ -3,12 +3,11 @@ package com.ga.company_service.service;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Task;
 import com.ga.company_service.model.TaskAssignment;
-import com.ga.company_service.model.User;
+import com.ga.company_service.model.response.UserResponse;
 import com.ga.company_service.repository.CompanyMembershipRepository;
 import com.ga.company_service.repository.ProjectRepository;
 import com.ga.company_service.repository.TaskAssignmentRepository;
 import com.ga.company_service.repository.TaskRepository;
-import com.ga.company_service.security.MyUserDetails;
 import jakarta.annotation.PreDestroy;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,16 +29,15 @@ public class TaskAssignmentService {
     private CompanyMembershipRepository companyMembershipRepository;
     private ProjectRepository projectRepository;
     private static final Logger logger= Logger.getLogger(TaskAssignmentService.class.getName());
-    private NotificationService notificationService;
+//    private NotificationService notificationService;
     private static final ExecutorService executorService= Executors.newFixedThreadPool(3);
 
-    public static User getCurrentLoggedInUser() {
-        MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return userDetails.getUser();
+    public static UserResponse getCurrentLoggedInUser() {
+        return (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
     public TaskAssignment assignWorker(Long taskId, Long workerMembershipId, LocalDateTime assignedAt, LocalDateTime dueAt) {
-        User currentUser = getCurrentLoggedInUser();
+        UserResponse currentUser = getCurrentLoggedInUser();
         Task task= findTaskById(taskId);
         CompanyMembership worker = companyMembershipRepository.findById(workerMembershipId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker membership not found."));
 
@@ -90,13 +88,13 @@ public class TaskAssignmentService {
         taskAssignment.setDueAt(dueAt);
 
         TaskAssignment savedAssignment= taskAssignmentRepository.save(taskAssignment);
-        notifyWorker(worker.getUser().getId(), savedAssignment.getTask().getId());
+        notifyWorker(worker.getUserId(), savedAssignment.getTask().getId());
         logger.log(Level.INFO,"Worker membership {0} assigned to task {1} by user {2}", new Object[]{workerMembershipId, taskId, currentUser.getId()});
         return savedAssignment;
     }
 
     public TaskAssignment removeAssignedWorker(Long taskId, Long workerMembershipId) {
-        User currentUser = getCurrentLoggedInUser();
+        UserResponse currentUser = getCurrentLoggedInUser();
         Task task = findTaskById(taskId);
 
         if (!canManageTaskAssignments(currentUser, task)) {
@@ -113,7 +111,7 @@ public class TaskAssignmentService {
         return taskAssignment;
     }
 
-    private boolean canManageTaskAssignments(User user, Task task){
+    private boolean canManageTaskAssignments(UserResponse user, Task task){
         boolean isCompanyOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), task.getProject().getCompany().getId(), "OWNER", "ACTIVE");
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(), task.getProject().getCompany().getId(), "ACTIVE");
         boolean isAssignedManager = projectRepository.existsByIdAndManagersUserIdAndManagersStatus(task.getProject().getId(), user.getId(), "ACTIVE");
@@ -138,12 +136,8 @@ public class TaskAssignmentService {
                     + " | Task: " + taskId);
 
             try {
-                notificationService.sendNotification(
-                        userId,
-                        "You have been assigned to task " + taskId
-                );
-
-                logger.info("[" + threadName + "] SUCCESS notification sent"
+//                notificationService.sendNotification(userId, "You have been assigned to task " + taskId;
+                logger.info("[" + threadName + "] Notification processing completed"
                         + " | User: " + userId
                         + " | Task: " + taskId);
 
