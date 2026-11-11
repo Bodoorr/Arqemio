@@ -5,6 +5,7 @@ import com.ga.company_service.model.Company;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Invitation;
 import com.ga.company_service.model.request.InvitationRegistrationRequest;
+import com.ga.company_service.model.request.RegistrationRequest;
 import com.ga.company_service.model.response.UserResponse;
 import com.ga.company_service.repository.CompanyMembershipRepository;
 import com.ga.company_service.repository.CompanyRepository;
@@ -29,17 +30,13 @@ import java.util.logging.Logger;
 @AllArgsConstructor
 public class InvitationService {
     private InvitationRepository invitationRepository;
-    private EmailService emailService;
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private AuthClient authClient;
-    private UserRepository userRepository;
-    private UserService userService;
-    private AuditLogService auditLogService;
     private static final Logger logger= Logger.getLogger(InvitationService.class.getName());
 
-    public UserResponse getCurrentLoggedInUser(String token){
-        return authClient.getCurrentUser(token);
+    public static UserResponse getCurrentLoggedInUser(){
+        return (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
     public String getInvitationEmail(
@@ -62,7 +59,7 @@ public class InvitationService {
     }
 
     public Invitation createInvitation(String email, String role, Long companyId) {
-        User currentUser = getCurrentLoggedInUser();
+        UserResponse currentUser = getCurrentLoggedInUser();
         Company company= companyRepository.findById(companyId)
                 .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
 
@@ -137,7 +134,7 @@ public class InvitationService {
             logger.log(Level.WARNING, "Invitation {0} saved but email delivery failed", savedInvitation.getId());
             throw new RuntimeException("Invitation saved, but email could not be sent.");
         }
-        auditLogService.createAuditLog(currentUser, company,"CREATE_INVITATION","INVITATION", savedInvitation.getId(), "Invited "+email+" as "+role);
+//        auditLogService.createAuditLog(currentUser, company,"CREATE_INVITATION","INVITATION", savedInvitation.getId(), "Invited "+email+" as "+role);
         logger.log(Level.INFO,"Invitation {0} created for company {1} by user {2}", new Object[]{savedInvitation.getId(), companyId, currentUser.getId()});
         return savedInvitation;
     }
@@ -160,21 +157,20 @@ public class InvitationService {
         return invitation;
     }
 
-    public User registerInvitedUser(InvitationRegistrationRequest invitationRegistrationRequest){
+    public UserResponse registerInvitedUser(InvitationRegistrationRequest invitationRegistrationRequest){
         Invitation invitation= validateInvitation(invitationRegistrationRequest.getToken());
 
-        if (userRepository.existsByEmail(invitation.getEmail())){
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exist. Please login to accept the invitation.");
-        }
+//        if (userRepository.existsByEmail(invitation.getEmail())){
+//            throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exist. Please login to accept the invitation.");
+//        }
 
-            User newUser=new User();
+        RegistrationRequest newUser=new RegistrationRequest();
             newUser.setName(invitationRegistrationRequest.getName());
             newUser.setEmail(invitation.getEmail());
             newUser.setPassword(invitationRegistrationRequest.getPassword());
             newUser.setProfilePicture(invitationRegistrationRequest.getProfilePicture());
-            newUser.setStatus(true);
-            newUser.setIsPlatformAdmin(false);
-            User savedUser= userService.createUser(newUser);
+
+            UserResponse savedUser= authClient.registerUser(newUser);
 
             CompanyMembership savedMembership= createMembership(savedUser.getId(), invitation);
 
@@ -182,13 +178,13 @@ public class InvitationService {
             markInvitationAccepted(invitation, savedUser);
 
             String action= "REGISTER_"+invitation.getRole();
-            auditLogService.createAuditLog(savedUser, invitation.getCompany(),action,"USER", savedUser.getId(), "Registered as "+invitation.getRole()+": " +savedUser.getName());
+//            auditLogService.createAuditLog(savedUser, invitation.getCompany(),action,"USER", savedUser.getId(), "Registered as "+invitation.getRole()+": " +savedUser.getName());
         return savedUser;
     }
 
 
     public Invitation acceptInvitation(String token){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Invitation invitation= validateInvitation(token);
 
         if (!currentUser.getEmail().equalsIgnoreCase(invitation.getEmail())){
@@ -208,7 +204,7 @@ public class InvitationService {
     }
 
     public Invitation cancelInvitation(Long invitationId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Invitation invitation= findInvitationById(invitationId);
 
         if (!canManageInvitation(currentUser,invitation)){
@@ -222,13 +218,13 @@ public class InvitationService {
 
         invitation.setStatus("CANCELLED");
         invitationRepository.save(invitation);
-        auditLogService.createAuditLog(currentUser,invitation.getCompany(),"CANCEL_INVITATION","INVITATION",invitation.getId(),"Cancelled invitation for "+invitation.getEmail());
+//        auditLogService.createAuditLog(currentUser,invitation.getCompany(),"CANCEL_INVITATION","INVITATION",invitation.getId(),"Cancelled invitation for "+invitation.getEmail());
         logger.log(Level.INFO,"Invitation {0} cancelled by user {1}", new Object[]{invitationId, currentUser.getId()});
         return invitation;
     }
 
     public Invitation resendInvitation(Long invitationId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Invitation invitation= findInvitationById(invitationId);
 
         if (!canManageInvitation(currentUser, invitation)){
@@ -254,7 +250,7 @@ public class InvitationService {
         return invitation;
     }
 
-    private boolean canManageInvitation(User user, Invitation invitation){
+    private boolean canManageInvitation(UserResponse user, Invitation invitation){
         if ("OWNER".equals(invitation.getRole())){
             return Boolean.TRUE.equals(user.getIsPlatformAdmin());
         }
@@ -298,14 +294,14 @@ public class InvitationService {
         }
     }
 
-    private Invitation markInvitationAccepted(Invitation invitation, User user){
+    private Invitation markInvitationAccepted(Invitation invitation, UserResponse user){
         invitation.setStatus("ACCEPTED");
         Invitation savedInvitation = invitationRepository.save(invitation);
         logger.log(Level.INFO,"Invitation {0} accepted by user {1} for company {2}", new Object[]{savedInvitation.getId(), user.getId(), invitation.getCompany().getId()});
-        auditLogService.createAuditLog(user, invitation.getCompany(),
-                "ACCEPT", "INVITATION", savedInvitation.getId(),
-                "Accepted invitation as " + invitation.getRole()
-        );
+//        auditLogService.createAuditLog(user, invitation.getCompany(),
+//                "ACCEPT", "INVITATION", savedInvitation.getId(),
+//                "Accepted invitation as " + invitation.getRole()
+//        );
 
         return savedInvitation;
     }

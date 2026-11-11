@@ -30,15 +30,15 @@ public class ProfileController {
         return ResponseEntity.ok(userService.updateProfile(updateProfileRequest));
     }
 
-    @GetMapping("/companies/{companyId}/employees")
-    public ResponseEntity<List<UserProfileResponse>> getEmployeeProfiles(@PathVariable Long companyId){
-        return ResponseEntity.ok(userService.getEmployeeProfiles(companyId));
-    }
-
-    @PatchMapping(path = "/companies/{companyId}/employees/{employeeId}/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<UserProfileResponse> updateEmployeeProfile(@PathVariable Long companyId, @PathVariable Long employeeId, @RequestParam String name, @RequestParam String mobileNumber, @RequestParam String email, @RequestParam(required = false)MultipartFile profilePicture) throws IOException {
-        return ResponseEntity.ok(userService.updateEmployeeProfile(companyId, employeeId, name, mobileNumber, email, profilePicture));
-    }
+//    @GetMapping("/companies/{companyId}/employees")
+//    public ResponseEntity<List<UserProfileResponse>> getEmployeeProfiles(@PathVariable Long companyId){
+//        return ResponseEntity.ok(userService.getEmployeeProfiles(companyId));
+//    }
+//
+//    @PatchMapping(path = "/companies/{companyId}/employees/{employeeId}/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//    public ResponseEntity<UserProfileResponse> updateEmployeeProfile(@PathVariable Long companyId, @PathVariable Long employeeId, @RequestParam String name, @RequestParam String mobileNumber, @RequestParam String email, @RequestParam(required = false)MultipartFile profilePicture) throws IOException {
+//        return ResponseEntity.ok(userService.updateEmployeeProfile(companyId, employeeId, name, mobileNumber, email, profilePicture));
+//    }
 
     @PatchMapping("/change-password")
     public ResponseEntity<String> changePassword(@Valid @RequestBody ChangePasswordRequest changePasswordRequest){

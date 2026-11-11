@@ -1,11 +1,11 @@
 package com.ga.company_service.controller;
 
 import com.ga.company_service.model.Invitation;
-import com.ga.company_service.model.User;
 import com.ga.company_service.model.request.InvitationRegistrationRequest;
 import com.ga.company_service.model.request.InvitationRequest;
 import com.ga.company_service.model.response.InvitationResponse;
 import com.ga.company_service.model.response.InvitationValidationResponse;
+import com.ga.company_service.model.response.UserResponse;
 import com.ga.company_service.service.InvitationService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -47,8 +47,8 @@ public class InvitationController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerOwner(@Valid @RequestBody InvitationRegistrationRequest invitationRegistrationRequest){
-        User user= invitationService.registerInvitedUser(invitationRegistrationRequest);
+    public ResponseEntity<UserResponse> registerOwner(@Valid @RequestBody InvitationRegistrationRequest invitationRegistrationRequest){
+        UserResponse user= invitationService.registerInvitedUser(invitationRegistrationRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(user);
     }
 
@@ -78,8 +78,8 @@ public class InvitationController {
                 invitation.getEmail(),
                 invitation.getRole(),
                 invitation.getStatus(),
-                invitation.getUser().getName(),
-                invitation.getUser().getId()
+                null,
+                invitation.getInvitedBy()
         );
     }
 }

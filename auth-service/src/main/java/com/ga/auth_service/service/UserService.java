@@ -43,22 +43,16 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JWTUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
-    private final CompanyMembershipRepository companyMembershipRepository;
-    private final FileAttachmentService fileAttachmentService;
     private final EmailService emailService;
-    private final AuditLogService auditLogService;
     private static final Logger logger= Logger.getLogger(UserService.class.getName());
 
     @Autowired
-    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, CompanyMembershipRepository companyMembershipRepository, FileAttachmentService fileAttachmentService, EmailService emailService, AuditLogService auditLogService) {
+    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
         this.authenticationManager = authenticationManager;
-        this.companyMembershipRepository = companyMembershipRepository;
-        this.fileAttachmentService = fileAttachmentService;
         this.emailService= emailService;
-        this.auditLogService= auditLogService;
     }
 
     public User createUser(User userObject) {
@@ -83,7 +77,7 @@ public class UserService {
         customer.setIsCustomer(true);
 
         User savedCustomer= createUser(customer);
-        auditLogService.createAuditLog(savedCustomer,null,"REGISTER_CUSTOMER","USER", savedCustomer.getId(), "Customer registered: "+savedCustomer.getName());
+//        auditLogService.createAuditLog(savedCustomer,null,"REGISTER_CUSTOMER","USER", savedCustomer.getId(), "Customer registered: "+savedCustomer.getName());
         return savedCustomer;
     }
 
@@ -232,68 +226,68 @@ public class UserService {
         return getProfile();
     }
 
-    public UserProfileResponse updateEmployeeProfile(Long companyId, Long employeeId, String name, String mobileNumber, String email, MultipartFile profilePicture) throws IOException {
-        User currentUser = getCurrentLoggedInUser();
-        boolean isOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId, "OWNER", "ACTIVE");
-        if (!isOwner) {
-            logger.log(Level.WARNING, "User {0} attempted to update employee {1} in company {2} without permissions", new Object[]{currentUser.getId(), employeeId, companyId});
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update employees in this company.");
-        }
+//    public UserProfileResponse updateEmployeeProfile(Long companyId, Long employeeId, String name, String mobileNumber, String email, MultipartFile profilePicture) throws IOException {
+//        User currentUser = getCurrentLoggedInUser();
+//        boolean isOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId, "OWNER", "ACTIVE");
+//        if (!isOwner) {
+//            logger.log(Level.WARNING, "User {0} attempted to update employee {1} in company {2} without permissions", new Object[]{currentUser.getId(), employeeId, companyId});
+//            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update employees in this company.");
+//        }
+//
+//        CompanyMembership employeeMembership = companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(employeeId, companyId, "ACTIVE").
+//                orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found in this company."));
+//
+//        User employee = employeeMembership.getUser();
+//        employee.setName(name);
+//        employee.setMobileNumber(mobileNumber);
+//        if (email!=null && !email.isBlank()){
+//            if (!employee.getEmail().equals(email) && userRepository.existsByEmail(email)) {
+//            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
+//            }
+//            employee.setEmail(email);
+//        }
+//        if (profilePicture != null && !profilePicture.isEmpty()) {
+//            Map uploadResult = fileAttachmentService.uploadImage(profilePicture);
+//            employee.setProfilePicture(uploadResult.get("secure_url").toString());
+//        }
+//        userRepository.save(employee);
+//        logger.log(Level.INFO, "Employee {0} updated by user {1} in company {2}", new Object[]{employeeId, currentUser.getId(), companyId});
+//
+//        List<UserMembershipResponse> membershipResponses = new ArrayList<>();
+//        membershipResponses.add(toMembershipResponse(employeeMembership));
+//
+//        return toProfileResponse(employee, membershipResponses);
+//    }
 
-        CompanyMembership employeeMembership = companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(employeeId, companyId, "ACTIVE").
-                orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found in this company."));
+//    public List<UserProfileResponse> getEmployeeProfiles(Long companyId){
+//        User currentUser= getCurrentLoggedInUser();
+//        boolean isOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId, "OWNER","ACTIVE");
+//        if (!isOwner){
+//            logger.log(Level.WARNING,"User {0} attempted to view employees in company {1} without permission", new Object[]{currentUser.getId(), companyId});
+//            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view employees in this company.");
+//        }
+//
+//        List<CompanyMembership> memberships= companyMembershipRepository.findByCompanyIdAndStatus(companyId,"ACTIVE");
+//        List<UserProfileResponse> employeeProfiles= new ArrayList<>();
+//
+//        for (CompanyMembership membership: memberships){
+//            User employee= membership.getUser();
+//            List<UserMembershipResponse> membershipResponses= new ArrayList<>();
+//            membershipResponses.add(toMembershipResponse(membership));
+//            employeeProfiles.add(toProfileResponse(employee, membershipResponses));
+//        }
+//        return employeeProfiles;
+//    }
 
-        User employee = employeeMembership.getUser();
-        employee.setName(name);
-        employee.setMobileNumber(mobileNumber);
-        if (email!=null && !email.isBlank()){
-            if (!employee.getEmail().equals(email) && userRepository.existsByEmail(email)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
-            }
-            employee.setEmail(email);
-        }
-        if (profilePicture != null && !profilePicture.isEmpty()) {
-            Map uploadResult = fileAttachmentService.uploadImage(profilePicture);
-            employee.setProfilePicture(uploadResult.get("secure_url").toString());
-        }
-        userRepository.save(employee);
-        logger.log(Level.INFO, "Employee {0} updated by user {1} in company {2}", new Object[]{employeeId, currentUser.getId(), companyId});
-
-        List<UserMembershipResponse> membershipResponses = new ArrayList<>();
-        membershipResponses.add(toMembershipResponse(employeeMembership));
-
-        return toProfileResponse(employee, membershipResponses);
-    }
-
-    public List<UserProfileResponse> getEmployeeProfiles(Long companyId){
-        User currentUser= getCurrentLoggedInUser();
-        boolean isOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId, "OWNER","ACTIVE");
-        if (!isOwner){
-            logger.log(Level.WARNING,"User {0} attempted to view employees in company {1} without permission", new Object[]{currentUser.getId(), companyId});
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view employees in this company.");
-        }
-
-        List<CompanyMembership> memberships= companyMembershipRepository.findByCompanyIdAndStatus(companyId,"ACTIVE");
-        List<UserProfileResponse> employeeProfiles= new ArrayList<>();
-
-        for (CompanyMembership membership: memberships){
-            User employee= membership.getUser();
-            List<UserMembershipResponse> membershipResponses= new ArrayList<>();
-            membershipResponses.add(toMembershipResponse(membership));
-            employeeProfiles.add(toProfileResponse(employee, membershipResponses));
-        }
-        return employeeProfiles;
-    }
-
-    private UserMembershipResponse toMembershipResponse(CompanyMembership membership){
-        return new UserMembershipResponse(
-                membership.getId(),
-                membership.getCompany().getId(),
-                membership.getCompany().getName(),
-                membership.getRole(),
-                membership.getStatus()
-        );
-    }
+//    private UserMembershipResponse toMembershipResponse(CompanyMembership membership){
+//        return new UserMembershipResponse(
+//                membership.getId(),
+//                membership.getCompany().getId(),
+//                membership.getCompany().getName(),
+//                membership.getRole(),
+//                membership.getStatus()
+//        );
+//    }
 
     private UserProfileResponse toProfileResponse(User user, List<UserMembershipResponse> membershipResponses){
         return new UserProfileResponse(

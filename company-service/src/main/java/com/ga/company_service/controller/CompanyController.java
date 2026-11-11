@@ -1,8 +1,11 @@
 package com.ga.company_service.controller;
 
+import com.ga.company_service.client.AuthClient;
 import com.ga.company_service.model.Company;
 import com.ga.company_service.model.request.CompanyRequest;
 import com.ga.company_service.model.response.CompanyResponse;
+import com.ga.company_service.model.response.UserMembershipResponse;
+import com.ga.company_service.model.response.UserProfileResponse;
 import com.ga.company_service.service.CompanyService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -18,23 +21,13 @@ import java.util.List;
 @AllArgsConstructor
 public class CompanyController {
     private CompanyService companyService;
+    private AuthClient authClient;
 
     @PostMapping
     public ResponseEntity<CompanyResponse> createCompany(@Valid @RequestBody CompanyRequest companyRequest){
         Company company= companyService.createCompany(companyRequest);
-        CompanyResponse companyResponse= new CompanyResponse(
-                true,
-                "Company created successfully.",
-                company.getId(),
-                company.getName(),
-                company.getDescription(),
-                company.getLocation(),
-                company.getAddress(),
-                company.getStatus(),
-                company.getOwner() != null ? company.getOwner().getUser().getId() : null,
-                company.getOwner() != null ? company.getOwner().getUser().getName() : null,
-                company.getOwner() != null ? company.getOwner().getUser().getEmail() : null
-        );
+        CompanyResponse companyResponse= toResponse(company);
+        companyResponse.setMessage("Company created successfully.");
         return ResponseEntity.status(HttpStatus.CREATED).body(companyResponse);
     }
 
@@ -55,7 +48,14 @@ public class CompanyController {
         return ResponseEntity.ok(toResponse(company));
     }
 
+    @GetMapping("/users/{userId}/memberships")
+    public ResponseEntity<List<UserMembershipResponse>> getUserMemberships(@PathVariable Long userId){
+        return ResponseEntity.ok(companyService.getUserMemberships(userId));
+    }
+
     private CompanyResponse toResponse(Company company) {
+        Long ownerId= company.getOwner() != null ? company.getOwner().getUserId(): null;
+        UserProfileResponse owner = ownerId != null ? authClient.getUserById(ownerId): null;
         return new CompanyResponse(
                 true,
                 "Company retrieved successfully",
@@ -65,9 +65,9 @@ public class CompanyController {
                 company.getLocation(),
                 company.getAddress(),
                 company.getStatus(),
-                company.getOwner() != null ? company.getOwner().getUser().getId() : null,
-                company.getOwner() != null ? company.getOwner().getUser().getName() : null,
-                company.getOwner() != null ? company.getOwner().getUser().getEmail() : null
+                ownerId,
+                owner != null ? owner.getName() : null,
+                owner != null ? owner.getEmail() : null
         );
     }
 }
