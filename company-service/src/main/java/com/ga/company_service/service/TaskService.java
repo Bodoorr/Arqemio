@@ -2,13 +2,12 @@ package com.ga.company_service.service;
 
 import com.ga.company_service.model.Project;
 import com.ga.company_service.model.Task;
-import com.ga.company_service.model.User;
 import com.ga.company_service.model.request.TaskRequest;
+import com.ga.company_service.model.response.UserResponse;
 import com.ga.company_service.repository.CompanyMembershipRepository;
 import com.ga.company_service.repository.ProjectRepository;
 import com.ga.company_service.repository.TaskAssignmentRepository;
 import com.ga.company_service.repository.TaskRepository;
-import com.ga.company_service.security.MyUserDetails;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -30,13 +29,12 @@ public class TaskService {
     private TaskAssignmentRepository taskAssignmentRepository;
     private static final Logger logger = Logger.getLogger(TaskService.class.getName());
 
-    public static User getCurrentLoggedInUser(){
-        MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return userDetails.getUser();
+    public static UserResponse getCurrentLoggedInUser(){
+        return (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
     public Task createTask(TaskRequest taskRequest){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Project project= projectRepository.findById(taskRequest.getProjectId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
 
         if (!canManageTask(currentUser,project)){
@@ -76,7 +74,7 @@ public class TaskService {
     }
 
     public Task updateTask(Long taskId, TaskRequest taskRequest){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Task task= findTaskById(taskId);
 
         if (!canManageTask(currentUser, task.getProject())){
@@ -97,7 +95,7 @@ public class TaskService {
     }
 
     public Task archiveTask(Long taskId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Task task= findTaskById(taskId);
 
         if (!canManageTask(currentUser, task.getProject())){
@@ -113,7 +111,7 @@ public class TaskService {
     }
 
     public Task updateTaskStatus(Long taskId, String status){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Task task= findTaskById(taskId);
 
         boolean isAssignedWorker= taskAssignmentRepository.existsByTaskIdAndAssignedToUserIdAndAssignedToStatus(taskId,currentUser.getId(),"ACTIVE");
@@ -132,7 +130,7 @@ public class TaskService {
     }
 
 
-    private boolean canManageTask(User user, Project project){
+    private boolean canManageTask(UserResponse user, Project project){
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), project.getCompany().getId(), "OWNER", "ACTIVE");
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(), project.getCompany().getId(), "ACTIVE");
         boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
