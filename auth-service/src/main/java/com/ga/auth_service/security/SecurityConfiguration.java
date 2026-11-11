@@ -60,7 +60,11 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(auth-> auth.requestMatchers(
                         "/auth/users/login",
                         "/auth/users/forget-password",
-                        "/auth/users/reset-password", "/auth/users/register", "/auth/users/{id}", "/auth/users/internal/send-email",
+                        "/auth/users/reset-password",
+                        "/auth/users/register",
+                        "/auth/users/{id}",
+                        "/auth/users/internal/send-email",
+                        "/auth/users/internal/register-customer",
                         "/swagger-ui/**",
                         "/v3/api-docs/**"
                 ).permitAll().anyRequest().authenticated());
