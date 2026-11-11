@@ -53,6 +53,8 @@ public class CompanyController {
         return ResponseEntity.ok(companyService.getUserMemberships(userId));
     }
 
+
+
     private CompanyResponse toResponse(Company company) {
         Long ownerId= company.getOwner() != null ? company.getOwner().getUserId(): null;
         UserProfileResponse owner = ownerId != null ? authClient.getUserById(ownerId): null;

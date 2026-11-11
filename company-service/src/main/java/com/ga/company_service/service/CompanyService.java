@@ -1,9 +1,11 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.client.AuthClient;
 import com.ga.company_service.model.Company;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.request.CompanyRequest;
 import com.ga.company_service.model.response.UserMembershipResponse;
+import com.ga.company_service.model.response.UserProfileResponse;
 import com.ga.company_service.model.response.UserResponse;
 import com.ga.company_service.repository.CompanyMembershipRepository;
 import com.ga.company_service.repository.CompanyRepository;
@@ -24,6 +26,7 @@ public class CompanyService {
     private CompanyRepository companyRepository;
 //    private AuditLogService auditLogService;
     private CompanyMembershipRepository companyMembershipRepository;
+    private AuthClient authClient;
 
     private static final Logger logger= Logger.getLogger(CompanyService.class.getName());
     public UserResponse getCurrentLoggedInUser(){
@@ -90,6 +93,42 @@ public class CompanyService {
             ));
         }
         return responses;
+    }
+
+    public List<UserProfileResponse> getEmployeeProfiles(Long companyId){
+        UserResponse currentUser= getCurrentLoggedInUser();
+
+        boolean isOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId, "OWNER","ACTIVE");
+        if (!isOwner){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view employees in this company.");
+        }
+
+        List<CompanyMembership> memberships= companyMembershipRepository.findByCompanyIdAndStatus(companyId, "ACTIVE");
+        List<UserProfileResponse> employeeProfiles= new ArrayList<>();
+
+        for (CompanyMembership membership: memberships){
+            UserProfileResponse employee= authClient.getUserById(membership.getUserId());
+
+            UserMembershipResponse membershipResponse= new UserMembershipResponse(
+                    membership.getId(),
+                    membership.getCompany().getId(),
+                    membership.getCompany().getName(),
+                    membership.getRole(),
+                    membership.getStatus()
+            );
+
+            UserProfileResponse response= new UserProfileResponse(
+                    employee.getId(),
+                    employee.getName(),
+                    employee.getEmail(),
+                    employee.getMobileNumber(),
+                    employee.getProfilePicture(),
+                    List.of(membershipResponse),
+                    employee.getIsCustomer()
+            );
+            employeeProfiles.add(response);
+        }
+        return employeeProfiles;
     }
 
 }
