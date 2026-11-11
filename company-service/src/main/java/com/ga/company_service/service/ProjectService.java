@@ -3,12 +3,11 @@ package com.ga.company_service.service;
 import com.ga.company_service.model.Company;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Project;
-import com.ga.company_service.model.User;
 import com.ga.company_service.model.request.ProjectRequest;
+import com.ga.company_service.model.response.UserResponse;
 import com.ga.company_service.repository.CompanyMembershipRepository;
 import com.ga.company_service.repository.CompanyRepository;
 import com.ga.company_service.repository.ProjectRepository;
-import com.ga.company_service.security.MyUserDetails;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,16 +28,15 @@ public class ProjectService {
     private ProjectRepository projectRepository;
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
-    private AuditLogService auditLogService;
-    private NotificationService notificationService;
+//    private AuditLogService auditLogService;
+//    private NotificationService notificationService;
 
-    public static User getCurrentLoggedInUser(){
-        MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return userDetails.getUser();
+    public static UserResponse getCurrentLoggedInUser(){
+        return  (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
     public Project createProject(ProjectRequest projectRequest){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Company company= companyRepository.findById(projectRequest.getCompanyId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
 
         if (!isCompanyOwner(currentUser, company.getId())){
@@ -55,17 +53,16 @@ public class ProjectService {
         Project savedProject = projectRepository.save(project);
 
         logger.log(Level.INFO,"Project {0} created successfully", savedProject.getId());
-
-        auditLogService.createAuditLog(currentUser, company,
-                "CREATE", "PROJECT",
-                savedProject.getId(), "Created project " + savedProject.getName());
+//        auditLogService.createAuditLog(currentUser, company,
+//                "CREATE", "PROJECT",
+//                savedProject.getId(), "Created project " + savedProject.getName());
 
         return savedProject;
 
     }
 
     public List<Project> getAllProjects(){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         List<Project> projects= new ArrayList<>();
         List<CompanyMembership> memberships= companyMembershipRepository.findByUserIdAndStatus(currentUser.getId(), "ACTIVE");
 
@@ -113,7 +110,7 @@ public class ProjectService {
 
 
     public Project getProjectById(Long projectId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Project project= findProjectById(projectId);
 
         boolean isOwner= isCompanyOwner(currentUser,project.getCompany().getId());
@@ -129,7 +126,7 @@ public class ProjectService {
     }
 
     public Project updateProject(Long projectId, ProjectRequest projectRequest){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Project project= findProjectById(projectId);
 
         if (!isCompanyOwner(currentUser, project.getCompany().getId())){
@@ -141,13 +138,13 @@ public class ProjectService {
         setProjectFields(project,projectRequest);
 
         Project updateProject= projectRepository.save(project);
-        auditLogService.createAuditLog(currentUser,updateProject.getCompany(),"UPDATE","PROJECT",updateProject.getId(),"Updated project: "+updateProject.getName());
+//        auditLogService.createAuditLog(currentUser,updateProject.getCompany(),"UPDATE","PROJECT",updateProject.getId(),"Updated project: "+updateProject.getName());
         logger.log(Level.INFO, "Project {0} updated successfully", updateProject.getId());
         return updateProject;
     }
 
     public Project archiveProject(Long projectId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Project project= findProjectById(projectId);
 
         if (!isCompanyOwner(currentUser, project.getCompany().getId())){
@@ -156,14 +153,14 @@ public class ProjectService {
         }
         project.setStatus("ARCHIVED");
         Project archivedProject= projectRepository.save(project);
-        auditLogService.createAuditLog(currentUser,archivedProject.getCompany(),"ARCHIVE","PROJECT",archivedProject.getId(),"Archived project: "+archivedProject.getName());
+//        auditLogService.createAuditLog(currentUser,archivedProject.getCompany(),"ARCHIVE","PROJECT",archivedProject.getId(),"Archived project: "+archivedProject.getName());
         logger.log(Level.INFO, "Project {0} archived successfully", archivedProject.getId());
         return archivedProject;
     }
 
 
     public CompanyMembership assignManager(Long projectId, Long membershipId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Project project= findProjectById(projectId);
         CompanyMembership membership= findMembershipById(membershipId);
 
@@ -190,14 +187,14 @@ public class ProjectService {
         }
         project.getManagers().add(membership);
         projectRepository.save(project);
-        notificationService.sendNotification(membership.getUser().getId(), "You have been assigned as a manager to project "+project.getName());
-        auditLogService.createAuditLog(currentUser,project.getCompany(),"ASSIGN_MANAGER","PROJECT", project.getId(), "Assigned manager: "+membership.getUser().getName());
+//        notificationService.sendNotification(membership.getUser().getId(), "You have been assigned as a manager to project "+project.getName());
+//        auditLogService.createAuditLog(currentUser,project.getCompany(),"ASSIGN_MANAGER","PROJECT", project.getId(), "Assigned manager: "+membership.getUser().getName());
         logger.log(Level.INFO, "Manager membership {0} assigned to project {1}", new Object[]{membershipId,projectId});
         return membership;
     }
 
     public CompanyMembership removeManager(Long projectId, Long membershipId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Project project= findProjectById(projectId);
         CompanyMembership membership= findMembershipById(membershipId);
 
@@ -212,14 +209,14 @@ public class ProjectService {
 
         project.getManagers().remove(membership);
         projectRepository.save(project);
-        notificationService.sendNotification(membership.getUser().getId(), "You have been removed as a manager from project "+ project.getName());
-        auditLogService.createAuditLog(currentUser,project.getCompany(),"REMOVE_MANAGER","PROJECT", project.getId(), "Remove manager: "+membership.getUser().getName());
+//        notificationService.sendNotification(membership.getUser().getId(), "You have been removed as a manager from project "+ project.getName());
+//        auditLogService.createAuditLog(currentUser,project.getCompany(),"REMOVE_MANAGER","PROJECT", project.getId(), "Remove manager: "+membership.getUser().getName());
         logger.log(Level.INFO,"Manager membership {0} removed from project {1}", new Object[]{membershipId, projectId});
         return membership;
     }
 
     public CompanyMembership assignWorker(Long projectId, Long membershipId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Project project= findProjectById(projectId);
         CompanyMembership membership= findMembershipById(membershipId);
 
@@ -246,14 +243,14 @@ public class ProjectService {
 
         project.getWorkers().add(membership);
         projectRepository.save(project);
-        notificationService.sendNotification(membership.getUser().getId(), "You have been assigned to project "+ project.getName());
-        auditLogService.createAuditLog(currentUser,project.getCompany(),"ASSIGN_WORKER","PROJECT", project.getId(), "Assigned worker: "+membership.getUser().getName());
+//        notificationService.sendNotification(membership.getUser().getId(), "You have been assigned to project "+ project.getName());
+//        auditLogService.createAuditLog(currentUser,project.getCompany(),"ASSIGN_WORKER","PROJECT", project.getId(), "Assigned worker: "+membership.getUser().getName());
         logger.log(Level.INFO,"Worker membership {0} assigned project {1}", new Object[]{membershipId,projectId});
         return membership;
     }
 
     public CompanyMembership removeWorker(Long projectId, Long membershipId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Project project= findProjectById(projectId);
         CompanyMembership membership= findMembershipById(membershipId);
 
@@ -268,8 +265,8 @@ public class ProjectService {
 
         project.getWorkers().remove(membership);
         projectRepository.save(project);
-        notificationService.sendNotification(membership.getUser().getId(), "You have been removed from project "+ project.getName());
-        auditLogService.createAuditLog(currentUser,project.getCompany(),"REMOVE_WORKER","PROJECT", project.getId(), "Removed worker: "+membership.getUser().getName());
+//        notificationService.sendNotification(membership.getUser().getId(), "You have been removed from project "+ project.getName());
+//        auditLogService.createAuditLog(currentUser,project.getCompany(),"REMOVE_WORKER","PROJECT", project.getId(), "Removed worker: "+membership.getUser().getName());
         logger.log(Level.INFO,"Worker membership {0} removed from project {1}", new Object[]{membershipId, projectId});
         return membership;
     }
@@ -284,7 +281,7 @@ public class ProjectService {
 
 
     public List<CompanyMembership> getAvailableProjectMembers(Long projectId) {
-        User currentUser = getCurrentLoggedInUser();
+        UserResponse currentUser = getCurrentLoggedInUser();
         Project project = findProjectById(projectId);
 
         if (!isCompanyOwner(currentUser, project.getCompany().getId())) {
@@ -332,7 +329,7 @@ public class ProjectService {
         project.setStatus(projectRequest.getStatus());
     }
 
-    private boolean isCompanyOwner(User user, Long companyId){
+    private boolean isCompanyOwner(UserResponse user, Long companyId){
         return companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), companyId,"OWNER","ACTIVE");
     }
 }
