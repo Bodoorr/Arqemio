@@ -3,12 +3,11 @@ package com.ga.company_service.service;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Project;
 import com.ga.company_service.model.ProjectUpdate;
-import com.ga.company_service.model.User;
 import com.ga.company_service.model.request.ProjectUpdateRequest;
+import com.ga.company_service.model.response.UserResponse;
 import com.ga.company_service.repository.CompanyMembershipRepository;
 import com.ga.company_service.repository.ProjectRepository;
 import com.ga.company_service.repository.ProjectUpdateRepository;
-import com.ga.company_service.security.MyUserDetails;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,17 +24,16 @@ public class ProjectUpdateService {
     private ProjectUpdateRepository projectUpdateRepository;
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
-    private NotificationService notificationService;
-    private AuditLogService auditLogService;
+//    private NotificationService notificationService;
+//    private AuditLogService auditLogService;
     private static final Logger logger= Logger.getLogger(ProjectUpdateService.class.getName());
 
-    public static User getCurrentLoggedInUser(){
-        MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return userDetails.getUser();
+    public static UserResponse getCurrentLoggedInUser(){
+        return (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
     public ProjectUpdate createProjectUpdate(ProjectUpdateRequest projectUpdateRequest){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Project project= projectRepository.findById(projectUpdateRequest.getProjectId()).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
         CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(), project.getCompany().getId(), "ACTIVE")
                 .orElseThrow(()-> new ResponseStatusException(HttpStatus.FORBIDDEN,"Active company membership not found."));
@@ -58,16 +56,16 @@ public class ProjectUpdateService {
         projectUpdate.setStatus("PENDING");
 
         ProjectUpdate savedProjectUpdate = projectUpdateRepository.save(projectUpdate);
-        auditLogService.createAuditLog(currentUser,project.getCompany(),"CREATE","PROJECT_UPDATE",savedProjectUpdate.getId(),"Submitted project update: "+savedProjectUpdate.getTitle());
+//        auditLogService.createAuditLog(currentUser,project.getCompany(),"CREATE","PROJECT_UPDATE",savedProjectUpdate.getId(),"Submitted project update: "+savedProjectUpdate.getTitle());
         logger.log(Level.INFO,"Project update {0} created for project {1} by user {2}", new Object[]{savedProjectUpdate.getId(), project.getId(), currentUser.getId()});
-        for (CompanyMembership manager: project.getManagers()){
-            notificationService.sendNotification(manager.getUser().getId(), "New project update submitted for "+ project.getName());
-        }
+//        for (CompanyMembership manager: project.getManagers()){
+//            notificationService.sendNotification(manager.getUser().getId(), "New project update submitted for "+ project.getName());
+//        }
         return savedProjectUpdate;
     }
 
     public List<ProjectUpdate> getProjectUpdates(Long projectId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
 
         if (!canViewProjectUpdate(currentUser, project)){
@@ -78,7 +76,7 @@ public class ProjectUpdateService {
     }
 
     public ProjectUpdate getProjectUpdateById(Long updateId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         ProjectUpdate projectUpdate= findProjectUpdateById(updateId);
 
         if (!canViewProjectUpdate(currentUser, projectUpdate.getProject())) {
@@ -89,7 +87,7 @@ public class ProjectUpdateService {
     }
 
     public ProjectUpdate reviewProjectUpdate(Long updateId, String status, String reviewNote){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         ProjectUpdate projectUpdate= findProjectUpdateById(updateId);
         Project project= projectUpdate.getProject();
         if (!canManageProjectUpdate(currentUser, project)){
@@ -113,14 +111,14 @@ public class ProjectUpdateService {
         projectUpdate.setReviewNote(reviewNote);
 
         ProjectUpdate reviewedUpdate= projectUpdateRepository.save(projectUpdate);
-        auditLogService.createAuditLog(currentUser, project.getCompany(),status.equals("APPROVED")? "APPROVE" : "REJECT", "PROJECT_UPDATE", reviewedUpdate.getId(),"Reviewed project update: "+reviewedUpdate.getTitle()+" - "+status);
-        notificationService.sendNotification(reviewedUpdate.getUpdatedBy().getUser().getId(), "Your project update "+reviewedUpdate.getTitle()+" has been "+status.toLowerCase());
+//        auditLogService.createAuditLog(currentUser, project.getCompany(),status.equals("APPROVED")? "APPROVE" : "REJECT", "PROJECT_UPDATE", reviewedUpdate.getId(),"Reviewed project update: "+reviewedUpdate.getTitle()+" - "+status);
+//        notificationService.sendNotification(reviewedUpdate.getUpdatedBy().getUserId(), "Your project update "+reviewedUpdate.getTitle()+" has been "+status.toLowerCase());
         logger.log(Level.INFO, "Project update {0} reviewed with status {1} by user {2}", new Object[]{updateId, status,currentUser.getId()});
         return reviewedUpdate;
     }
 
     public ProjectUpdate updateProjectUpdate(Long updateId, ProjectUpdateRequest projectUpdateRequest){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
 
         ProjectUpdate projectUpdate= findProjectUpdateById(updateId);
 
@@ -132,7 +130,7 @@ public class ProjectUpdateService {
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to modify this project update.");
         }
 
-        if (!projectUpdate.getUpdatedBy().getUser().getId().equals(currentUser.getId())){
+        if (!projectUpdate.getUpdatedBy().getUserId().equals(currentUser.getId())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this project update.");
         }
 
@@ -144,13 +142,13 @@ public class ProjectUpdateService {
         projectUpdate.setDescription(projectUpdateRequest.getDescription());
 
         ProjectUpdate updatedProjectUpdate= projectUpdateRepository.save(projectUpdate);
-        auditLogService.createAuditLog(currentUser, updatedProjectUpdate.getProject().getCompany(),"UPDATE","PROJECT_UPDATE", updatedProjectUpdate.getId(), "Updated project update: "+updatedProjectUpdate.getTitle());
+//        auditLogService.createAuditLog(currentUser, updatedProjectUpdate.getProject().getCompany(),"UPDATE","PROJECT_UPDATE", updatedProjectUpdate.getId(), "Updated project update: "+updatedProjectUpdate.getTitle());
         logger.log(Level.INFO, "Project update {0} edited by user {1}", new Object[]{updateId, currentUser.getId()});
         return updatedProjectUpdate;
     }
 
     public ProjectUpdate archiveProjectUpdate(Long updateId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         ProjectUpdate projectUpdate= findProjectUpdateById(updateId);
 
         Project project= projectUpdate.getProject();
@@ -160,7 +158,7 @@ public class ProjectUpdateService {
         if (!isActiveWorker || !isAssignedWorker){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to archive this project update.");
         }
-        if (!projectUpdate.getUpdatedBy().getUser().getId().equals(currentUser.getId())){
+        if (!projectUpdate.getUpdatedBy().getUserId().equals(currentUser.getId())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to archive this project update.");
         }
 
@@ -171,7 +169,7 @@ public class ProjectUpdateService {
         projectUpdate.setStatus("ARCHIVED");
 
         ProjectUpdate archivedUpdate= projectUpdateRepository.save(projectUpdate);
-        auditLogService.createAuditLog(currentUser, archivedUpdate.getProject().getCompany(),"ARCHIVE","PROJECT_UPDATE", archivedUpdate.getId(), "Archived project update: "+archivedUpdate.getTitle());
+//        auditLogService.createAuditLog(currentUser, archivedUpdate.getProject().getCompany(),"ARCHIVE","PROJECT_UPDATE", archivedUpdate.getId(), "Archived project update: "+archivedUpdate.getTitle());
         logger.log(Level.INFO,"Project update {0} archived by user {1}", new Object[]{updateId, currentUser.getId()});
         return archivedUpdate;
     }
@@ -182,7 +180,7 @@ public class ProjectUpdateService {
                         HttpStatus.NOT_FOUND, "Project update not found."));
     }
 
-    private boolean canManageProjectUpdate(User user, Project project){
+    private boolean canManageProjectUpdate(UserResponse user, Project project){
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(),project.getCompany().getId(), "OWNER", "ACTIVE");
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(), project.getCompany().getId(), "ACTIVE");
         boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
@@ -190,7 +188,7 @@ public class ProjectUpdateService {
         return isCompanyOwner|| (isActiveMember && isAssignedManager);
     }
 
-    private boolean canViewProjectUpdate(User user, Project project){
+    private boolean canViewProjectUpdate(UserResponse user, Project project){
         boolean canManage= canManageProjectUpdate(user,project);
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(), project.getCompany().getId(), "ACTIVE");
         boolean isAssignedWorker = projectRepository.existsByIdAndWorkersUserIdAndWorkersStatus(project.getId(), user.getId(), "ACTIVE");
