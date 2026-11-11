@@ -5,11 +5,11 @@ import com.ga.company_service.model.Equipment;
 import com.ga.company_service.model.Project;
 import com.ga.company_service.model.Reservation;
 import com.ga.company_service.model.request.ReservationRequest;
+import com.ga.company_service.model.response.UserResponse;
 import com.ga.company_service.repository.CompanyMembershipRepository;
 import com.ga.company_service.repository.EquipmentRepository;
 import com.ga.company_service.repository.ProjectRepository;
 import com.ga.company_service.repository.ReservationRepository;
-import com.ga.company_service.security.MyUserDetails;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.AllArgsConstructor;
@@ -37,26 +37,25 @@ public class ReservationService {
     private ProjectRepository projectRepository;
     private ProjectService projectService;
     private CompanyMembershipRepository companyMembershipRepository;
-    private AuditLogService auditLogService;
-    private NotificationService notificationService;
+//    private AuditLogService auditLogService;
+//    private NotificationService notificationService;
     private static final ReentrantLock reservationLock= new ReentrantLock();
     @PersistenceContext
     private EntityManager entityManager;
 
-    public static User getCurrentLoggedInUser(){
-        MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return userDetails.getUser();
+    public static UserResponse getCurrentLoggedInUser(){
+        return  (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
     @Transactional
     public Reservation createReservation(ReservationRequest reservationRequest){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
 
         //Reservation lock
         reservationLock.lock();
         logger.info("["+ Thread.currentThread().getName()+ "] LOCK ACQUIRED");
         try {
-            logger.info("["+ Thread.currentThread().getName()+ "] Manager "+ currentUser.getName()+ " requesting equipment "+reservationRequest.getEquipmentId());
+            logger.info("["+ Thread.currentThread().getName()+ "] Manager "+ currentUser.getId()+ " requesting equipment "+reservationRequest.getEquipmentId());
             Equipment equipment= equipmentRepository.findByIdForUpdate(reservationRequest.getEquipmentId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
             logger.info("["+ Thread.currentThread().getName()+ "] DATABASE LOCK ACQUIRED for equipment "+ equipment.getId());
             //Testing concurrency
@@ -98,7 +97,7 @@ public class ReservationService {
             if (reservationRequest.getQuantity()> availableQuantity){
 //                logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{equipment.getId(), reservationRequest.getQuantity(), availableQuantity});
                 logger.warning("[" + Thread.currentThread().getName()+ "] RESERVATION REJECTED - Not enough equipment");
-                notificationService.sendNotification(currentUser.getId(), "Reservation failed! Not enough "+ equipment.getName()+" available. Only "+availableQuantity+" remaining.");
+//                notificationService.sendNotification(currentUser.getId(), "Reservation failed! Not enough "+ equipment.getName()+" available. Only "+availableQuantity+" remaining.");
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");
             }
 
@@ -118,14 +117,14 @@ public class ReservationService {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit(){
-                    notificationService.sendNotification(currentUser.getId(), "Your reservation for "+equipment.getName()+" was successful.");
+//                    notificationService.sendNotification(currentUser.getId(), "Your reservation for "+equipment.getName()+" was successful.");
                 }
             });
 
-            auditLogService.createAuditLog(currentUser, project.getCompany(),
-                    "CREATE", "RESERVATION", savedReservation.getId(),
-                    "Created equipment reservation for " + equipment.getName()
-            );
+//            auditLogService.createAuditLog(currentUser, project.getCompany(),
+//                    "CREATE", "RESERVATION", savedReservation.getId(),
+//                    "Created equipment reservation for " + equipment.getName()
+//            );
 
             return savedReservation;
         } finally {
@@ -155,7 +154,7 @@ public class ReservationService {
 
     @Transactional
     public Reservation updateReservation(Long reservationId, ReservationRequest reservationRequest){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         //Reservation lock
         reservationLock.lock();
 
@@ -173,7 +172,7 @@ public class ReservationService {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update this reservation.");
             }
 
-            if (!reservation.getMembership().getUser().getId().equals(currentUser.getId())){
+            if (!reservation.getMembership().getUserId().equals(currentUser.getId())){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,"You can only cancel your own reservations.");
             }
 
@@ -210,7 +209,7 @@ public class ReservationService {
             reservation.setQuantity(reservationRequest.getQuantity());
 
             Reservation updatedReservation= reservationRepository.save(reservation);
-            auditLogService.createAuditLog(currentUser, updatedReservation.getProject().getCompany(),"UPDATE","RESERVATION", updatedReservation.getId(),"Updated equipment reservation for "+updatedReservation.getEquipment().getName());
+//            auditLogService.createAuditLog(currentUser, updatedReservation.getProject().getCompany(),"UPDATE","RESERVATION", updatedReservation.getId(),"Updated equipment reservation for "+updatedReservation.getEquipment().getName());
             logger.log(Level.INFO,"Reservation {0} updated successfully", updatedReservation.getId());
             return updatedReservation;
         } finally {
@@ -220,7 +219,7 @@ public class ReservationService {
 
     @Transactional
     public Reservation cancelReservation(Long reservationId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
 
         //Reservation lock
         reservationLock.lock();
@@ -234,7 +233,7 @@ public class ReservationService {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to cancel this reservation.");
             }
 
-            if (!reservation.getMembership().getUser().getId().equals(currentUser.getId())){
+            if (!reservation.getMembership().getUserId().equals(currentUser.getId())){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,"You can only update your own reservations.");
             }
 
@@ -246,10 +245,10 @@ public class ReservationService {
             Reservation savedReservation = reservationRepository.save(reservation);
 
             logger.log(Level.INFO,"Reservation {0} cancelled successfully", savedReservation.getId());
-            auditLogService.createAuditLog(currentUser, reservation.getProject().getCompany(),
-                    "CANCEL", "RESERVATION", savedReservation.getId(),
-                    "Cancelled equipment reservation for " + reservation.getEquipment().getName()
-            );
+//            auditLogService.createAuditLog(currentUser, reservation.getProject().getCompany(),
+//                    "CANCEL", "RESERVATION", savedReservation.getId(),
+//                    "Cancelled equipment reservation for " + reservation.getEquipment().getName()
+//            );
             return savedReservation;
         } finally {
             reservationLock.unlock();
@@ -259,7 +258,7 @@ public class ReservationService {
 
     @Transactional
     public Reservation updateReservationStatus(Long reservationId, String status){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         //Reservation lock
         reservationLock.lock();
         try {
@@ -285,13 +284,13 @@ public class ReservationService {
 
             reservation.setStatus(status);
             Reservation updatedReservation= reservationRepository.save(reservation);
-            auditLogService.createAuditLog(currentUser, updatedReservation.getProject().getCompany(),"COMPLETE","RESERVATION", updatedReservation.getId(),"Completed equipment reservation for "+updatedReservation.getEquipment().getName());
+//            auditLogService.createAuditLog(currentUser, updatedReservation.getProject().getCompany(),"COMPLETE","RESERVATION", updatedReservation.getId(),"Completed equipment reservation for "+updatedReservation.getEquipment().getName());
 
             //notification
             //find the managers that will receive the notification
             List<Long> managerIds= updatedReservation.getProject().getManagers()
                     .stream()
-                    .map(manager->manager.getUser().getId())
+                    .map(manager->manager.getUserId())
                     .toList();
             String equipmentName= updatedReservation.getEquipment().getName();
             //register the notification to run later
@@ -300,7 +299,7 @@ public class ReservationService {
                 @Override
                 public void afterCommit(){
                 for (Long managerId: managerIds){
-                    notificationService.sendNotification(managerId, "Equipment reservation for "+equipmentName+" has been completed.");
+//                    notificationService.sendNotification(managerId, "Equipment reservation for "+equipmentName+" has been completed.");
                 }
             }
             });
@@ -313,7 +312,7 @@ public class ReservationService {
     }
 
     public int getAvailableQuantity(Long equipmentId, LocalDateTime startDateTime, LocalDateTime endDateTime){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Equipment equipment= equipmentRepository.findById(equipmentId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
 
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), equipment.getCompany().getId(), "ACTIVE");
@@ -326,7 +325,7 @@ public class ReservationService {
         return calculateAvailableQuantity(equipment,startDateTime,endDateTime);
     }
 
-    private boolean canManageReservation(User user, Project project){
+    private boolean canManageReservation(UserResponse user, Project project){
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(),project.getCompany().getId(), "OWNER", "ACTIVE");
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(), project.getCompany().getId(), "ACTIVE");
         boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
