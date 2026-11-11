@@ -1,9 +1,11 @@
 package com.ga.company_service.controller;
 
+import com.ga.company_service.client.AuthClient;
 import com.ga.company_service.model.Reservation;
 import com.ga.company_service.model.request.ReservationRequest;
 import com.ga.company_service.model.request.ReservationStatusRequest;
 import com.ga.company_service.model.response.ReservationResponse;
+import com.ga.company_service.model.response.UserProfileResponse;
 import com.ga.company_service.service.ReservationService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -20,6 +22,7 @@ import java.util.List;
 @AllArgsConstructor
 public class ReservationController {
     private ReservationService reservationService;
+    private AuthClient authClient;
 
     @PostMapping
     public ResponseEntity<ReservationResponse> createReservation(@Valid @RequestBody ReservationRequest reservationRequest){
@@ -68,6 +71,8 @@ public class ReservationController {
     }
 
     private ReservationResponse toResponse(Reservation reservation){
+        UserProfileResponse user= authClient.getUserById(reservation.getMembership().getUserId());
+
         return new ReservationResponse(
                 reservation.getId(),
                 reservation.getEquipment().getId(),
@@ -75,7 +80,7 @@ public class ReservationController {
                 reservation.getProject().getId(),
                 reservation.getProject().getName(),
                 reservation.getMembership().getId(),
-                reservation.getMembership().getUser().getName(),
+                user.getName(),
                 reservation.getStartDateTime(),
                 reservation.getEndDateTime(),
                 reservation.getDescription(),
