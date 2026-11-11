@@ -9,4 +9,5 @@ public class UserResponse {
     private Long id;
     private String email;
     private Boolean isPlatformAdmin;
+    private Boolean isCustomer;
 }

@@ -1,10 +1,12 @@
 package com.ga.company_service.controller;
 
+import com.ga.company_service.client.AuthClient;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Project;
 import com.ga.company_service.model.request.ProjectRequest;
 import com.ga.company_service.model.response.ProjectMemberResponse;
 import com.ga.company_service.model.response.ProjectResponse;
+import com.ga.company_service.model.response.UserProfileResponse;
 import com.ga.company_service.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -24,6 +26,7 @@ import java.util.List;
 @AllArgsConstructor
 public class ProjectController {
     private ProjectService projectService;
+    private AuthClient authClient;
 
     @PostMapping
     public ResponseEntity<ProjectResponse> createProject(@Valid @RequestBody ProjectRequest projectRequest){
@@ -147,11 +150,12 @@ public class ProjectController {
     }
 
     private ProjectMemberResponse toMemberResponse(CompanyMembership member, Long projectId){
+        UserProfileResponse user= authClient.getUserById(member.getUserId());
         return new ProjectMemberResponse(
                 projectId,
                 member.getCompany().getName(),
                 member.getId(),
-                member.getUser().getName(),
+                user.getName(),
                 member.getRole()
         );
     }

@@ -2,16 +2,12 @@ package com.ga.auth_service.controller;
 
 import com.ga.auth_service.model.EmailDetails;
 import com.ga.auth_service.model.User;
-import com.ga.auth_service.model.request.ForgetPasswordRequest;
-import com.ga.auth_service.model.request.LoginRequest;
-import com.ga.auth_service.model.request.RegistrationRequest;
-import com.ga.auth_service.model.request.ResetPasswordRequest;
+import com.ga.auth_service.model.request.*;
 import com.ga.auth_service.model.response.UserProfileResponse;
 import com.ga.auth_service.model.response.UserResponse;
 import com.ga.auth_service.service.EmailService;
 import com.ga.auth_service.service.UserService;
 import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -23,8 +19,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 @RequestMapping(path = "/auth/users")
 public class UserController {
-    private UserService userService;
-    private EmailService emailService;
+    private final UserService userService;
+    private final EmailService emailService;
 
     @Value("${internal.api-key}")
     private String internalApiKey;
@@ -72,7 +68,8 @@ public class UserController {
         UserResponse response= new UserResponse(
                 user.getId(),
                 user.getEmail(),
-                user.getIsPlatformAdmin()
+                user.getIsPlatformAdmin(),
+                user.getIsCustomer()
         );
 
         return ResponseEntity.ok(response);
@@ -98,7 +95,8 @@ public class UserController {
         UserResponse response= new UserResponse(
                 savedUser.getId(),
                 savedUser.getEmail(),
-                savedUser.getIsPlatformAdmin()
+                savedUser.getIsPlatformAdmin(),
+                savedUser.getIsCustomer()
                 );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -111,6 +109,31 @@ public class UserController {
                     HttpStatus.UNAUTHORIZED, "Invalid API key");
         }
         return ResponseEntity.ok(emailService.sendHtmlMail(emailDetails));
+    }
+
+    @PostMapping("/internal/register-customer")
+    public UserResponse registerCustomer(@RequestHeader("X-Internal-Api-Key") String apiKey, @Valid @RequestBody CustomerRegistrationRequest registrationRequest){
+        if (internalApiKey.isBlank() || !internalApiKey.equals(apiKey)) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Invalid API key");
+        }
+
+        if (!registrationRequest.getPassword().equals(registrationRequest.getConfirmedPassword())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Passwords do not match.");
+        }
+
+        User customer= userService.registerCustomer(
+                registrationRequest.getName(),
+                registrationRequest.getEmail(),
+                registrationRequest.getPassword()
+        );
+
+        return new UserResponse(
+                customer.getId(),
+                customer.getEmail(),
+                customer.getIsPlatformAdmin(),
+                customer.getIsCustomer()
+        );
     }
 
 

@@ -60,13 +60,10 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(auth-> auth.requestMatchers(
                         "/auth/users/login",
                         "/auth/users/forget-password",
-                        "/auth/users/reset-password",
+                        "/auth/users/reset-password", "/auth/users/register", "/auth/users/{id}", "/auth/users/internal/send-email",
                         "/swagger-ui/**",
                         "/v3/api-docs/**"
-                ).permitAll().requestMatchers(HttpMethod.POST, "/auth/users/register").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/auth/users/{id}").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/aauth/users/internal/send-email").permitAll()
-                        .anyRequest().authenticated());
+                ).permitAll().anyRequest().authenticated());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
