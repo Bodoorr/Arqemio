@@ -1,10 +1,11 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.client.AuthClient;
 import com.ga.company_service.model.*;
 import com.ga.company_service.model.request.ProjectUpdateShareRequest;
 import com.ga.company_service.model.response.ProjectUpdateShareResponse;
+import com.ga.company_service.model.response.UserResponse;
 import com.ga.company_service.repository.*;
-import com.ga.company_service.security.MyUserDetails;
 import lombok.AllArgsConstructor;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
@@ -28,17 +29,16 @@ public class ProjectShareLinkService {
     private ProjectUpdateRepository projectUpdateRepository;
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
-    private EmailService emailService;
     private FileAttachmentRepository fileAttachmentRepository;
-    private AuditLogService auditLogService;
-    private NotificationService notificationService;
+    private AuthClient authClient;
+//    private AuditLogService auditLogService;
+//    private NotificationService notificationService;
     private UserService userService;
 
     private static final Logger logger =Logger.getLogger(ProjectShareLinkService.class.getName());
 
-    public static User getCurrentLoggedInUser(){
-        MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return userDetails.getUser();
+    public static UserResponse getCurrentLoggedInUser(){
+        return (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
     public String getProjectShareEmail(String projectName, String message, String companyName, String shareLink, String registrationLink, List<FileAttachment> attachments) {
@@ -76,7 +76,7 @@ public class ProjectShareLinkService {
     }
 
     public ProjectShareLink shareProjectUpdate(Long updateId, ProjectUpdateShareRequest projectUpdateShareRequest){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         ProjectUpdate projectUpdate= projectUpdateRepository.findById(updateId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project Update not found."));
         Project project= projectUpdate.getProject();
 
@@ -114,12 +114,12 @@ public class ProjectShareLinkService {
                 null
         );
 
-        emailService.sendHtmlMail(emailDetails);
-        notificationService.sendNotification(projectUpdate.getUpdatedBy().getUser().getId(), "Your project update "+projectUpdate.getTitle()+" has been shared with the customer.");
-        auditLogService.createAuditLog(currentUser, project.getCompany(),
-                "SHARE", "PROJECT_UPDATE", projectUpdate.getId(),
-                "Shared project update with customer " + shareLink.getCustomerEmail()
-        );
+        authClient.sendEmail(emailDetails);
+//        notificationService.sendNotification(projectUpdate.getUpdatedBy().getUserId(), "Your project update "+projectUpdate.getTitle()+" has been shared with the customer.");
+//        auditLogService.createAuditLog(currentUser, project.getCompany(),
+//                "SHARE", "PROJECT_UPDATE", projectUpdate.getId(),
+//                "Shared project update with customer " + shareLink.getCustomerEmail()
+//        );
         logger.log(Level.INFO,"Project share link {0} created for project update {1} by user {2}", new Object[]{savedShareLink.getId(), updateId, currentUser.getId()});
         return savedShareLink;
     }
@@ -171,13 +171,13 @@ public class ProjectShareLinkService {
         return shareLink.getCustomerEmail();
     }
 
-    public User registerCustomer(String token, String name, String password){
+    public UserResponse registerCustomer(String token, String name, String password){
         String email= getCustomerRegistrationEmail(token);
         return userService.registerCustomer(name,email,password);
     }
 
     public List<ProjectUpdateShareResponse> getCustomerSharedUpdates(){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
 
         if (!Boolean.TRUE.equals(currentUser.getIsCustomer())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only customers can access this dashboard.");
@@ -212,7 +212,7 @@ public class ProjectShareLinkService {
         return responses;
     }
 
-    private boolean canShareProjectUpdate(User user, Project project){
+    private boolean canShareProjectUpdate(UserResponse user, Project project){
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), project.getCompany().getId(),"OWNER","ACTIVE");
         boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(project.getId(), user.getId(), "ACTIVE");
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(user.getId(), project.getCompany().getId(), "ACTIVE");
