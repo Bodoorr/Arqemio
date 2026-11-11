@@ -1,5 +1,6 @@
 package com.ga.auth_service.controller;
 
+import com.ga.auth_service.model.EmailDetails;
 import com.ga.auth_service.model.User;
 import com.ga.auth_service.model.request.ForgetPasswordRequest;
 import com.ga.auth_service.model.request.LoginRequest;
@@ -7,6 +8,7 @@ import com.ga.auth_service.model.request.RegistrationRequest;
 import com.ga.auth_service.model.request.ResetPasswordRequest;
 import com.ga.auth_service.model.response.UserProfileResponse;
 import com.ga.auth_service.model.response.UserResponse;
+import com.ga.auth_service.service.EmailService;
 import com.ga.auth_service.service.UserService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -22,7 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping(path = "/auth/users")
 public class UserController {
     private UserService userService;
-
+    private EmailService emailService;
     @Value("${internal.api-key}")
     private String internalApiKey;
 
@@ -99,6 +101,15 @@ public class UserController {
                 );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/internal/send-email")
+    public ResponseEntity<Boolean> sendEmail(@RequestHeader("X-Internal-Api-Key") String apiKey,  @RequestBody EmailDetails emailDetails) {
+        if (internalApiKey.isBlank() || !internalApiKey.equals(apiKey)) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Invalid API key");
+        }
+        return ResponseEntity.ok(emailService.sendHtmlMail(emailDetails));
     }
 
 

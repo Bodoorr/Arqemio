@@ -1,5 +1,6 @@
 package com.ga.company_service.client;
 
+import com.ga.company_service.model.EmailDetails;
 import com.ga.company_service.model.request.RegistrationRequest;
 import com.ga.company_service.model.response.UserProfileResponse;
 import com.ga.company_service.model.response.UserResponse;
@@ -39,6 +40,15 @@ public class AuthClient {
                 .body(request)
                 .retrieve()
                 .body(UserResponse.class);
+    }
+
+    public Boolean sendEmail(EmailDetails emailDetails){
+        return restClient.post()
+                .uri("/auth/users/internal/send-email")
+                .header("X-Internal-Api-Key", internalApiKey)
+                .body(emailDetails)
+                .retrieve()
+                .body(Boolean.class);
     }
 
 }

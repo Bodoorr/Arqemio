@@ -3,6 +3,7 @@ package com.ga.company_service.service;
 import com.ga.company_service.client.AuthClient;
 import com.ga.company_service.model.Company;
 import com.ga.company_service.model.CompanyMembership;
+import com.ga.company_service.model.EmailDetails;
 import com.ga.company_service.model.Invitation;
 import com.ga.company_service.model.request.InvitationRegistrationRequest;
 import com.ga.company_service.model.request.RegistrationRequest;
@@ -10,8 +11,6 @@ import com.ga.company_service.model.response.UserResponse;
 import com.ga.company_service.repository.CompanyMembershipRepository;
 import com.ga.company_service.repository.CompanyRepository;
 import com.ga.company_service.repository.InvitationRepository;
-import com.ga.company_service.repository.UserRepository;
-import com.ga.company_service.security.MyUserDetails;
 import lombok.AllArgsConstructor;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
@@ -271,7 +270,7 @@ public class InvitationService {
         emailDetails.setSubject("You're invited to join Arqemio!");
         emailDetails.setMsgBody(emailBody);
 
-        return emailService.sendHtmlMail(emailDetails);
+        return Boolean.TRUE.equals(authClient.sendEmail(emailDetails));
     }
 
     private CompanyMembership createMembership(Long userId, Invitation invitation){
