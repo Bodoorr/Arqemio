@@ -2,6 +2,7 @@ package com.ga.company_service.service;
 
 import com.ga.company_service.client.AuthClient;
 import com.ga.company_service.model.*;
+import com.ga.company_service.model.request.CustomerRegistrationRequest;
 import com.ga.company_service.model.request.ProjectUpdateShareRequest;
 import com.ga.company_service.model.response.ProjectUpdateShareResponse;
 import com.ga.company_service.model.response.UserResponse;
@@ -33,7 +34,6 @@ public class ProjectShareLinkService {
     private AuthClient authClient;
 //    private AuditLogService auditLogService;
 //    private NotificationService notificationService;
-    private UserService userService;
 
     private static final Logger logger =Logger.getLogger(ProjectShareLinkService.class.getName());
 
@@ -171,9 +171,16 @@ public class ProjectShareLinkService {
         return shareLink.getCustomerEmail();
     }
 
-    public UserResponse registerCustomer(String token, String name, String password){
+    public UserResponse registerCustomer(String token, String name, String password, String confirmedPassword){
         String email= getCustomerRegistrationEmail(token);
-        return userService.registerCustomer(name,email,password);
+        CustomerRegistrationRequest customerRegistrationRequest=new CustomerRegistrationRequest();
+
+        customerRegistrationRequest.setName(name);
+        customerRegistrationRequest.setEmail(email);
+        customerRegistrationRequest.setPassword(password);
+        customerRegistrationRequest.setConfirmedPassword(confirmedPassword);
+
+        return authClient.registerCustomer(customerRegistrationRequest);
     }
 
     public List<ProjectUpdateShareResponse> getCustomerSharedUpdates(){

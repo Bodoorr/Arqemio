@@ -1,6 +1,7 @@
 package com.ga.company_service.client;
 
 import com.ga.company_service.model.EmailDetails;
+import com.ga.company_service.model.request.CustomerRegistrationRequest;
 import com.ga.company_service.model.request.RegistrationRequest;
 import com.ga.company_service.model.response.UserProfileResponse;
 import com.ga.company_service.model.response.UserResponse;
@@ -51,4 +52,12 @@ public class AuthClient {
                 .body(Boolean.class);
     }
 
+    public UserResponse registerCustomer(CustomerRegistrationRequest customerRegistrationRequest){
+        return restClient.post()
+                .uri("/auth/users/internal/register-customer")
+                .header("X-Internal-Api-Key", internalApiKey)
+                .body(customerRegistrationRequest)
+                .retrieve()
+                .body(UserResponse.class);
+    }
 }
