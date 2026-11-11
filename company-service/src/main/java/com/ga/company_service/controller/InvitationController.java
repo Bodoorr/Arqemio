@@ -1,5 +1,6 @@
 package com.ga.company_service.controller;
 
+import com.ga.company_service.client.AuthClient;
 import com.ga.company_service.model.Invitation;
 import com.ga.company_service.model.request.InvitationRegistrationRequest;
 import com.ga.company_service.model.request.InvitationRequest;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @AllArgsConstructor
 public class InvitationController {
     private InvitationService invitationService;
+    private AuthClient authClient;
 
     @PostMapping
     public ResponseEntity<InvitationResponse> createInvitation(
@@ -72,13 +74,15 @@ public class InvitationController {
     }
 
     private InvitationResponse toResponse(Invitation invitation, String message){
+        String invitedByName= authClient.getUserById(invitation.getInvitedBy()).getName();
+
         return new InvitationResponse( true,
                 message,
                 invitation.getId(),
                 invitation.getEmail(),
                 invitation.getRole(),
                 invitation.getStatus(),
-                null,
+                invitedByName,
                 invitation.getInvitedBy()
         );
     }
