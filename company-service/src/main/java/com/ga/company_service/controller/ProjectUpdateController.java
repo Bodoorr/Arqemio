@@ -1,9 +1,11 @@
 package com.ga.company_service.controller;
 
+import com.ga.company_service.client.AuthClient;
 import com.ga.company_service.model.ProjectUpdate;
 import com.ga.company_service.model.request.ProjectUpdateRequest;
 import com.ga.company_service.model.request.ProjectUpdateReviewRequest;
 import com.ga.company_service.model.response.ProjectUpdateResponse;
+import com.ga.company_service.model.response.UserProfileResponse;
 import com.ga.company_service.service.ProjectUpdateService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -19,6 +21,7 @@ import java.util.List;
 @AllArgsConstructor
 public class ProjectUpdateController {
     private ProjectUpdateService projectUpdateService;
+    private AuthClient authClient;
 
     @PostMapping
     public ResponseEntity<ProjectUpdateResponse> createProjectUpdate(@Valid @RequestBody ProjectUpdateRequest projectUpdateRequest){
@@ -67,15 +70,17 @@ public class ProjectUpdateController {
 
         if (projectUpdate.getReviewedBy() != null) {
             reviewedByMembershipId = projectUpdate.getReviewedBy().getId();
-            reviewedByName = projectUpdate.getReviewedBy().getUser().getName();
+            UserProfileResponse reviewer= authClient.getUserById(projectUpdate.getReviewedBy().getUserId());
+            reviewedByName = reviewer.getName();
             }
 
+        UserProfileResponse updatedBy= authClient.getUserById(projectUpdate.getUpdatedBy().getUserId());
         return new ProjectUpdateResponse(
                 projectUpdate.getId(),
                 projectUpdate.getProject().getId(),
                 projectUpdate.getProject().getName(),
                 projectUpdate.getUpdatedBy().getId(),
-                projectUpdate.getUpdatedBy().getUser().getName(),
+                updatedBy.getName(),
                 projectUpdate.getTitle(),
                 projectUpdate.getDescription(),
                 projectUpdate.getStatus(),
