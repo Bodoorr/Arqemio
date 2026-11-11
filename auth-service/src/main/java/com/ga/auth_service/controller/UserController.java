@@ -25,6 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class UserController {
     private UserService userService;
     private EmailService emailService;
+
     @Value("${internal.api-key}")
     private String internalApiKey;
 

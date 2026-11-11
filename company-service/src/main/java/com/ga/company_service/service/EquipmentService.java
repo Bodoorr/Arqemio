@@ -3,12 +3,11 @@ package com.ga.company_service.service;
 import com.ga.company_service.model.Company;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Equipment;
-import com.ga.company_service.model.User;
 import com.ga.company_service.model.request.EquipmentRequest;
+import com.ga.company_service.model.response.UserResponse;
 import com.ga.company_service.repository.CompanyMembershipRepository;
 import com.ga.company_service.repository.CompanyRepository;
 import com.ga.company_service.repository.EquipmentRepository;
-import com.ga.company_service.security.MyUserDetails;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,13 +26,14 @@ public class EquipmentService {
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private static final Logger logger= Logger.getLogger(EquipmentService.class.getName());
-    public static User getCurrentLoggedInUser(){
-        MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return userDetails.getUser();
+
+    public static UserResponse getCurrentLoggedInUser() {
+        return (UserResponse) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
     }
 
     public Equipment createEquipment(EquipmentRequest equipmentRequest){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Company company= companyRepository.findById(equipmentRequest.getCompanyId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
         validateEquipmentManagementAccess(currentUser, company);
         validateEquipmentQuantity(equipmentRequest);
@@ -52,7 +52,7 @@ public class EquipmentService {
     }
 
     public List<Equipment> getAllEquipment(){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         List<Equipment> equipments=new ArrayList<>();
         List<CompanyMembership> memberships= companyMembershipRepository.findByUserIdAndStatus(currentUser.getId(), "ACTIVE");
 
@@ -67,7 +67,7 @@ public class EquipmentService {
     }
 
     public Equipment getEquipmentById(Long equipmentId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Equipment equipment= equipmentRepository.findById(equipmentId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
 
         boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), equipment.getCompany().getId(), "ACTIVE");
@@ -79,7 +79,7 @@ public class EquipmentService {
     }
 
     public Equipment updateEquipment(Long equipmentId, EquipmentRequest equipmentRequest){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Equipment equipment= equipmentRepository.findById(equipmentId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
         validateEquipmentManagementAccess(currentUser, equipment.getCompany());
         validateEquipmentQuantity(equipmentRequest);
@@ -96,7 +96,7 @@ public class EquipmentService {
     }
 
     public Equipment archiveEquipment(Long equipmentId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Equipment equipment= equipmentRepository.findById(equipmentId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
         validateEquipmentManagementAccess(currentUser, equipment.getCompany());
         equipment.setStatus("ARCHIVED");
@@ -106,7 +106,7 @@ public class EquipmentService {
         return savedEquipment;
     }
 
-    private void validateEquipmentManagementAccess(User user, Company company){
+    private void validateEquipmentManagementAccess(UserResponse user, Company company){
         boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), company.getId(), "OWNER", "ACTIVE");
         if (!isCompanyOwner){
             logger.log(Level.WARNING,"User {0} attempted to manage equipment for company {1} without permission", new Object[]{user.getId(), company.getId()});
