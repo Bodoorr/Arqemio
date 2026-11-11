@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Setter
 @Entity
 @Table(name = "file_attachments")
-@ToString(exclude = {"project","expense","projectUpdate","uploadedBy"})
+@ToString(exclude = {"project","projectUpdate","uploadedBy"})
 public class FileAttachment {
     @Id
     @Column
@@ -23,9 +23,8 @@ public class FileAttachment {
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
-    @ManyToOne
-    @JoinColumn(name = "expense_id")
-    private Expense expense;
+    @Column(name = "expense_id")
+    private Long expenseId;
 
     @Column
     private String fileUrl;

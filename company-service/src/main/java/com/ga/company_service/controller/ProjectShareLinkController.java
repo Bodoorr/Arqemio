@@ -39,7 +39,7 @@ public class ProjectShareLinkController {
         if (!customerRegistrationRequest.getPassword().equals(customerRegistrationRequest.getConfirmedPassword())){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Password do not match.");
         }
-        projectShareLinkService.registerCustomer(token, customerRegistrationRequest.getName(), customerRegistrationRequest.getPassword());
+        projectShareLinkService.registerCustomer(token, customerRegistrationRequest.getName(), customerRegistrationRequest.getPassword(), customerRegistrationRequest.getConfirmedPassword());
         return ResponseEntity.ok("Customer registered successfully.");
     }
 

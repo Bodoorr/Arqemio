@@ -6,13 +6,14 @@ import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.FileAttachment;
 import com.ga.company_service.model.Project;
 import com.ga.company_service.model.ProjectUpdate;
+import com.ga.company_service.model.response.UserResponse;
 import com.ga.company_service.repository.CompanyMembershipRepository;
 import com.ga.company_service.repository.FileAttachmentRepository;
 import com.ga.company_service.repository.ProjectRepository;
 import com.ga.company_service.repository.ProjectUpdateRepository;
-import com.ga.company_service.security.MyUserDetails;
 import io.github.cdimascio.dotenv.Dotenv;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -26,21 +27,19 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class FileAttachmentService {
     private final Dotenv dotenv = Dotenv.load();
     private final Cloudinary cloudinary = new Cloudinary(dotenv.get("CLOUDINARY_URL"));
-    private FileAttachmentRepository fileAttachmentRepository;
-    private ProjectRepository projectRepository;
-    private ProjectService projectService;
-    private ProjectUpdateRepository projectUpdateRepository;
-    private ExpenseRepository expenseRepository;
-    private CompanyMembershipRepository companyMembershipRepository;
+    private final FileAttachmentRepository fileAttachmentRepository;
+    private final ProjectRepository projectRepository;
+    private final ProjectService projectService;
+    private final ProjectUpdateRepository projectUpdateRepository;
+    private final CompanyMembershipRepository companyMembershipRepository;
     private static final Logger logger= Logger.getLogger(FileAttachmentService.class.getName());
 
-    public static User getCurrentLoggedInUser(){
-        MyUserDetails userDetails = (MyUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return userDetails.getUser();
+    public static UserResponse getCurrentLoggedInUser(){
+        return (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
     public Map uploadImage(MultipartFile file) throws IOException {
@@ -69,7 +68,7 @@ public class FileAttachmentService {
     }
 
     public FileAttachment createFileAttachment(MultipartFile file, Long projectId, Long projectUpdateId, Long expenseId){
-        User currentUser= getCurrentLoggedInUser();
+        UserResponse currentUser= getCurrentLoggedInUser();
         Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Project not found."));
         CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(),project.getCompany().getId(), "ACTIVE")
                 .orElseThrow(()-> new ResponseStatusException(HttpStatus.FORBIDDEN,"You're not an active member of this company."));
@@ -90,31 +89,31 @@ public class FileAttachmentService {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Project update does not belong to this project.");
             }
 
-            if (!projectUpdate.getUpdatedBy().getUser().getId().equals(currentUser.getId())){
+            if (!projectUpdate.getUpdatedBy().getUserId().equals(currentUser.getId())){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only attach files to your own project updates.");
             }
         }
 
 
-        Expense expense= null;
-        if (expenseId != null){
-            expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
-
-            if (!expense.getProject().getId().equals(projectId)){
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Expense does not belong to this project.");
-            }
-
-            if (!expense.getMember().getUser().getId().equals(currentUser.getId())){
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only attach files to your own expenses.");
-            }
-        }
+//        Expense expense= null;
+//        if (expenseId != null){
+//            expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
+//
+//            if (!expense.getProject().getId().equals(projectId)){
+//                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Expense does not belong to this project.");
+//            }
+//
+//            if (!expense.getMember().getUser().getId().equals(currentUser.getId())){
+//                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only attach files to your own expenses.");
+//            }
+//        }
 
         try {
             Map uploadResult= uploadImage(file);
             FileAttachment fileAttachment= new FileAttachment();
             fileAttachment.setProject(project);
             fileAttachment.setProjectUpdate(projectUpdate);
-            fileAttachment.setExpense(expense);
+//            fileAttachment.setExpense(expense);
             fileAttachment.setFileUrl(uploadResult.get("secure_url").toString());
             fileAttachment.setFileName(file.getOriginalFilename());
             fileAttachment.setFileType(file.getContentType());
@@ -140,8 +139,8 @@ public class FileAttachmentService {
     }
 
     public List<FileAttachment> getAllProjectExpenseAttachments(Long expenseId){
-        Expense expense= expenseRepository.findById(expenseId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
-        projectService.getProjectById(expense.getProject().getId());
+//        Expense expense= expenseRepository.findById(expenseId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
+//        projectService.getProjectById(expense.getProject().getId());
         return fileAttachmentRepository.findByExpenseIdAndStatus(expenseId, "ACTIVE");
     }
 
@@ -155,7 +154,7 @@ public class FileAttachmentService {
     }
 
     public FileAttachment archiveFileAttachment(Long attachmentId) {
-        User currentUser = getCurrentLoggedInUser();
+        UserResponse currentUser = getCurrentLoggedInUser();
         FileAttachment fileAttachment = fileAttachmentRepository.findById(attachmentId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File attachment not found."));
 
         if (!fileAttachment.getStatus().equals("ACTIVE")) {
@@ -165,7 +164,7 @@ public class FileAttachmentService {
         Project project = fileAttachment.getProject();
 
         projectService.getProjectById(project.getId());
-        boolean isUploader = fileAttachment.getUploadedBy().getUser().getId().equals(currentUser.getId());
+        boolean isUploader = fileAttachment.getUploadedBy().getUserId().equals(currentUser.getId());
 
         if (!isUploader){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only archive your own attachments.");

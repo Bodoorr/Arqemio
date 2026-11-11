@@ -1,7 +1,9 @@
 package com.ga.company_service.controller;
 
+import com.ga.company_service.client.AuthClient;
 import com.ga.company_service.model.FileAttachment;
 import com.ga.company_service.model.response.FileAttachmentResponse;
+import com.ga.company_service.model.response.UserProfileResponse;
 import com.ga.company_service.service.FileAttachmentService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,6 +19,7 @@ import java.util.List;
 @AllArgsConstructor
 public class FileAttachmentController {
     private FileAttachmentService fileAttachmentService;
+    private final AuthClient authClient;
 
     @PostMapping
     public ResponseEntity<FileAttachmentResponse> createFileAttachment(@RequestParam("file") MultipartFile file, @RequestParam Long projectId, @RequestParam(required = false) Long projectUpdateId, @RequestParam(required = false) Long expenseId){
@@ -70,16 +73,19 @@ public class FileAttachmentController {
     }
 
     private FileAttachmentResponse toResponse(FileAttachment fileAttachment){
+        Long uploaderId= fileAttachment.getUploadedBy().getUserId();
+        UserProfileResponse uploader= authClient.getUserById(uploaderId);
+
         return new FileAttachmentResponse(
                 fileAttachment.getId(),
                 fileAttachment.getProject().getId(),
-                fileAttachment.getExpense() != null ? fileAttachment.getExpense().getId() : null,
+                fileAttachment.getExpenseId(),
                 fileAttachment.getProjectUpdate() != null ? fileAttachment.getProjectUpdate().getId() : null,
                 fileAttachment.getFileUrl(),
                 fileAttachment.getFileName(),
                 fileAttachment.getFileType(),
                 fileAttachment.getUploadedBy().getId(),
-                fileAttachment.getUploadedBy().getUser().getName(),
+                uploader.getName(),
                 fileAttachment.getStatus()
         );
     }
