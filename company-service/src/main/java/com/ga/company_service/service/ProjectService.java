@@ -61,10 +61,15 @@ public class ProjectService {
 
     }
 
+
     public List<Project> getAllProjects(){
         UserResponse currentUser= getCurrentLoggedInUser();
+        return getAllProjects(currentUser.getId());
+    }
+
+    public List<Project> getAllProjects(Long userId){
         List<Project> projects= new ArrayList<>();
-        List<CompanyMembership> memberships= companyMembershipRepository.findByUserIdAndStatus(currentUser.getId(), "ACTIVE");
+        List<CompanyMembership> memberships= companyMembershipRepository.findByUserIdAndStatus(userId, "ACTIVE");
 
         for (CompanyMembership membership: memberships){
             List<Project> accessibleProjects= new ArrayList<>();
@@ -90,6 +95,7 @@ public class ProjectService {
         return projects;
     }
 
+
     public Page<Project> getProjects(Pageable pageable, String name, String status) {
        List<Project> projects= getAllProjects();
        List<Long> projectIds= new ArrayList<>();
@@ -108,18 +114,21 @@ public class ProjectService {
        return projectRepository.findByIdIn(projectIds, pageable);
     }
 
-
     public Project getProjectById(Long projectId){
         UserResponse currentUser= getCurrentLoggedInUser();
+        return getProjectById(projectId, currentUser.getId());
+    }
+
+    public Project getProjectById(Long projectId, Long userId){
         Project project= findProjectById(projectId);
 
-        boolean isOwner= isCompanyOwner(currentUser,project.getCompany().getId());
-        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), project.getCompany().getId(), "ACTIVE");
-        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(projectId, currentUser.getId(),"ACTIVE");
-        boolean isAssignedWorker= projectRepository.existsByIdAndWorkersUserIdAndWorkersStatus(projectId, currentUser.getId(), "ACTIVE");
+        boolean isOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(userId, project.getCompany().getId(), "OWNER", "ACTIVE");
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(userId, project.getCompany().getId(), "ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(projectId, userId,"ACTIVE");
+        boolean isAssignedWorker= projectRepository.existsByIdAndWorkersUserIdAndWorkersStatus(projectId, userId, "ACTIVE");
 
          if (!isOwner && (!isActiveMember || (!isAssignedManager && !isAssignedWorker))){
-             logger.log(Level.WARNING,"User {0} attempted to view project {1} without permission", new Object[]{currentUser.getId(), projectId});
+             logger.log(Level.WARNING,"User {0} attempted to view project {1} without permission", new Object[]{userId, projectId});
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to view this project.");
         }
         return project;
