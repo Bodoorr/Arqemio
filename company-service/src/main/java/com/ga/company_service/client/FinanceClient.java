@@ -22,4 +22,12 @@ public class FinanceClient {
                 .retrieve()
                 .body(Long.class);
     }
+
+    public Long getExpenseMemberId(Long expenseId) {
+        return restClient.get()
+                .uri("/company/projects/expenses/{expenseId}/internal/member", expenseId)
+                .header("X-Internal-Api-Key", internalApiKey)
+                .retrieve()
+                .body(Long.class);
+    }
 }

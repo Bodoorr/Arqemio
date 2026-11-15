@@ -51,7 +51,9 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(auth-> auth.requestMatchers(
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
-                        "/company/projects/expenses/*/internal/project"
+                        "/company/projects/expenses/*/internal/project",
+                        "/company/projects/expenses/*/internal/project",
+                        "/company/projects/expenses/*/internal/member"
                 ).permitAll().anyRequest().authenticated());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();

@@ -67,11 +67,19 @@ public class ExpenseController {
     @GetMapping("/{expenseId}/internal/project")
     public ResponseEntity<Long> getExpenseProjectId(@PathVariable Long expenseId, @RequestHeader("X-Internal-Api-Key") String apiKey) {
         if (!internalApiKey.equals(apiKey)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, "Invalid internal API key.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid internal API key.");
         }
         Long projectId = expenseService.findExpenseProjectId(expenseId);
         return ResponseEntity.ok(projectId);
+    }
+
+    @GetMapping("/{expenseId}/internal/member")
+    public ResponseEntity<Long> getExpenseMemberId(@PathVariable Long expenseId, @RequestHeader("X-Internal-Api-Key") String apiKey) {
+        if (!internalApiKey.equals(apiKey)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid internal API key.");
+        }
+        Long memberId = expenseService.findExpenseMemberId(expenseId);
+        return ResponseEntity.ok(memberId);
     }
 
     private ExpenseResponse toResponse(Expense expense){

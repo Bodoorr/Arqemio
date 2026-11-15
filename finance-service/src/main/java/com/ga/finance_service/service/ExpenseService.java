@@ -116,6 +116,12 @@ public class ExpenseService {
         return expense.getProjectId();
     }
 
+    public Long findExpenseMemberId(Long expenseId) {
+        Expense expense = expenseRepository.findById(expenseId).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found."));
+        return expense.getMemberId();
+    }
+
     private void validateExpenseAmount(ExpenseRequest expenseRequest){
         if (expenseRequest.getAmount()<=0){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expense amount must be greater than 0.");

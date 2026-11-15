@@ -2,6 +2,7 @@ package com.ga.company_service.service;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import com.ga.company_service.client.FinanceClient;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.FileAttachment;
 import com.ga.company_service.model.Project;
@@ -12,7 +13,6 @@ import com.ga.company_service.repository.FileAttachmentRepository;
 import com.ga.company_service.repository.ProjectRepository;
 import com.ga.company_service.repository.ProjectUpdateRepository;
 import io.github.cdimascio.dotenv.Dotenv;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,6 +36,8 @@ public class FileAttachmentService {
     private final ProjectService projectService;
     private final ProjectUpdateRepository projectUpdateRepository;
     private final CompanyMembershipRepository companyMembershipRepository;
+    private final FinanceClient financeClient;
+
     private static final Logger logger= Logger.getLogger(FileAttachmentService.class.getName());
 
     public static UserResponse getCurrentLoggedInUser(){
@@ -94,15 +96,15 @@ public class FileAttachmentService {
             }
         }
 
-        Expense expense= null;
         if (expenseId != null){
-            expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
+            Long expenseProjectId= financeClient.getExpenseProjectId(expenseId);
+            Long expenseMemberId= financeClient.getExpenseMemberId(expenseId);
 
-            if (!expense.getProject().getId().equals(projectId)){
+            if (!expenseProjectId.equals(projectId)){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Expense does not belong to this project.");
             }
 
-            if (!expense.getMember().getUser().getId().equals(currentUser.getId())){
+            if (!expenseMemberId.equals(membership.getId())){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only attach files to your own expenses.");
             }
         }
@@ -112,7 +114,7 @@ public class FileAttachmentService {
             FileAttachment fileAttachment= new FileAttachment();
             fileAttachment.setProject(project);
             fileAttachment.setProjectUpdate(projectUpdate);
-            fileAttachment.setExpense(expense);
+            fileAttachment.setExpenseId(expenseId);
             fileAttachment.setFileUrl(uploadResult.get("secure_url").toString());
             fileAttachment.setFileName(file.getOriginalFilename());
             fileAttachment.setFileType(file.getContentType());
@@ -138,8 +140,8 @@ public class FileAttachmentService {
     }
 
     public List<FileAttachment> getAllProjectExpenseAttachments(Long expenseId){
-        Expense expense= expenseRepository.findById(expenseId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
-        projectService.getProjectById(expense.getProject().getId());
+        Long projectId= financeClient.getExpenseProjectId(expenseId);
+        projectService.getProjectById(projectId);
         return fileAttachmentRepository.findByExpenseIdAndStatus(expenseId, "ACTIVE");
     }
 
