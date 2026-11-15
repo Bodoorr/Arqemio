@@ -32,7 +32,7 @@ public class ProjectService {
 //    private NotificationService notificationService;
 
     public static UserResponse getCurrentLoggedInUser(){
-        return  (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
     public Project createProject(ProjectRequest projectRequest){
@@ -284,7 +284,7 @@ public class ProjectService {
         return projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
     }
 
-    private CompanyMembership findMembershipById(Long membershipId){
+    public CompanyMembership findMembershipById(Long membershipId){
         return companyMembershipRepository.findById(membershipId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membership not found."));
     }
 

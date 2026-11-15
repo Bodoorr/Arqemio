@@ -183,6 +183,22 @@ public class ProjectController {
         return ResponseEntity.ok(toResponse(project));
     }
 
+    @GetMapping("/{projectId}/internal/expenses/members/{membershipId}/{userId}")
+    public ResponseEntity<String> getExpenseMemberName(@PathVariable Long projectId, @PathVariable Long membershipId, @PathVariable Long userId, @RequestHeader("X-Internal-Api-Key") String apiKey){
+        if (!internalApiKey.equals(apiKey)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid internal API key.");
+        }
+
+        Project project = projectService.getProjectById(projectId, userId);
+        CompanyMembership member = projectService.findMembershipById(membershipId);
+
+        if (!member.getCompany().getId().equals(project.getCompany().getId())){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid membership.");
+        }
+
+        UserProfileResponse user = authClient.getUserById(member.getUserId());
+        return ResponseEntity.ok(user.getName());
+    }
 
     private ProjectResponse toResponse(Project project){
         return new ProjectResponse(
