@@ -332,4 +332,27 @@ public class ProjectService {
     private boolean isCompanyOwner(UserResponse user, Long companyId){
         return companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), companyId,"OWNER","ACTIVE");
     }
+
+    public Long validateExpenseManagementAccess(Long projectId, Long userId){
+        Project project= findProjectById(projectId);
+
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(userId, project.getCompany().getId(), "OWNER","ACTIVE");
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(userId, project.getCompany().getId(), "ACTIVE");
+        boolean isAssignedManager= projectRepository.existsByIdAndManagersUserIdAndManagersStatus(projectId, userId, "ACTIVE");
+
+        if (!isCompanyOwner && !(isAssignedManager && isActiveMember)){
+            logger.log(Level.WARNING,
+                    "User {0} attempted to manage expenses for project {1} without permission",
+                    new Object[]{userId, projectId});
+
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You're not allowed to manage expenses for this project.");
+        }
+
+        CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(userId, project.getCompany().getId(), "ACTIVE").orElseThrow(
+                ()-> new ResponseStatusException(HttpStatus.FORBIDDEN, "Active company membership is not found."));
+
+        return membership.getId();
+    }
 }
