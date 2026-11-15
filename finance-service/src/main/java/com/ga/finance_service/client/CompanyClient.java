@@ -48,4 +48,12 @@ public class CompanyClient {
                 .body(ProjectResponse[].class);
     }
 
+    public String getMemberName(Long projectId, Long membershipId, Long userId){
+        return restClient.get()
+                .uri("/company/projects/{projectId}/internal/expenses/members/{membershipId}/{userId}", projectId, membershipId, userId)
+                .header("X-Internal-Api-Key", internalApiKey)
+                .retrieve()
+                .body(String.class);
+    }
+
 }

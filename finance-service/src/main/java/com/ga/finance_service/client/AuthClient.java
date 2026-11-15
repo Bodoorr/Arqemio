@@ -18,14 +18,4 @@ public class AuthClient {
                 .retrieve()
                 .body(UserResponse.class);
     }
-
-
-    public UserProfileResponse getUserById(Long userId, String internalApiKey){
-        return restClient.get()
-                .uri("/auth/users/{id}", userId)
-                .header("X-Internal-Api-Key", internalApiKey)
-                .retrieve()
-                .body(UserProfileResponse.class);
-    }
-
 }
