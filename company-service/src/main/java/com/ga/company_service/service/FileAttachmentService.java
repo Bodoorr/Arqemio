@@ -94,26 +94,25 @@ public class FileAttachmentService {
             }
         }
 
+        Expense expense= null;
+        if (expenseId != null){
+            expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
 
-//        Expense expense= null;
-//        if (expenseId != null){
-//            expense= expenseRepository.findById(expenseId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
-//
-//            if (!expense.getProject().getId().equals(projectId)){
-//                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Expense does not belong to this project.");
-//            }
-//
-//            if (!expense.getMember().getUser().getId().equals(currentUser.getId())){
-//                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only attach files to your own expenses.");
-//            }
-//        }
+            if (!expense.getProject().getId().equals(projectId)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Expense does not belong to this project.");
+            }
+
+            if (!expense.getMember().getUser().getId().equals(currentUser.getId())){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only attach files to your own expenses.");
+            }
+        }
 
         try {
             Map uploadResult= uploadImage(file);
             FileAttachment fileAttachment= new FileAttachment();
             fileAttachment.setProject(project);
             fileAttachment.setProjectUpdate(projectUpdate);
-//            fileAttachment.setExpense(expense);
+            fileAttachment.setExpense(expense);
             fileAttachment.setFileUrl(uploadResult.get("secure_url").toString());
             fileAttachment.setFileName(file.getOriginalFilename());
             fileAttachment.setFileType(file.getContentType());
@@ -139,8 +138,8 @@ public class FileAttachmentService {
     }
 
     public List<FileAttachment> getAllProjectExpenseAttachments(Long expenseId){
-//        Expense expense= expenseRepository.findById(expenseId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
-//        projectService.getProjectById(expense.getProject().getId());
+        Expense expense= expenseRepository.findById(expenseId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Expense not found."));
+        projectService.getProjectById(expense.getProject().getId());
         return fileAttachmentRepository.findByExpenseIdAndStatus(expenseId, "ACTIVE");
     }
 

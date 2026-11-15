@@ -9,19 +9,25 @@ import com.ga.finance_service.model.response.UserResponse;
 import com.ga.finance_service.service.ExpenseService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @RestController
 @RequestMapping("/company/projects/expenses")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ExpenseController {
-    private ExpenseService expenseService;
-    private CompanyClient companyClient;
+    private final ExpenseService expenseService;
+    private final CompanyClient companyClient;
+
+    @Value("${internal.api-key}")
+    private String internalApiKey;
 
     @PostMapping
     public ResponseEntity<ExpenseResponse> createExpense(@Valid @RequestBody ExpenseRequest expenseRequest){
@@ -56,6 +62,16 @@ public class ExpenseController {
     public ResponseEntity<ExpenseResponse> archiveExpense(@PathVariable Long expenseId){
         Expense expense= expenseService.archiveExpense(expenseId);
         return ResponseEntity.ok(toResponse(expense));
+    }
+
+    @GetMapping("/{expenseId}/internal/project")
+    public ResponseEntity<Long> getExpenseProjectId(@PathVariable Long expenseId, @RequestHeader("X-Internal-Api-Key") String apiKey) {
+        if (!internalApiKey.equals(apiKey)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "Invalid internal API key.");
+        }
+        Long projectId = expenseService.findExpenseProjectId(expenseId);
+        return ResponseEntity.ok(projectId);
     }
 
     private ExpenseResponse toResponse(Expense expense){
