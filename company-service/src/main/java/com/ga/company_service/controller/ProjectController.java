@@ -10,6 +10,8 @@ import com.ga.company_service.model.response.UserProfileResponse;
 import com.ga.company_service.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -17,16 +19,20 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @RestController
 @RequestMapping("/company/projects")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ProjectController {
-    private ProjectService projectService;
-    private AuthClient authClient;
+    private final ProjectService projectService;
+    private final AuthClient authClient;
+
+    @Value("${internal.api-key}")
+    private String internalApiKey;
 
     @PostMapping
     public ResponseEntity<ProjectResponse> createProject(@Valid @RequestBody ProjectRequest projectRequest){
@@ -133,6 +139,15 @@ public class ProjectController {
         return ResponseEntity.ok(memberResponses);
     }
 
+    @GetMapping("/{projectId}/internal/expense-access")
+    public ResponseEntity<Long> validateExpenseAccess(@PathVariable Long projectId, @RequestParam Long userId, @RequestHeader("X-Internal-Api-Key") String apiKey){
+        if (!internalApiKey.equals(apiKey)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Invalid internal API key.");
+        }
+
+        Long membershipId= projectService.validateExpenseManagementAccess(projectId,userId);
+        return ResponseEntity.ok(membershipId);
+    }
 
     private ProjectResponse toResponse(Project project){
         return new ProjectResponse(
