@@ -110,6 +110,11 @@ public class ExpenseService {
         return archivedExpense;
     }
 
+    public Long findExpenseProjectId(Long expenseId) {
+        Expense expense = expenseRepository.findById(expenseId).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found."));
+        return expense.getProjectId();
+    }
 
     private void validateExpenseAmount(ExpenseRequest expenseRequest){
         if (expenseRequest.getAmount()<=0){
