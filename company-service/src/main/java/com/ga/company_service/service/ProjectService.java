@@ -355,4 +355,13 @@ public class ProjectService {
 
         return membership.getId();
     }
+
+    public void validateExpenseOwnership(Long projectId, Long membershipId, Long userId){
+        Project project= findProjectById(projectId);
+        CompanyMembership membership= findMembershipById(membershipId);
+
+        if (!membership.getCompany().getId().equals(project.getCompany().getId()) || !membership.getUserId().equals(userId)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only manage your own expenses.");
+        }
+    }
 }
