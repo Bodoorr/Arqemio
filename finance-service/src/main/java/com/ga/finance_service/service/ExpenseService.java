@@ -52,10 +52,11 @@ public class ExpenseService {
     }
 
     public List<Expense> getAllExpenses(){
+        UserResponse currentUser= getCurrentLoggedInUser();
         List<Expense> expenses= new ArrayList<>();
-        List<Project> projects= projectService.getAllProjects();
 
-        for (Project project: projects){
+        ProjectResponse[] projects= companyClient.getAllProjects(currentUser.getId());
+        for (ProjectResponse project: projects){
             List<Expense> projectExpenses= expenseRepository.findByProjectId(project.getId());
 
             for (Expense expense: projectExpenses){
@@ -66,8 +67,10 @@ public class ExpenseService {
     }
 
     public Expense getExpenseById(Long expenseId){
+        UserResponse currentUser= getCurrentLoggedInUser();
         Expense expense= expenseRepository.findById(expenseId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found."));
-        projectService.getProjectById(expense.getProject().getId());
+
+        companyClient.getProjectById(expense.getProjectId(), currentUser.getId());
         return expense;
     }
 
