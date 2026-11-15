@@ -22,4 +22,12 @@ public class CompanyClient {
                 .retrieve()
                 .body(Long.class);
     }
+
+    public Boolean validateExpenseOwnership(Long projectId, Long membershipId, Long userId){
+        return restClient.get()
+                .uri("/company/projects/{projectId}/internal/expense-ownership/{membershipId}/{userId}", projectId, membershipId,userId)
+                .header("X-Internal-Api-Key", internalApiKey)
+                .retrieve()
+                .body(Boolean.class);
+    }
 }
