@@ -159,6 +159,31 @@ public class ProjectController {
         return ResponseEntity.ok(true);
     }
 
+    @GetMapping("/internal/expenses/projects/{userId}")
+    public ResponseEntity<List<ProjectResponse>> getProjectsForExpenses(@PathVariable Long userId, @RequestHeader("X-Internal-Api-Key") String apiKey){
+        if (!internalApiKey.equals(apiKey)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid internal API key.");
+        }
+
+        List<Project> projects= projectService.getAllProjects(userId);
+        List<ProjectResponse> projectResponses= new ArrayList<>();
+        for (Project project: projects){
+            projectResponses.add(toResponse(project));
+        }
+        return ResponseEntity.ok(projectResponses);
+    }
+
+    @GetMapping("/{projectId}/internal/expenses/project/{userId}")
+    public ResponseEntity<ProjectResponse> getProjectForExpenses(@PathVariable Long projectId, @PathVariable Long userId, @RequestHeader("X-Internal-Api-Key") String apiKey){
+        if (!internalApiKey.equals(apiKey)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid internal API key.");
+        }
+
+        Project project= projectService.getProjectById(projectId, userId);
+        return ResponseEntity.ok(toResponse(project));
+    }
+
+
     private ProjectResponse toResponse(Project project){
         return new ProjectResponse(
                 project.getId(),

@@ -1,5 +1,6 @@
 package com.ga.finance_service.client;
 
+import com.ga.finance_service.model.response.ProjectResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -30,4 +31,21 @@ public class CompanyClient {
                 .retrieve()
                 .body(Boolean.class);
     }
+
+    public ProjectResponse getProjectById(Long projectId, String token){
+        return restClient.get()
+                .uri("/company/projects/{projectId}", projectId)
+                .headers(headers->headers.setBearerAuth(token))
+                .retrieve()
+                .body(ProjectResponse.class);
+    }
+
+    public ProjectResponse[] getAllProjects(String token){
+        return restClient.get()
+                .uri("/company/projects")
+                .headers(headers->headers.setBearerAuth(token))
+                .retrieve()
+                .body(ProjectResponse[].class);
+    }
+
 }
