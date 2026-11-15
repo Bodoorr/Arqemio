@@ -32,18 +32,18 @@ public class CompanyClient {
                 .body(Boolean.class);
     }
 
-    public ProjectResponse getProjectById(Long projectId, String token){
+    public ProjectResponse getProjectById(Long projectId, Long userId){
         return restClient.get()
-                .uri("/company/projects/{projectId}", projectId)
-                .headers(headers->headers.setBearerAuth(token))
+                .uri("/company/projects/{projectId}/internal/expenses/project/{userId}", projectId, userId)
+                .header("X-Internal-Api-Key", internalApiKey)
                 .retrieve()
                 .body(ProjectResponse.class);
     }
 
-    public ProjectResponse[] getAllProjects(String token){
+    public ProjectResponse[] getAllProjects(Long userId){
         return restClient.get()
-                .uri("/company/projects")
-                .headers(headers->headers.setBearerAuth(token))
+                .uri("/company/projects/internal/expenses/projects/{userId}", userId)
+                .header("X-Internal-Api-Key", internalApiKey)
                 .retrieve()
                 .body(ProjectResponse[].class);
     }
