@@ -60,8 +60,9 @@ public class ExpenseController {
 
     private ExpenseResponse toResponse(Expense expense){
         UserResponse currentUser= ExpenseService.getCurrentLoggedInUser();
-        String recordedByName = companyClient.getMemberName(expense.getMemberId());
+        String recordedByName = companyClient.getMemberName(expense.getProjectId(), expense.getMemberId(), currentUser.getId());
         ProjectResponse project= companyClient.getProjectById(expense.getProjectId(), currentUser.getId());
+
         return new ExpenseResponse(
                 expense.getId(),
                 expense.getProjectId(),
