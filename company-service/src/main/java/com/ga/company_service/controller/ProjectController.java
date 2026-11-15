@@ -139,8 +139,8 @@ public class ProjectController {
         return ResponseEntity.ok(memberResponses);
     }
 
-    @GetMapping("/{projectId}/internal/expense-access")
-    public ResponseEntity<Long> validateExpenseAccess(@PathVariable Long projectId, @RequestParam Long userId, @RequestHeader("X-Internal-Api-Key") String apiKey){
+    @GetMapping("/{projectId}/internal/expense-access/{userId}")
+    public ResponseEntity<Long> validateExpenseAccess(@PathVariable Long projectId, @PathVariable Long userId, @RequestHeader("X-Internal-Api-Key") String apiKey){
         if (!internalApiKey.equals(apiKey)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Invalid internal API key.");
         }
