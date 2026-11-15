@@ -13,10 +13,13 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,6 +30,7 @@ public class CompanyService {
 //    private AuditLogService auditLogService;
     private CompanyMembershipRepository companyMembershipRepository;
     private AuthClient authClient;
+    private FileAttachmentService fileAttachmentService;
 
     private static final Logger logger= Logger.getLogger(CompanyService.class.getName());
     public UserResponse getCurrentLoggedInUser(){
@@ -129,6 +133,47 @@ public class CompanyService {
             employeeProfiles.add(response);
         }
         return employeeProfiles;
+    }
+
+    public UserProfileResponse updateEmployeeProfile(Long companyId, Long employeeId, String name, String mobileNumber, String email, MultipartFile profilePicture) throws IOException {
+        UserResponse currentUser = getCurrentLoggedInUser();
+        boolean isOwner = companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId, "OWNER", "ACTIVE");
+        if (!isOwner) {
+            logger.log(Level.WARNING, "User {0} attempted to update employee {1} in company {2} without permissions", new Object[]{currentUser.getId(), employeeId, companyId});
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to update employees in this company.");
+        }
+
+        CompanyMembership employeeMembership = companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(employeeId, companyId, "ACTIVE").
+                orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found in this company."));
+
+        String profilePictureUrl= null;
+
+        if (profilePicture != null && !profilePicture.isEmpty()) {
+            Map uploadResult = fileAttachmentService.uploadImage(profilePicture);
+            profilePictureUrl= uploadResult.get("secure_url").toString();
+        }
+
+        UserProfileResponse employee= authClient.updateEmployee(employeeId, name, mobileNumber,email,profilePictureUrl);
+        logger.log(Level.INFO, "Employee {0} updated by user {1} in company {2}", new Object[]{employeeId, currentUser.getId(), companyId});
+
+        List<UserMembershipResponse> membershipResponses = new ArrayList<>();
+        membershipResponses.add(new UserMembershipResponse(
+                employeeMembership.getId(),
+                employeeMembership.getCompany().getId(),
+                employeeMembership.getCompany().getName(),
+                employeeMembership.getRole(),
+                employeeMembership.getStatus()
+        ));
+
+        return new UserProfileResponse(
+                employee.getId(),
+                employee.getName(),
+                employee.getEmail(),
+                employee.getMobileNumber(),
+                employee.getProfilePicture(),
+                membershipResponses,
+                employee.getIsCustomer()
+                );
     }
 
 }

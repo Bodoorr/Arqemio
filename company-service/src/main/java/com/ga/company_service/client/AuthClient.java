@@ -9,6 +9,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Service
 public class AuthClient {
     private RestClient restClient;
@@ -60,5 +63,20 @@ public class AuthClient {
                 .body(customerRegistrationRequest)
                 .retrieve()
                 .body(UserResponse.class);
+    }
+
+    public UserProfileResponse updateEmployee(Long employeeId, String name, String mobileNumber, String email, String profilePictureUrl){
+        Map<String, String> request= new HashMap<>();
+        request.put("name", name);
+        request.put("mobileNumber", mobileNumber);
+        request.put("email", email);
+        request.put("profilePictureUrl", profilePictureUrl);
+
+        return restClient.patch()
+                .uri("/auth/users/internal/employees/{id}", employeeId)
+                .header("X-Internal-Api-Key", internalApiKey)
+                .body(request)
+                .retrieve()
+                .body(UserProfileResponse.class);
     }
 }

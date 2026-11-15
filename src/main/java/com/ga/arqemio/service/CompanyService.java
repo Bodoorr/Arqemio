@@ -3,6 +3,7 @@ package com.ga.arqemio.service;
 import com.ga.arqemio.model.Company;
 import com.ga.arqemio.model.User;
 import com.ga.arqemio.model.request.CompanyRequest;
+import com.ga.arqemio.model.response.UserProfileResponse;
 import com.ga.arqemio.repository.CompanyMembershipRepository;
 import com.ga.arqemio.repository.CompanyRepository;
 import com.ga.arqemio.security.MyUserDetails;
@@ -10,8 +11,10 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
