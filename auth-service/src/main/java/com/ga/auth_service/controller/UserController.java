@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Map;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/auth/users")
@@ -134,6 +136,21 @@ public class UserController {
                 customer.getIsPlatformAdmin(),
                 customer.getIsCustomer()
         );
+    }
+
+    @PatchMapping("/internal/employees/{employeeId}")
+    public ResponseEntity<UserProfileResponse> updateEmployee(@PathVariable Long employeeId, @RequestHeader("X-Internal-Api-Key") String apiKey, @RequestBody Map<String,String> request){
+        if (internalApiKey.isBlank() || !internalApiKey.equals(apiKey)){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Invalid API key");
+        }
+
+        return ResponseEntity.ok(userService.updateEmployee(
+                employeeId,
+                request.get("name"),
+                request.get("mobileNumber"),
+                request.get("email"),
+                request.get("profilePictureUrl")
+        ));
     }
 
 

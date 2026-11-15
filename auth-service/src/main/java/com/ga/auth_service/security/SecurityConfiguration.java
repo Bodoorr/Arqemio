@@ -65,6 +65,7 @@ public class SecurityConfiguration {
                         "/auth/users/{id}",
                         "/auth/users/internal/send-email",
                         "/auth/users/internal/register-customer",
+                        "/auth/users/internal/employees/{employeeId}",
                         "/swagger-ui/**",
                         "/v3/api-docs/**"
                 ).permitAll().anyRequest().authenticated());
