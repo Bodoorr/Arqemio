@@ -2,8 +2,10 @@ package com.ga.finance_service.client;
 
 import com.ga.finance_service.model.response.UserResponse;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+@Service
 public class AuthClient {
     private RestClient restClient;
 
