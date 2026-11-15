@@ -149,6 +149,16 @@ public class ProjectController {
         return ResponseEntity.ok(membershipId);
     }
 
+    @GetMapping("/{projectId}/internal/expense-ownership/{membershipId}/{userId}")
+    public ResponseEntity<Boolean> validateExpenseOwnership(@PathVariable Long projectId, @PathVariable Long membershipId, @PathVariable Long userId, @RequestHeader("X-Internal-Api-Key") String apiKey){
+        if (!internalApiKey.equals(apiKey)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid internal API key.");
+        }
+
+        projectService.validateExpenseOwnership(projectId, membershipId,userId);
+        return ResponseEntity.ok(true);
+    }
+
     private ProjectResponse toResponse(Project project){
         return new ProjectResponse(
                 project.getId(),
