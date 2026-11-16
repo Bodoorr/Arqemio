@@ -137,7 +137,7 @@ public class TaskAssignmentService {
                     + " | Task: " + taskId);
 
             try {
-                notificationClient.sendNotification(userId, "You have been assigned to task " + taskId;
+                notificationClient.sendNotification(userId, "You have been assigned to task " + taskId);
                 logger.info("[" + threadName + "] Notification processing completed"
                         + " | User: " + userId
                         + " | Task: " + taskId);
