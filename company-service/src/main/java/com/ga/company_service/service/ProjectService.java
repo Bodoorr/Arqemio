@@ -33,8 +33,6 @@ public class ProjectService {
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private ArqemioEventProducer arqemioEventProducer;
-//    private AuditLogService auditLogService;
-//    private NotificationService notificationService;
 
     public static UserResponse getCurrentLoggedInUser(){
         return (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -213,7 +211,17 @@ public class ProjectService {
         }
         project.getManagers().add(membership);
         projectRepository.save(project);
-//        notificationService.sendNotification(membership.getUser().getId(), "You have been assigned as a manager to project "+project.getName());
+        ArqemioEvent event = new ArqemioEvent(
+                UUID.randomUUID().toString(),
+                membership.getUserId(),
+                project.getCompany().getId(),
+                "ASSIGN_MANAGER",
+                "PROJECT",
+                project.getId(),
+                "You have been assigned as a manager to project " + project.getName(),
+                LocalDateTime.now()
+        );
+        arqemioEventProducer.sendEvent(event);
 //        auditLogService.createAuditLog(currentUser,project.getCompany(),"ASSIGN_MANAGER","PROJECT", project.getId(), "Assigned manager: "+membership.getUser().getName());
         logger.log(Level.INFO, "Manager membership {0} assigned to project {1}", new Object[]{membershipId,projectId});
         return membership;
@@ -235,7 +243,18 @@ public class ProjectService {
 
         project.getManagers().remove(membership);
         projectRepository.save(project);
-//        notificationService.sendNotification(membership.getUser().getId(), "You have been removed as a manager from project "+ project.getName());
+        ArqemioEvent event = new ArqemioEvent(
+                UUID.randomUUID().toString(),
+                membership.getUserId(),
+                project.getCompany().getId(),
+                "REMOVE_MANAGER",
+                "PROJECT",
+                project.getId(),
+                "You have been removed as a manager from project " + project.getName(),
+                LocalDateTime.now()
+        );
+
+        arqemioEventProducer.sendEvent(event);
 //        auditLogService.createAuditLog(currentUser,project.getCompany(),"REMOVE_MANAGER","PROJECT", project.getId(), "Remove manager: "+membership.getUser().getName());
         logger.log(Level.INFO,"Manager membership {0} removed from project {1}", new Object[]{membershipId, projectId});
         return membership;
@@ -269,7 +288,18 @@ public class ProjectService {
 
         project.getWorkers().add(membership);
         projectRepository.save(project);
-//        notificationService.sendNotification(membership.getUser().getId(), "You have been assigned to project "+ project.getName());
+        ArqemioEvent event = new ArqemioEvent(
+                UUID.randomUUID().toString(),
+                membership.getUserId(),
+                project.getCompany().getId(),
+                "ASSIGN_WORKER",
+                "PROJECT",
+                project.getId(),
+                "You have been assigned to project " + project.getName(),
+                LocalDateTime.now()
+        );
+
+        arqemioEventProducer.sendEvent(event);
 //        auditLogService.createAuditLog(currentUser,project.getCompany(),"ASSIGN_WORKER","PROJECT", project.getId(), "Assigned worker: "+membership.getUser().getName());
         logger.log(Level.INFO,"Worker membership {0} assigned project {1}", new Object[]{membershipId,projectId});
         return membership;
@@ -291,7 +321,18 @@ public class ProjectService {
 
         project.getWorkers().remove(membership);
         projectRepository.save(project);
-//        notificationService.sendNotification(membership.getUser().getId(), "You have been removed from project "+ project.getName());
+        ArqemioEvent event = new ArqemioEvent(
+                UUID.randomUUID().toString(),
+                membership.getUserId(),
+                project.getCompany().getId(),
+                "REMOVE_WORKER",
+                "PROJECT",
+                project.getId(),
+                "You have been removed from project " + project.getName(),
+                LocalDateTime.now()
+        );
+
+        arqemioEventProducer.sendEvent(event);
 //        auditLogService.createAuditLog(currentUser,project.getCompany(),"REMOVE_WORKER","PROJECT", project.getId(), "Removed worker: "+membership.getUser().getName());
         logger.log(Level.INFO,"Worker membership {0} removed from project {1}", new Object[]{membershipId, projectId});
         return membership;
