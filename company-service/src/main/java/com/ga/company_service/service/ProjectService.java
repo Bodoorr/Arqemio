@@ -1,5 +1,7 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.event.ArqemioEvent;
+import com.ga.company_service.kafka.ArqemioEventProducer;
 import com.ga.company_service.model.Company;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Project;
@@ -16,8 +18,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -28,6 +32,7 @@ public class ProjectService {
     private ProjectRepository projectRepository;
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
+    private ArqemioEventProducer arqemioEventProducer;
 //    private AuditLogService auditLogService;
 //    private NotificationService notificationService;
 
@@ -53,6 +58,18 @@ public class ProjectService {
         Project savedProject = projectRepository.save(project);
 
         logger.log(Level.INFO,"Project {0} created successfully", savedProject.getId());
+        ArqemioEvent event = new ArqemioEvent(
+                UUID.randomUUID().toString(),
+                currentUser.getId(),
+                company.getId(),
+                "CREATE",
+                "PROJECT",
+                savedProject.getId(),
+                "Created project " + savedProject.getName(),
+                LocalDateTime.now()
+        );
+
+        arqemioEventProducer.sendEvent(event);
 //        auditLogService.createAuditLog(currentUser, company,
 //                "CREATE", "PROJECT",
 //                savedProject.getId(), "Created project " + savedProject.getName());
