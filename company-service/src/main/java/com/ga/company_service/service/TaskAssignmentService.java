@@ -1,5 +1,6 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.client.NotificationClient;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Task;
 import com.ga.company_service.model.TaskAssignment;
@@ -29,7 +30,7 @@ public class TaskAssignmentService {
     private CompanyMembershipRepository companyMembershipRepository;
     private ProjectRepository projectRepository;
     private static final Logger logger= Logger.getLogger(TaskAssignmentService.class.getName());
-//    private NotificationService notificationService;
+    private NotificationClient notificationClient;
     private static final ExecutorService executorService= Executors.newFixedThreadPool(3);
 
     public static UserResponse getCurrentLoggedInUser() {
@@ -136,7 +137,7 @@ public class TaskAssignmentService {
                     + " | Task: " + taskId);
 
             try {
-//                notificationService.sendNotification(userId, "You have been assigned to task " + taskId;
+                notificationClient.sendNotification(userId, "You have been assigned to task " + taskId;
                 logger.info("[" + threadName + "] Notification processing completed"
                         + " | User: " + userId
                         + " | Task: " + taskId);
