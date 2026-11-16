@@ -1,5 +1,6 @@
 package com.ga.notification_service.controller;
 
+import com.ga.notification_service.model.response.UserResponse;
 import com.ga.notification_service.service.NotificationService;
 import lombok.AllArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
