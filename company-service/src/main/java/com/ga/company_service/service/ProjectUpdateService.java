@@ -1,5 +1,6 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.client.AuditLogClient;
 import com.ga.company_service.client.NotificationClient;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Project;
@@ -26,7 +27,7 @@ public class ProjectUpdateService {
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private NotificationClient notificationClient;
-//    private AuditLogService auditLogService;
+    private AuditLogClient auditLogClient;
     private static final Logger logger= Logger.getLogger(ProjectUpdateService.class.getName());
 
     public static UserResponse getCurrentLoggedInUser(){
@@ -57,7 +58,7 @@ public class ProjectUpdateService {
         projectUpdate.setStatus("PENDING");
 
         ProjectUpdate savedProjectUpdate = projectUpdateRepository.save(projectUpdate);
-//        auditLogService.createAuditLog(currentUser,project.getCompany(),"CREATE","PROJECT_UPDATE",savedProjectUpdate.getId(),"Submitted project update: "+savedProjectUpdate.getTitle());
+        auditLogClient.createAuditLog(currentUser.getId(),project.getCompany().getId(),"CREATE","PROJECT_UPDATE",savedProjectUpdate.getId(),"Submitted project update: "+savedProjectUpdate.getTitle());
         logger.log(Level.INFO,"Project update {0} created for project {1} by user {2}", new Object[]{savedProjectUpdate.getId(), project.getId(), currentUser.getId()});
         for (CompanyMembership manager: project.getManagers()){
             if (manager.getStatus().equals("ACTIVE")){
@@ -115,7 +116,7 @@ public class ProjectUpdateService {
         projectUpdate.setReviewNote(reviewNote);
 
         ProjectUpdate reviewedUpdate= projectUpdateRepository.save(projectUpdate);
-//        auditLogService.createAuditLog(currentUser, project.getCompany(),status.equals("APPROVED")? "APPROVE" : "REJECT", "PROJECT_UPDATE", reviewedUpdate.getId(),"Reviewed project update: "+reviewedUpdate.getTitle()+" - "+status);
+        auditLogClient.createAuditLog(currentUser.getId(), project.getCompany().getId(),status.equals("APPROVED")? "APPROVE" : "REJECT", "PROJECT_UPDATE", reviewedUpdate.getId(),"Reviewed project update: "+reviewedUpdate.getTitle()+" - "+status);
         notificationClient.sendNotification(reviewedUpdate.getUpdatedBy().getUserId(), "Your project update "+reviewedUpdate.getTitle()+" has been "+status.toLowerCase());
         logger.log(Level.INFO, "Project update {0} reviewed with status {1} by user {2}", new Object[]{updateId, status,currentUser.getId()});
         return reviewedUpdate;
@@ -146,7 +147,7 @@ public class ProjectUpdateService {
         projectUpdate.setDescription(projectUpdateRequest.getDescription());
 
         ProjectUpdate updatedProjectUpdate= projectUpdateRepository.save(projectUpdate);
-//        auditLogService.createAuditLog(currentUser, updatedProjectUpdate.getProject().getCompany(),"UPDATE","PROJECT_UPDATE", updatedProjectUpdate.getId(), "Updated project update: "+updatedProjectUpdate.getTitle());
+        auditLogClient.createAuditLog(currentUser.getId(), updatedProjectUpdate.getProject().getCompany().getId(),"UPDATE","PROJECT_UPDATE", updatedProjectUpdate.getId(), "Updated project update: "+updatedProjectUpdate.getTitle());
         logger.log(Level.INFO, "Project update {0} edited by user {1}", new Object[]{updateId, currentUser.getId()});
         return updatedProjectUpdate;
     }
@@ -173,7 +174,7 @@ public class ProjectUpdateService {
         projectUpdate.setStatus("ARCHIVED");
 
         ProjectUpdate archivedUpdate= projectUpdateRepository.save(projectUpdate);
-//        auditLogService.createAuditLog(currentUser, archivedUpdate.getProject().getCompany(),"ARCHIVE","PROJECT_UPDATE", archivedUpdate.getId(), "Archived project update: "+archivedUpdate.getTitle());
+        auditLogClient.createAuditLog(currentUser.getId(), archivedUpdate.getProject().getCompany().getId(),"ARCHIVE","PROJECT_UPDATE", archivedUpdate.getId(), "Archived project update: "+archivedUpdate.getTitle());
         logger.log(Level.INFO,"Project update {0} archived by user {1}", new Object[]{updateId, currentUser.getId()});
         return archivedUpdate;
     }
