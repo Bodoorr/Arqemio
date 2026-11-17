@@ -22,7 +22,7 @@ import java.util.logging.Logger;
 public class ExpenseService {
     private ExpenseRepository expenseRepository;
     private CompanyClient companyClient;
-//    private AuditLogService auditLogService;
+//    private AuditLogClient auditLogClient;
     private static final Logger logger= Logger.getLogger(ExpenseService.class.getName());
 
     public static UserResponse getCurrentLoggedInUser(){
