@@ -1,6 +1,7 @@
 package com.ga.company_service.service;
 
 import com.ga.company_service.client.AuthClient;
+import com.ga.company_service.client.NotificationClient;
 import com.ga.company_service.model.*;
 import com.ga.company_service.model.request.CustomerRegistrationRequest;
 import com.ga.company_service.model.request.ProjectUpdateShareRequest;
@@ -33,7 +34,7 @@ public class ProjectShareLinkService {
     private FileAttachmentRepository fileAttachmentRepository;
     private AuthClient authClient;
 //    private AuditLogService auditLogService;
-//    private NotificationService notificationService;
+    private NotificationClient notificationClient;
 
     private static final Logger logger =Logger.getLogger(ProjectShareLinkService.class.getName());
 
@@ -115,7 +116,7 @@ public class ProjectShareLinkService {
         );
 
         authClient.sendEmail(emailDetails);
-//        notificationService.sendNotification(projectUpdate.getUpdatedBy().getUserId(), "Your project update "+projectUpdate.getTitle()+" has been shared with the customer.");
+        notificationClient.sendNotification(projectUpdate.getUpdatedBy().getUserId(), "Your project update "+projectUpdate.getTitle()+" has been shared with the customer.");
 //        auditLogService.createAuditLog(currentUser, project.getCompany(),
 //                "SHARE", "PROJECT_UPDATE", projectUpdate.getId(),
 //                "Shared project update with customer " + shareLink.getCustomerEmail()
