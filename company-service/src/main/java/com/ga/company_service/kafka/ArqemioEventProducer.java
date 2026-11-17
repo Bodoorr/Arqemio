@@ -12,7 +12,11 @@ public class ArqemioEventProducer {
     private final KafkaTemplate<String, ArqemioEvent> kafkaTemplate;
 
     public void sendEvent(ArqemioEvent event) {
-        kafkaTemplate.send("arqemio-events", event);
-        System.out.println("Kafka event sent: " + event);
+        try {
+            kafkaTemplate.send("arqemio-events", event);
+            System.out.println("Kafka event submitted: " + event);
+        } catch (RuntimeException e) {
+            System.out.println("Failed to send Kafka event");
+        }
     }
 }
