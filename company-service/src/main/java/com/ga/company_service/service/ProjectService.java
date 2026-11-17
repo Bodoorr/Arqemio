@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -40,6 +41,7 @@ public class ProjectService {
         return (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
+    @Transactional
     public Project createProject(ProjectRequest projectRequest){
         UserResponse currentUser= getCurrentLoggedInUser();
         Company company= companyRepository.findById(projectRequest.getCompanyId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
