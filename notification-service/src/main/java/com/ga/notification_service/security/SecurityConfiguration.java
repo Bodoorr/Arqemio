@@ -51,7 +51,8 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(auth-> auth.requestMatchers(
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
-                        "/notifications/send"
+                        "/notifications/send",
+                        "/audit-logs/create"
                 ).permitAll().anyRequest().authenticated());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
