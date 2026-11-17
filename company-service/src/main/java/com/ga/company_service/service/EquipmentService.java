@@ -1,5 +1,6 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.client.AuditLogClient;
 import com.ga.company_service.model.Company;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Equipment;
@@ -25,6 +26,7 @@ public class EquipmentService {
     private EquipmentRepository equipmentRepository;
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
+    private AuditLogClient auditLogClient;
     private static final Logger logger= Logger.getLogger(EquipmentService.class.getName());
 
     public static UserResponse getCurrentLoggedInUser() {
@@ -47,6 +49,7 @@ public class EquipmentService {
         equipment.setQuantity(equipmentRequest.getQuantity());
 
         Equipment savedEquipment= equipmentRepository.save(equipment);
+        auditLogClient.createAuditLog(currentUser.getId(), company.getId(), "CREATE", "EQUIPMENT", savedEquipment.getId(), "Created equipment: " + savedEquipment.getName());
         logger.log(Level.INFO,"Equipment {0} created for company {1} by user {2}", new Object[]{savedEquipment.getId(), company.getId(), currentUser.getId()});
         return savedEquipment;
     }
@@ -91,6 +94,7 @@ public class EquipmentService {
         equipment.setQuantity(equipmentRequest.getQuantity());
 
         Equipment savedEquipment= equipmentRepository.save(equipment);
+        auditLogClient.createAuditLog(currentUser.getId(), savedEquipment.getCompany().getId(), "UPDATE", "EQUIPMENT", savedEquipment.getId(), "Updated equipment: " + savedEquipment.getName());
         logger.log(Level.INFO,"Equipment {0} updated by user {1}", new Object[]{savedEquipment.getId(), currentUser.getId()});
         return savedEquipment;
     }
@@ -102,6 +106,7 @@ public class EquipmentService {
         equipment.setStatus("ARCHIVED");
 
         Equipment savedEquipment= equipmentRepository.save(equipment);
+        auditLogClient.createAuditLog(currentUser.getId(), savedEquipment.getCompany().getId(), "ARCHIVE", "EQUIPMENT", savedEquipment.getId(), "Archived equipment: " + savedEquipment.getName());
         logger.log(Level.INFO,"Equipment {0} archived by user {1}", new Object[]{savedEquipment.getId(), currentUser.getId()});
         return savedEquipment;
     }
