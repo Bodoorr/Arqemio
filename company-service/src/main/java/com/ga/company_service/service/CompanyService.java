@@ -155,6 +155,7 @@ public class CompanyService {
         }
 
         UserProfileResponse employee= authClient.updateEmployee(employeeId, name, mobileNumber,email,profilePictureUrl);
+        auditLogClient.createAuditLog(currentUser.getId(), companyId, "UPDATE_EMPLOYEE", "USER", employeeId, "Updated employee profile: " + employee.getName());
         logger.log(Level.INFO, "Employee {0} updated by user {1} in company {2}", new Object[]{employeeId, currentUser.getId(), companyId});
 
         List<UserMembershipResponse> membershipResponses = new ArrayList<>();
