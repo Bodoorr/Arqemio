@@ -12,4 +12,5 @@ import java.util.List;
 public class UserProfileResponse {
     private Long id;
     private String name;
+    private String email;
 }
