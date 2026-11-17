@@ -1,5 +1,6 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.client.NotificationClient;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Equipment;
 import com.ga.company_service.model.Project;
@@ -38,7 +39,7 @@ public class ReservationService {
     private ProjectService projectService;
     private CompanyMembershipRepository companyMembershipRepository;
 //    private AuditLogService auditLogService;
-//    private NotificationService notificationService;
+    private NotificationClient notificationClient;
     private static final ReentrantLock reservationLock= new ReentrantLock();
     @PersistenceContext
     private EntityManager entityManager;
@@ -97,7 +98,7 @@ public class ReservationService {
             if (reservationRequest.getQuantity()> availableQuantity){
 //                logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{equipment.getId(), reservationRequest.getQuantity(), availableQuantity});
                 logger.warning("[" + Thread.currentThread().getName()+ "] RESERVATION REJECTED - Not enough equipment");
-//                notificationService.sendNotification(currentUser.getId(), "Reservation failed! Not enough "+ equipment.getName()+" available. Only "+availableQuantity+" remaining.");
+                notificationClient.sendNotification(currentUser.getId(), "Reservation failed! Not enough "+ equipment.getName()+" available. Only "+availableQuantity+" remaining.");
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");
             }
 
@@ -117,7 +118,7 @@ public class ReservationService {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit(){
-//                    notificationService.sendNotification(currentUser.getId(), "Your reservation for "+equipment.getName()+" was successful.");
+                    notificationClient.sendNotification(currentUser.getId(), "Your reservation for "+equipment.getName()+" was successful.");
                 }
             });
 
@@ -299,7 +300,7 @@ public class ReservationService {
                 @Override
                 public void afterCommit(){
                 for (Long managerId: managerIds){
-//                    notificationService.sendNotification(managerId, "Equipment reservation for "+equipmentName+" has been completed.");
+                    notificationClient.sendNotification(managerId, "Equipment reservation for "+equipmentName+" has been completed.");
                 }
             }
             });
