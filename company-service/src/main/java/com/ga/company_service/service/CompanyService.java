@@ -1,5 +1,6 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.client.AuditLogClient;
 import com.ga.company_service.client.AuthClient;
 import com.ga.company_service.model.Company;
 import com.ga.company_service.model.CompanyMembership;
@@ -27,7 +28,7 @@ import java.util.logging.Logger;
 @AllArgsConstructor
 public class CompanyService {
     private CompanyRepository companyRepository;
-//    private AuditLogService auditLogService;
+    private AuditLogClient auditLogClient;
     private CompanyMembershipRepository companyMembershipRepository;
     private AuthClient authClient;
     private FileAttachmentService fileAttachmentService;
@@ -53,7 +54,7 @@ public class CompanyService {
         company.setOwner(null);
 
         Company savedCompany= companyRepository.save(company);
-//        auditLogService.createAuditLog(currentUser,savedCompany,"CREATE_COMPANY","COMPANY", savedCompany.getId(), "Created company: "+ savedCompany.getName());
+        auditLogClient.createAuditLog(currentUser.getId(),savedCompany.getId(),"CREATE_COMPANY","COMPANY", savedCompany.getId(), "Created company: "+ savedCompany.getName());
         logger.log(Level.INFO,"Company {0} created successfully by platform admin {1}", new Object[]{savedCompany.getId(), currentUser.getId()});
         return savedCompany;
     }
