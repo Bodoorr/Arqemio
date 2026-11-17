@@ -18,7 +18,7 @@ public class NotificationController {
     @Value("${internal.api-key}")
     private String internalApiKey;
 
-    private NotificationService notificationService;
+    private final NotificationService notificationService;
 
     public static UserResponse getCurrentLoggedInUser(){
         return (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();

@@ -19,8 +19,8 @@ import java.util.List;
 @RequestMapping("/audit-logs")
 @RequiredArgsConstructor
 public class AuditLogController {
-    private AuditLogService auditLogService;
-    private AuthClient authClient;
+    private final AuditLogService auditLogService;
+    private final AuthClient authClient;
 
     @Value("${internal.api-key}")
     private String internalApikey;
