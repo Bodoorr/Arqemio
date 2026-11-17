@@ -9,19 +9,25 @@ import com.ga.company_service.model.response.UserProfileResponse;
 import com.ga.company_service.service.CompanyService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @RestController
 @RequestMapping(path = "/company")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class CompanyController {
     private CompanyService companyService;
     private AuthClient authClient;
+
+    @Value("${internal.api-key}")
+    private String internalApiKey;
 
     @PostMapping
     public ResponseEntity<CompanyResponse> createCompany(@Valid @RequestBody CompanyRequest companyRequest){
@@ -53,7 +59,13 @@ public class CompanyController {
         return ResponseEntity.ok(companyService.getUserMemberships(userId));
     }
 
+    @GetMapping("/internal/{companyId}/owners/{userId}")
+    public ResponseEntity<Boolean> isCompanyOwner(@RequestHeader("X-Internal-Api-Key") String apiKey, @PathVariable Long companyId, @PathVariable Long userId) {
+        if (internalApiKey.isBlank() || !internalApiKey.equals(apiKey)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid API key");}
 
+        return ResponseEntity.ok(companyService.isCompanyOwner(companyId, userId));
+    }
 
     private CompanyResponse toResponse(Company company) {
         Long ownerId= company.getOwner() != null ? company.getOwner().getUserId(): null;

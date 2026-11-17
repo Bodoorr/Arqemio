@@ -17,8 +17,7 @@ public class CompanyClient {
 
     public Boolean isCompanyOwner(Long companyId, Long userId) {
         return restClient.get()
-                .uri("/companies/internal/{companyId}/owners/{userId}", companyId, userId)
-                .header("X-Internal-Api-Key", internalApiKey)
+                .uri("/company/internal/{companyId}/owners/{userId}", companyId, userId)                .header("X-Internal-Api-Key", internalApiKey)
                 .retrieve()
                 .body(Boolean.class);
     }

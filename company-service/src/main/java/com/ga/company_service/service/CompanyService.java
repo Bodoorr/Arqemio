@@ -178,4 +178,10 @@ public class CompanyService {
                 );
     }
 
+    public boolean isCompanyOwner(Long companyId, Long userId) {
+        return companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(
+                userId, companyId, "OWNER", "ACTIVE"
+        );
+    }
+
 }
