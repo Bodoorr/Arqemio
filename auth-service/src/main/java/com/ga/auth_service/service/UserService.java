@@ -1,6 +1,7 @@
 package com.ga.auth_service.service;
 
 
+import com.ga.auth_service.client.AuditLogClient;
 import com.ga.auth_service.client.CompanyClient;
 import com.ga.auth_service.model.EmailDetails;
 import com.ga.auth_service.model.User;
@@ -41,16 +42,18 @@ public class UserService {
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
     private final CompanyClient companyClient;
+    private AuditLogClient auditLogClient;
     private static final Logger logger= Logger.getLogger(UserService.class.getName());
 
     @Autowired
-    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, EmailService emailService, CompanyClient companyClient) {
+    public UserService(UserRepository userRepository, @Lazy PasswordEncoder passwordEncoder, JWTUtils jwtUtils, @Lazy AuthenticationManager authenticationManager, EmailService emailService, CompanyClient companyClient, AuditLogClient auditLogClient) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
         this.authenticationManager = authenticationManager;
         this.emailService= emailService;
         this.companyClient= companyClient;
+        this.auditLogClient= auditLogClient;
     }
 
     public User createUser(User userObject) {
@@ -75,7 +78,7 @@ public class UserService {
         customer.setIsCustomer(true);
 
         User savedCustomer= createUser(customer);
-//        auditLogService.createAuditLog(savedCustomer,null,"REGISTER_CUSTOMER","USER", savedCustomer.getId(), "Customer registered: "+savedCustomer.getName());
+        auditLogClient.createAuditLog(savedCustomer.getId(),null,"REGISTER_CUSTOMER","USER", savedCustomer.getId(), "Customer registered: "+savedCustomer.getName());
         return savedCustomer;
     }
 
@@ -86,7 +89,7 @@ public class UserService {
             SecurityContextHolder.getContext().setAuthentication(authentication);
             MyUserDetails myUserDetails = (MyUserDetails) authentication.getPrincipal();
             final String JWT = jwtUtils.generateJwtToken(myUserDetails);
-//            logger.log(Level.INFO,"User {0} logged in successfully", myUserDetails.getUser().getId());
+            logger.log(Level.INFO,"User {0} logged in successfully", myUserDetails.getUser().getId());
             return ResponseEntity.ok(new LoginResponse("Login successful", JWT));
         } catch (AuthenticationException e) {
             logger.log(Level.WARNING, "Login failed: invalid credentials");
@@ -221,6 +224,7 @@ public class UserService {
         currentUser.setMobileNumber(updateProfileRequest.getMobileNumber());
 
         userRepository.save(currentUser);
+        auditLogClient.createAuditLog(currentUser.getId(), null, "UPDATE_PROFILE", "USER", currentUser.getId(), "User updated their profile");
         logger.log(Level.INFO,"User {0} updated their profile", currentUser.getId());
         return getProfile(token);
     }
