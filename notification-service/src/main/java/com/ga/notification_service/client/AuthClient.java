@@ -1,5 +1,6 @@
 package com.ga.notification_service.client;
 
+import com.ga.notification_service.model.response.UserProfileResponse;
 import com.ga.notification_service.model.response.UserResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -8,6 +9,9 @@ import org.springframework.web.client.RestClient;
 @Service
 public class AuthClient {
     private RestClient restClient;
+
+    @Value("${internal.api-key}")
+    private String internalApiKey;
 
     public AuthClient(@Value("${auth.service.url}") String authServiceUrl) {
         this.restClient = RestClient.builder()
@@ -21,5 +25,13 @@ public class AuthClient {
                 .headers(headers -> headers.setBearerAuth(token))
                 .retrieve()
                 .body(UserResponse.class);
+    }
+
+    public UserProfileResponse getUserById(Long userId) {
+        return restClient.get()
+                .uri("/auth/users/{id}", userId)
+                .header("X-Internal-Api-Key", internalApiKey)
+                .retrieve()
+                .body(UserProfileResponse.class);
     }
 }
