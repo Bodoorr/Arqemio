@@ -2,7 +2,7 @@ package com.ga.notification_service.controller;
 
 import com.ga.notification_service.model.response.UserResponse;
 import com.ga.notification_service.service.NotificationService;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +13,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/notifications")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class NotificationController {
     @Value("${internal.api-key}")
     private String internalApiKey;
