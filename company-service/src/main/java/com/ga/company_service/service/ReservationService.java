@@ -1,5 +1,6 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.client.AuditLogClient;
 import com.ga.company_service.client.NotificationClient;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Equipment;
@@ -38,7 +39,7 @@ public class ReservationService {
     private ProjectRepository projectRepository;
     private ProjectService projectService;
     private CompanyMembershipRepository companyMembershipRepository;
-//    private AuditLogService auditLogService;
+    private AuditLogClient auditLogClient;
     private NotificationClient notificationClient;
     private static final ReentrantLock reservationLock= new ReentrantLock();
     @PersistenceContext
@@ -96,7 +97,7 @@ public class ReservationService {
             logger.info("[" + Thread.currentThread().getName()+ "] Available quantity: "+ availableQuantity);
 
             if (reservationRequest.getQuantity()> availableQuantity){
-//                logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{equipment.getId(), reservationRequest.getQuantity(), availableQuantity});
+                logger.log(Level.WARNING,"Insufficient equipment {0}: requested {1}, available {2}", new Object[]{equipment.getId(), reservationRequest.getQuantity(), availableQuantity});
                 logger.warning("[" + Thread.currentThread().getName()+ "] RESERVATION REJECTED - Not enough equipment");
                 notificationClient.sendNotification(currentUser.getId(), "Reservation failed! Not enough "+ equipment.getName()+" available. Only "+availableQuantity+" remaining.");
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Not enough equipment available for the selected time.");
@@ -122,10 +123,10 @@ public class ReservationService {
                 }
             });
 
-//            auditLogService.createAuditLog(currentUser, project.getCompany(),
-//                    "CREATE", "RESERVATION", savedReservation.getId(),
-//                    "Created equipment reservation for " + equipment.getName()
-//            );
+            auditLogClient.createAuditLog(currentUser.getId(), project.getCompany().getId(),
+                    "CREATE", "RESERVATION", savedReservation.getId(),
+                    "Created equipment reservation for " + equipment.getName()
+            );
 
             return savedReservation;
         } finally {
@@ -210,7 +211,7 @@ public class ReservationService {
             reservation.setQuantity(reservationRequest.getQuantity());
 
             Reservation updatedReservation= reservationRepository.save(reservation);
-//            auditLogService.createAuditLog(currentUser, updatedReservation.getProject().getCompany(),"UPDATE","RESERVATION", updatedReservation.getId(),"Updated equipment reservation for "+updatedReservation.getEquipment().getName());
+            auditLogClient.createAuditLog(currentUser.getId(), updatedReservation.getProject().getCompany().getId(),"UPDATE","RESERVATION", updatedReservation.getId(),"Updated equipment reservation for "+updatedReservation.getEquipment().getName());
             logger.log(Level.INFO,"Reservation {0} updated successfully", updatedReservation.getId());
             return updatedReservation;
         } finally {
@@ -246,10 +247,10 @@ public class ReservationService {
             Reservation savedReservation = reservationRepository.save(reservation);
 
             logger.log(Level.INFO,"Reservation {0} cancelled successfully", savedReservation.getId());
-//            auditLogService.createAuditLog(currentUser, reservation.getProject().getCompany(),
-//                    "CANCEL", "RESERVATION", savedReservation.getId(),
-//                    "Cancelled equipment reservation for " + reservation.getEquipment().getName()
-//            );
+            auditLogClient.createAuditLog(currentUser.getId(), reservation.getProject().getCompany().getId(),
+                    "CANCEL", "RESERVATION", savedReservation.getId(),
+                    "Cancelled equipment reservation for " + reservation.getEquipment().getName()
+            );
             return savedReservation;
         } finally {
             reservationLock.unlock();
@@ -285,7 +286,7 @@ public class ReservationService {
 
             reservation.setStatus(status);
             Reservation updatedReservation= reservationRepository.save(reservation);
-//            auditLogService.createAuditLog(currentUser, updatedReservation.getProject().getCompany(),"COMPLETE","RESERVATION", updatedReservation.getId(),"Completed equipment reservation for "+updatedReservation.getEquipment().getName());
+            auditLogClient.createAuditLog(currentUser.getId(), updatedReservation.getProject().getCompany().getId(),"COMPLETE","RESERVATION", updatedReservation.getId(),"Completed equipment reservation for "+updatedReservation.getEquipment().getName());
 
             //notification
             //find the managers that will receive the notification
