@@ -1,5 +1,6 @@
 package com.ga.finance_service.service;
 
+import com.ga.finance_service.client.AuditLogClient;
 import com.ga.finance_service.client.CompanyClient;
 import com.ga.finance_service.model.Expense;
 import com.ga.finance_service.model.request.ExpenseRequest;
@@ -22,7 +23,7 @@ import java.util.logging.Logger;
 public class ExpenseService {
     private ExpenseRepository expenseRepository;
     private CompanyClient companyClient;
-//    private AuditLogClient auditLogClient;
+    private AuditLogClient auditLogClient;
     private static final Logger logger= Logger.getLogger(ExpenseService.class.getName());
 
     public static UserResponse getCurrentLoggedInUser(){
@@ -46,7 +47,8 @@ public class ExpenseService {
         expense.setStatus("ACTIVE");
 
         Expense savedExpense= expenseRepository.save(expense);
-//        auditLogService.createAuditLog(currentUser,project.getCompany(),"CREATE","EXPENSE",savedExpense.getId(),"Created expense: "+savedExpense.getTitle());
+        ProjectResponse project= companyClient.getProjectById(savedExpense.getProjectId(), currentUser.getId());
+        auditLogClient.createAuditLog(currentUser.getId(),project.getCompanyId(),"CREATE","EXPENSE",savedExpense.getId(),"Created expense: "+savedExpense.getTitle());
         logger.log(Level.INFO, "Expense {0} created for project {1} by user {2}", new Object[]{savedExpense.getId(), savedExpense.getProjectId(), currentUser.getId()});
         return savedExpense;
     }
@@ -90,7 +92,8 @@ public class ExpenseService {
         expense.setExpenseDateTime(expenseRequest.getExpenseDateTime());
 
         Expense updatedExpense= expenseRepository.save(expense);
-//        auditLogService.createAuditLog(currentUser, updatedExpense.getProject().getCompany(),"UPDATE", "EXPENSE",updatedExpense.getId(),"Updated expense: "+updatedExpense.getTitle());
+        ProjectResponse project= companyClient.getProjectById(updatedExpense.getProjectId(), currentUser.getId());
+        auditLogClient.createAuditLog(currentUser.getId(),project.getCompanyId(),"UPDATE", "EXPENSE",updatedExpense.getId(),"Updated expense: "+updatedExpense.getTitle());
         logger.log(Level.INFO,"Expense {0} updated by user {1}", new Object[]{expenseId, currentUser.getId()});
         return updatedExpense;
     }
@@ -105,7 +108,8 @@ public class ExpenseService {
         expense.setStatus("ARCHIVED");
 
         Expense archivedExpense= expenseRepository.save(expense);
-//        auditLogService.createAuditLog(currentUser,archivedExpense.getProject().getCompany(),"ARCHIVE","EXPENSE",archivedExpense.getId(),"Archived expense: "+archivedExpense.getTitle());
+        ProjectResponse project= companyClient.getProjectById(archivedExpense.getProjectId(), currentUser.getId());
+        auditLogClient.createAuditLog(currentUser.getId(),project.getCompanyId(),"ARCHIVE","EXPENSE",archivedExpense.getId(),"Archived expense: "+archivedExpense.getTitle());
         logger.log(Level.INFO,"Expense {0} archived by user {1}", new Object[]{expenseId, currentUser.getId()});
         return archivedExpense;
     }
