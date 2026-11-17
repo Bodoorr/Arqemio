@@ -1,5 +1,6 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.client.AuditLogClient;
 import com.ga.company_service.event.ArqemioEvent;
 import com.ga.company_service.kafka.ArqemioEventProducer;
 import com.ga.company_service.model.Company;
@@ -33,6 +34,7 @@ public class ProjectService {
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private ArqemioEventProducer arqemioEventProducer;
+    private AuditLogClient auditLogClient;
 
     public static UserResponse getCurrentLoggedInUser(){
         return (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -68,12 +70,11 @@ public class ProjectService {
         );
 
         arqemioEventProducer.sendEvent(event);
-//        auditLogService.createAuditLog(currentUser, company,
-//                "CREATE", "PROJECT",
-//                savedProject.getId(), "Created project " + savedProject.getName());
+        auditLogClient.createAuditLog(currentUser.getId(), company.getId(),
+                "CREATE", "PROJECT",
+                savedProject.getId(), "Created project " + savedProject.getName());
 
         return savedProject;
-
     }
 
 
@@ -162,7 +163,7 @@ public class ProjectService {
         setProjectFields(project,projectRequest);
 
         Project updateProject= projectRepository.save(project);
-//        auditLogService.createAuditLog(currentUser,updateProject.getCompany(),"UPDATE","PROJECT",updateProject.getId(),"Updated project: "+updateProject.getName());
+        auditLogClient.createAuditLog(currentUser.getId(),updateProject.getCompany().getId(),"UPDATE","PROJECT",updateProject.getId(),"Updated project: "+updateProject.getName());
         logger.log(Level.INFO, "Project {0} updated successfully", updateProject.getId());
         return updateProject;
     }
@@ -177,7 +178,7 @@ public class ProjectService {
         }
         project.setStatus("ARCHIVED");
         Project archivedProject= projectRepository.save(project);
-//        auditLogService.createAuditLog(currentUser,archivedProject.getCompany(),"ARCHIVE","PROJECT",archivedProject.getId(),"Archived project: "+archivedProject.getName());
+        auditLogClient.createAuditLog(currentUser.getId(),archivedProject.getCompany().getId(),"ARCHIVE","PROJECT",archivedProject.getId(),"Archived project: "+archivedProject.getName());
         logger.log(Level.INFO, "Project {0} archived successfully", archivedProject.getId());
         return archivedProject;
     }
@@ -222,7 +223,7 @@ public class ProjectService {
                 LocalDateTime.now()
         );
         arqemioEventProducer.sendEvent(event);
-//        auditLogService.createAuditLog(currentUser,project.getCompany(),"ASSIGN_MANAGER","PROJECT", project.getId(), "Assigned manager: "+membership.getUser().getName());
+        auditLogClient.createAuditLog(currentUser.getId(),project.getCompany().getId(),"ASSIGN_MANAGER","PROJECT", project.getId(), "Assigned manager: "+membership.getId());
         logger.log(Level.INFO, "Manager membership {0} assigned to project {1}", new Object[]{membershipId,projectId});
         return membership;
     }
@@ -255,7 +256,7 @@ public class ProjectService {
         );
 
         arqemioEventProducer.sendEvent(event);
-//        auditLogService.createAuditLog(currentUser,project.getCompany(),"REMOVE_MANAGER","PROJECT", project.getId(), "Remove manager: "+membership.getUser().getName());
+        auditLogClient.createAuditLog(currentUser.getId(),project.getCompany().getId(),"REMOVE_MANAGER","PROJECT", project.getId(), "Remove manager: "+membership.getUserId());
         logger.log(Level.INFO,"Manager membership {0} removed from project {1}", new Object[]{membershipId, projectId});
         return membership;
     }
@@ -300,7 +301,7 @@ public class ProjectService {
         );
 
         arqemioEventProducer.sendEvent(event);
-//        auditLogService.createAuditLog(currentUser,project.getCompany(),"ASSIGN_WORKER","PROJECT", project.getId(), "Assigned worker: "+membership.getUser().getName());
+        auditLogClient.createAuditLog(currentUser.getId(),project.getCompany().getId(),"ASSIGN_WORKER","PROJECT", project.getId(), "Assigned worker: "+membership.getUserId());
         logger.log(Level.INFO,"Worker membership {0} assigned project {1}", new Object[]{membershipId,projectId});
         return membership;
     }
@@ -333,7 +334,7 @@ public class ProjectService {
         );
 
         arqemioEventProducer.sendEvent(event);
-//        auditLogService.createAuditLog(currentUser,project.getCompany(),"REMOVE_WORKER","PROJECT", project.getId(), "Removed worker: "+membership.getUser().getName());
+        auditLogClient.createAuditLog(currentUser.getId(),project.getCompany().getId(),"REMOVE_WORKER","PROJECT", project.getId(), "Removed worker: "+membership.getUserId());
         logger.log(Level.INFO,"Worker membership {0} removed from project {1}", new Object[]{membershipId, projectId});
         return membership;
     }
