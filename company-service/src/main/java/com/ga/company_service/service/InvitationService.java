@@ -1,5 +1,6 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.client.AuditLogClient;
 import com.ga.company_service.client.AuthClient;
 import com.ga.company_service.model.Company;
 import com.ga.company_service.model.CompanyMembership;
@@ -32,6 +33,8 @@ public class InvitationService {
     private CompanyRepository companyRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private AuthClient authClient;
+    private AuditLogClient auditLogClient;
+
     private static final Logger logger= Logger.getLogger(InvitationService.class.getName());
 
     public static UserResponse getCurrentLoggedInUser(){
@@ -133,7 +136,7 @@ public class InvitationService {
             logger.log(Level.WARNING, "Invitation {0} saved but email delivery failed", savedInvitation.getId());
             throw new RuntimeException("Invitation saved, but email could not be sent.");
         }
-//        auditLogService.createAuditLog(currentUser, company,"CREATE_INVITATION","INVITATION", savedInvitation.getId(), "Invited "+email+" as "+role);
+        auditLogClient.createAuditLog(currentUser.getId(), company.getId(),"CREATE_INVITATION","INVITATION", savedInvitation.getId(), "Invited "+email+" as "+role);
         logger.log(Level.INFO,"Invitation {0} created for company {1} by user {2}", new Object[]{savedInvitation.getId(), companyId, currentUser.getId()});
         return savedInvitation;
     }
@@ -177,7 +180,7 @@ public class InvitationService {
             markInvitationAccepted(invitation, savedUser);
 
             String action= "REGISTER_"+invitation.getRole();
-//            auditLogService.createAuditLog(savedUser, invitation.getCompany(),action,"USER", savedUser.getId(), "Registered as "+invitation.getRole()+": " +savedUser.getName());
+            auditLogClient.createAuditLog(savedUser.getId(), invitation.getCompany().getId(),action,"USER", savedUser.getId(), "Registered as "+invitation.getRole()+": " +invitationRegistrationRequest.getName());
         return savedUser;
     }
 
@@ -217,7 +220,7 @@ public class InvitationService {
 
         invitation.setStatus("CANCELLED");
         invitationRepository.save(invitation);
-//        auditLogService.createAuditLog(currentUser,invitation.getCompany(),"CANCEL_INVITATION","INVITATION",invitation.getId(),"Cancelled invitation for "+invitation.getEmail());
+        auditLogClient.createAuditLog(currentUser.getId(),invitation.getCompany().getId(),"CANCEL_INVITATION","INVITATION",invitation.getId(),"Cancelled invitation for "+invitation.getEmail());
         logger.log(Level.INFO,"Invitation {0} cancelled by user {1}", new Object[]{invitationId, currentUser.getId()});
         return invitation;
     }
@@ -297,10 +300,10 @@ public class InvitationService {
         invitation.setStatus("ACCEPTED");
         Invitation savedInvitation = invitationRepository.save(invitation);
         logger.log(Level.INFO,"Invitation {0} accepted by user {1} for company {2}", new Object[]{savedInvitation.getId(), user.getId(), invitation.getCompany().getId()});
-//        auditLogService.createAuditLog(user, invitation.getCompany(),
-//                "ACCEPT", "INVITATION", savedInvitation.getId(),
-//                "Accepted invitation as " + invitation.getRole()
-//        );
+        auditLogClient.createAuditLog(user.getId(), invitation.getCompany().getId(),
+                "ACCEPT", "INVITATION", savedInvitation.getId(),
+                "Accepted invitation as " + invitation.getRole()
+        );
 
         return savedInvitation;
     }
