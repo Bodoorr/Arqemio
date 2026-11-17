@@ -1,5 +1,6 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.client.AuditLogClient;
 import com.ga.company_service.model.Project;
 import com.ga.company_service.model.Task;
 import com.ga.company_service.model.request.TaskRequest;
@@ -27,6 +28,7 @@ public class TaskService {
     private ProjectService projectService;
     private CompanyMembershipRepository companyMembershipRepository;
     private TaskAssignmentRepository taskAssignmentRepository;
+    private AuditLogClient auditLogClient;
     private static final Logger logger = Logger.getLogger(TaskService.class.getName());
 
     public static UserResponse getCurrentLoggedInUser(){
@@ -48,6 +50,7 @@ public class TaskService {
         task.setStatus("TODO");
 
         Task savedTask= taskRepository.save(task);
+        auditLogClient.createAuditLog(currentUser.getId(), project.getCompany().getId(), "CREATE", "TASK", savedTask.getId(), "Created task: " + savedTask.getTitle());
         logger.log(Level.INFO, "Task {0} created in project {1} by user {2}", new Object[]{savedTask.getId(), project.getId(), currentUser.getId()});
 
         return savedTask;
@@ -89,6 +92,7 @@ public class TaskService {
         setTaskFields(task,taskRequest);
 
         Task savedTask= taskRepository.save(task);
+        auditLogClient.createAuditLog(currentUser.getId(), savedTask.getProject().getCompany().getId(), "UPDATE", "TASK", savedTask.getId(), "Updated task: " + savedTask.getTitle());
         logger.log(Level.INFO,"Task {0} updated by user {1}", new Object[]{savedTask.getId(), currentUser.getId()});
         return savedTask;
 
@@ -106,6 +110,7 @@ public class TaskService {
         task.setStatus("ARCHIVED");
 
         Task savedTask= taskRepository.save(task);
+        auditLogClient.createAuditLog(currentUser.getId(), savedTask.getProject().getCompany().getId(), "ARCHIVE", "TASK", savedTask.getId(), "Archived task: " + savedTask.getTitle());
         logger.log(Level.INFO,"Task {0} archived by user {1}", new Object[]{savedTask.getId(), currentUser.getId()});
         return savedTask;
     }
@@ -125,6 +130,7 @@ public class TaskService {
         task.setStatus(status);
         Task savedTask= taskRepository.save(task);
 
+        auditLogClient.createAuditLog(currentUser.getId(), savedTask.getProject().getCompany().getId(), "UPDATE_STATUS", "TASK", savedTask.getId(), "Updated task status to " + status);
         logger.log(Level.INFO,"Task {0} status updated to {1} by user {2}", new Object[]{savedTask.getId(), status, currentUser.getId()});
         return savedTask;
     }
