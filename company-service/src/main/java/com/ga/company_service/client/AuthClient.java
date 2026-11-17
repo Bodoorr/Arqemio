@@ -56,6 +56,14 @@ public class AuthClient {
                 .body(Boolean.class);
     }
 
+    public Boolean existsByEmail(String email) {
+        return restClient.get()
+                .uri("/auth/users/exists?email={email}", email)
+                .header("X-Internal-Api-Key", internalApiKey)
+                .retrieve()
+                .body(Boolean.class);
+    }
+
     public UserResponse registerCustomer(CustomerRegistrationRequest customerRegistrationRequest){
         return restClient.post()
                 .uri("/auth/users/internal/register-customer")

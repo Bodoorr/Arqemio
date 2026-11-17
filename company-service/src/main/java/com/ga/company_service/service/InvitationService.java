@@ -162,9 +162,9 @@ public class InvitationService {
     public UserResponse registerInvitedUser(InvitationRegistrationRequest invitationRegistrationRequest){
         Invitation invitation= validateInvitation(invitationRegistrationRequest.getToken());
 
-//        if (userRepository.existsByEmail(invitation.getEmail())){
-//            throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exist. Please login to accept the invitation.");
-//        }
+        if (authClient.existsByEmail(invitation.getEmail())){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exist. Please login to accept the invitation.");
+        }
 
         RegistrationRequest newUser=new RegistrationRequest();
             newUser.setName(invitationRegistrationRequest.getName());
