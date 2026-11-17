@@ -1,5 +1,6 @@
 package com.ga.notification_service.service;
 
+import com.ga.notification_service.client.CompanyClient;
 import com.ga.notification_service.model.AuditLog;
 import com.ga.notification_service.model.response.UserResponse;
 import com.ga.notification_service.repository.AuditLogRepository;
@@ -17,11 +18,12 @@ import java.util.logging.Logger;
 @AllArgsConstructor
 public class AuditLogService {
     private AuditLogRepository auditLogRepository;
+    private CompanyClient companyClient;
     private static final Logger logger= Logger.getLogger(AuditLogService.class.getName());
 
-//    public static UserResponse getCurrentLoggedInUser(){
-//        return (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-//    }
+    public static UserResponse getCurrentLoggedInUser(){
+        return (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
 
     public AuditLog createAuditLog(Long userId, Long companyId, String action, String entityType, Long entityId, String details){
         AuditLog auditLog=new AuditLog();
@@ -37,30 +39,30 @@ public class AuditLogService {
         return savedAuditLog;
     }
 
-//    public List<AuditLog> getCompanyAuditLogs(Long companyId){
-//        UserResponse currentUser= getCurrentLoggedInUser();
-//
-//        boolean isOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId, "OWNER","ACTIVE");
-//        if (!isOwner){
-//            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Access denied.");
-//        }
-//
-//        return auditLogRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
-//    }
+    public List<AuditLog> getCompanyAuditLogs(Long companyId){
+        UserResponse currentUser= getCurrentLoggedInUser();
 
-//    public List<AuditLog> getPlatformAuditLogs(){
-//        UserResponse currentUser= getCurrentLoggedInUser();
-//        if (!Boolean.TRUE.equals(currentUser.getIsPlatformAdmin())){
-//            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Access denied.");
-//        }
-//        return auditLogRepository.findByActionInOrderByCreatedAtDesc(
-//                List.of(
-//                        "CREATE_COMPANY",
-//                        "REGISTER_OWNER",
-//                        "REGISTER_MANAGER",
-//                        "REGISTER_WORKER",
-//                        "REGISTER_CUSTOMER"
-//                )
-//        );
-//    }
+        boolean isOwner= Boolean.TRUE.equals(companyClient.isCompanyOwner(companyId, currentUser.getId()));
+        if (!isOwner){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Access denied.");
+        }
+
+        return auditLogRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
+    }
+
+    public List<AuditLog> getPlatformAuditLogs(){
+        UserResponse currentUser= getCurrentLoggedInUser();
+        if (!Boolean.TRUE.equals(currentUser.getIsPlatformAdmin())){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Access denied.");
+        }
+        return auditLogRepository.findByActionInOrderByCreatedAtDesc(
+                List.of(
+                        "CREATE_COMPANY",
+                        "REGISTER_OWNER",
+                        "REGISTER_MANAGER",
+                        "REGISTER_WORKER",
+                        "REGISTER_CUSTOMER"
+                )
+        );
+    }
 }
