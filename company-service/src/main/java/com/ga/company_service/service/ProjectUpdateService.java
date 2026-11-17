@@ -1,5 +1,6 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.client.NotificationClient;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Project;
 import com.ga.company_service.model.ProjectUpdate;
@@ -24,7 +25,7 @@ public class ProjectUpdateService {
     private ProjectUpdateRepository projectUpdateRepository;
     private ProjectRepository projectRepository;
     private CompanyMembershipRepository companyMembershipRepository;
-//    private NotificationService notificationService;
+    private NotificationClient notificationClient;
 //    private AuditLogService auditLogService;
     private static final Logger logger= Logger.getLogger(ProjectUpdateService.class.getName());
 
@@ -58,9 +59,12 @@ public class ProjectUpdateService {
         ProjectUpdate savedProjectUpdate = projectUpdateRepository.save(projectUpdate);
 //        auditLogService.createAuditLog(currentUser,project.getCompany(),"CREATE","PROJECT_UPDATE",savedProjectUpdate.getId(),"Submitted project update: "+savedProjectUpdate.getTitle());
         logger.log(Level.INFO,"Project update {0} created for project {1} by user {2}", new Object[]{savedProjectUpdate.getId(), project.getId(), currentUser.getId()});
-//        for (CompanyMembership manager: project.getManagers()){
-//            notificationService.sendNotification(manager.getUser().getId(), "New project update submitted for "+ project.getName());
-//        }
+        for (CompanyMembership manager: project.getManagers()){
+            if (manager.getStatus().equals("ACTIVE")){
+                notificationClient.sendNotification(manager.getUserId(), "New project update submitted for "+ project.getName());
+
+            }
+        }
         return savedProjectUpdate;
     }
 
@@ -112,7 +116,7 @@ public class ProjectUpdateService {
 
         ProjectUpdate reviewedUpdate= projectUpdateRepository.save(projectUpdate);
 //        auditLogService.createAuditLog(currentUser, project.getCompany(),status.equals("APPROVED")? "APPROVE" : "REJECT", "PROJECT_UPDATE", reviewedUpdate.getId(),"Reviewed project update: "+reviewedUpdate.getTitle()+" - "+status);
-//        notificationService.sendNotification(reviewedUpdate.getUpdatedBy().getUserId(), "Your project update "+reviewedUpdate.getTitle()+" has been "+status.toLowerCase());
+        notificationClient.sendNotification(reviewedUpdate.getUpdatedBy().getUserId(), "Your project update "+reviewedUpdate.getTitle()+" has been "+status.toLowerCase());
         logger.log(Level.INFO, "Project update {0} reviewed with status {1} by user {2}", new Object[]{updateId, status,currentUser.getId()});
         return reviewedUpdate;
     }
