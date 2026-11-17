@@ -1,5 +1,6 @@
 package com.ga.company_service.service;
 
+import com.ga.company_service.client.AuditLogClient;
 import com.ga.company_service.client.NotificationClient;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Task;
@@ -31,6 +32,7 @@ public class TaskAssignmentService {
     private ProjectRepository projectRepository;
     private static final Logger logger= Logger.getLogger(TaskAssignmentService.class.getName());
     private NotificationClient notificationClient;
+    private AuditLogClient auditLogClient;
     private static final ExecutorService executorService= Executors.newFixedThreadPool(3);
 
     public static UserResponse getCurrentLoggedInUser() {
@@ -89,6 +91,7 @@ public class TaskAssignmentService {
         taskAssignment.setDueAt(dueAt);
 
         TaskAssignment savedAssignment= taskAssignmentRepository.save(taskAssignment);
+        auditLogClient.createAuditLog(currentUser.getId(), task.getProject().getCompany().getId(), "ASSIGN_WORKER", "TASK", task.getId(), "Assigned worker membership " + worker.getId() + " to task: " + task.getTitle());
         notifyWorker(worker.getUserId(), savedAssignment.getTask().getId());
         logger.log(Level.INFO,"Worker membership {0} assigned to task {1} by user {2}", new Object[]{workerMembershipId, taskId, currentUser.getId()});
         return savedAssignment;
@@ -108,6 +111,7 @@ public class TaskAssignmentService {
                                 "This worker is not assigned to this task."));
 
         taskAssignmentRepository.delete(taskAssignment);
+        auditLogClient.createAuditLog(currentUser.getId(), task.getProject().getCompany().getId(), "REMOVE_WORKER", "TASK", task.getId(), "Removed worker membership " + workerMembershipId + " from task: " + task.getTitle());
         logger.log(Level.INFO,"Worker membership {0} removed from task {1} by user {2}", new Object[]{workerMembershipId, taskId, currentUser.getId()});
         return taskAssignment;
     }
