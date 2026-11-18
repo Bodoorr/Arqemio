@@ -87,4 +87,131 @@ public class RiskService {
         });
         return savedRisk;
     }
+
+    @Transactional
+    public Risk approveRisk(Long riskId, Integer likelihood, Integer impact){
+        UserResponse currentUser= ProjectService.getCurrentLoggedInUser();
+
+        Risk risk= riskRepository.findById(riskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
+        CompanyMembership manager= getRiskReviewManager(risk, currentUser.getId());
+
+        if (!"PENDING_REVIEW".equals(risk.getStatus())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Risk has already been reviewed.");
+        }
+
+        if (likelihood == null || impact== null ||
+                likelihood < 1 || likelihood > 5 ||
+                impact < 1 || impact > 5){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Likelihood and impact must be between 1 and 5.");
+        }
+
+        int score= likelihood * impact;
+        String level;
+
+        if (score <= 6){
+            level= "GREEN";
+        } else if (score <= 14) {
+            level= "YELLOW";
+        } else {
+            level= "RED";
+        }
+
+        risk.setLikelihood(likelihood);
+        risk.setImpact(impact);
+        risk.setRiskScore(score);
+        risk.setLevel(level);
+        risk.setApprovedBy(manager);
+        risk.setStatus("APPROVED");
+
+        Risk savedRisk= riskRepository.save(risk);
+        auditLogClient.createAuditLog(
+                currentUser.getId(),
+                risk.getProject().getCompany().getId(),
+                "APPROVE",
+                "RISK",
+                savedRisk.getId(),
+                "Approved risk: "+ savedRisk.getTitle() + " ("+ level+ ")"
+        );
+        sendRiskReviewNotification(savedRisk, "RISK_APPROVED");
+
+        return savedRisk;
+    }
+
+    @Transactional
+    public Risk rejectRisk(Long riskId){
+        UserResponse currentUser= ProjectService.getCurrentLoggedInUser();
+        Risk risk= riskRepository.findById(riskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
+
+        getRiskReviewManager(risk, currentUser.getId());
+
+        if (!"PENDING_REVIEW".equals(risk.getStatus())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Risk has already been reviewed.");
+        }
+
+        risk.setStatus("REJECTED");
+        Risk savedRisk= riskRepository.save(risk);
+        auditLogClient.createAuditLog(
+                currentUser.getId(),
+                risk.getProject().getCompany().getId(),
+                "REJECT",
+                "RISK",
+                savedRisk.getId(),
+                "Rejected risk: "+ savedRisk.getTitle()
+        );
+        sendRiskReviewNotification(savedRisk, "RISK_REJECTED");
+
+        return savedRisk;
+    }
+
+    private CompanyMembership getRiskReviewManager(Risk risk, Long userId){
+        Project project= risk.getProject();
+        CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(userId, project.getCompany().getId(), "ACTIVE")
+                .orElseThrow(()->new ResponseStatusException(HttpStatus.FORBIDDEN, "Active company membership not found."));
+
+        boolean assignedManager= false;
+
+        for (CompanyMembership manager : project.getManagers()){
+            if (manager.getId().equals(membership.getId())
+                    && "ACTIVE".equals(manager.getStatus()) &&
+                    "MANAGER".equals(manager.getRole())){
+                assignedManager= true;
+                break;
+            }
+        }
+        if (!assignedManager){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only assigned managers can review risks.");
+        }
+        return membership;
+    }
+
+    private void sendRiskReviewNotification(Risk risk, String action){
+        Long reporterId= risk.getReportedBy().getUserId();
+        String message;
+
+        if ("RISK_APPROVED".equals(action)){
+            message= "Your risk report '"+ risk.getTitle()+"' has been approved. Risk level: "+risk.getLevel();
+        } else {
+            message= "Your risk report '"+risk.getTitle()+"' has been rejected.";
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                @Override
+                    public void afterCommit(){
+                    ArqemioEvent event=new ArqemioEvent(
+                            UUID.randomUUID().toString(),
+                            reporterId,
+                            risk.getProject().getCompany().getId(),
+                            action,
+                            "RISK",
+                            risk.getId(),
+                            message,
+                            LocalDateTime.now()
+                    );
+                    arqemioEventProducer.sendEvent(event);
+                }
+                }
+        );
+
+    }
 }
