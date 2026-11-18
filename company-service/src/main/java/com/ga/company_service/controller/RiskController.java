@@ -6,8 +6,11 @@ import com.ga.company_service.model.request.RiskRequest;
 import com.ga.company_service.service.RiskService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,6 +20,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RiskController {
     private final RiskService riskService;
+
+    @Value("${internal.api-key}")
+    private String internalApiKey;
 
     @PostMapping
     public ResponseEntity<Risk> reportRisk(@Valid @RequestBody RiskRequest riskRequest){
@@ -51,6 +57,14 @@ public class RiskController {
     @PutMapping("/{riskId}/acknowledge")
     public ResponseEntity<RiskAcknowledgement> acknowledgeRisk(@PathVariable Long riskId, @RequestParam String status){
         return ResponseEntity.ok(riskService.acknowledgeRisk(riskId, status));
+    }
+
+    @PutMapping("/internal/acknowledge")
+    public ResponseEntity<RiskAcknowledgement> acknowledgeRiskInternal(@RequestHeader("X-Internal-Api-Key") String apiKey, @RequestParam Long riskId, @RequestParam Long workerUserId, @RequestParam String status) {
+        if (internalApiKey == null || internalApiKey.isBlank() || !internalApiKey.equals(apiKey)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid API key");
+        }
+        return ResponseEntity.ok(riskService.acknowledgeRiskInternal(riskId, workerUserId, status));
     }
 
     @GetMapping("/{riskId}/acknowledgements")

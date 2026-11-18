@@ -325,42 +325,53 @@ public class RiskService {
     }
 
     @Transactional
-    public RiskAcknowledgement acknowledgeRisk(Long riskId, String status){
-        UserResponse currentUser= ProjectService.getCurrentLoggedInUser();
+    public RiskAcknowledgement acknowledgeRisk(Long riskId, String status) {
+        UserResponse currentUser = ProjectService.getCurrentLoggedInUser();
+        return acknowledgeRiskInternal(riskId, currentUser.getId(), status);
+    }
 
-        if (!"SAFE".equals(status) && !"NEED_ASSISTANCE".equals(status)){
+    @Transactional
+    public RiskAcknowledgement acknowledgeRiskInternal(Long riskId, Long workerUserId, String status) {
+        if (workerUserId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Worker ID is required.");
+        }
+
+        if (!"SAFE".equals(status) && !"NEED_ASSISTANCE".equals(status)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status must be SAFE or NEED_ASSISTANCE.");
         }
 
-        Risk risk= riskRepository.findById(riskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
-        CompanyMembership membership= requireProjectAccess(risk.getProject(), currentUser.getId());
+        Risk risk = riskRepository.findById(riskId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
+        CompanyMembership membership = requireProjectAccess(risk.getProject(), workerUserId);
 
-        if (!"WORKER".equals(membership.getRole())){
+        if (!"WORKER".equals(membership.getRole())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only assigned workers can confirm their safety.");
         }
 
-        if (!Boolean.TRUE.equals(risk.getEvacuationRequired())){
+        if (!Boolean.TRUE.equals(risk.getEvacuationRequired())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Evacuation is not required for this risk.");
         }
 
-        if (!"APPROVED".equals(risk.getStatus()) && !"ASSIGNED".equals(risk.getStatus())){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"The risk is not awaiting safety confirmations");
+        if (!"APPROVED".equals(risk.getStatus()) && !"ASSIGNED".equals(risk.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The risk is not awaiting safety confirmations.");
         }
 
-        RiskAcknowledgement acknowledgement= riskAcknowledgementRepository.findByRiskIdAndWorkerId(riskId, membership.getId())
-                .orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Safety acknowledgment not found."));
+        RiskAcknowledgement acknowledgement = riskAcknowledgementRepository.findByRiskIdAndWorkerId(riskId, membership.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Safety acknowledgment not found."));
 
         boolean needsAssistance = "NEED_ASSISTANCE".equals(status) && !"NEED_ASSISTANCE".equals(acknowledgement.getStatus());
         acknowledgement.setStatus(status);
         acknowledgement.setRespondedAt(LocalDateTime.now());
-        RiskAcknowledgement savedAcknowledgement= riskAcknowledgementRepository.save(acknowledgement);
 
-        if (needsAssistance){
-            Project project= risk.getProject();
-            List<Long> managerIds= new ArrayList<>();
+        RiskAcknowledgement savedAcknowledgement = riskAcknowledgementRepository.save(acknowledgement);
 
-            for (CompanyMembership manager: project.getManagers()){
-                if ("ACTIVE".equals(manager.getStatus()) && "MANAGER".equals(manager.getRole()) && !managerIds.contains(manager.getUserId())){
+        if (needsAssistance) {
+            Project project = risk.getProject();
+            List<Long> managerIds = new ArrayList<>();
+
+            for (CompanyMembership manager : project.getManagers()) {
+                if ("ACTIVE".equals(manager.getStatus())
+                        && "MANAGER".equals(manager.getRole())
+                        && !managerIds.contains(manager.getUserId())) {
                     managerIds.add(manager.getUserId());
                 }
             }
@@ -380,6 +391,7 @@ public class RiskService {
                                         "URGENT: A worker needs assistance for risk: " + risk.getTitle(),
                                         LocalDateTime.now()
                                 );
+
                                 arqemioEventProducer.sendEvent(event);
                             }
                         }
