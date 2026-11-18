@@ -1,6 +1,7 @@
 package com.ga.company_service.controller;
 
 import com.ga.company_service.model.Risk;
+import com.ga.company_service.model.RiskAcknowledgement;
 import com.ga.company_service.model.request.RiskRequest;
 import com.ga.company_service.service.RiskService;
 import jakarta.validation.Valid;
@@ -45,5 +46,10 @@ public class RiskController {
     @GetMapping("/project/{projectId}")
     public ResponseEntity<List<Risk>> getRisksByProject(@PathVariable Long projectId) {
         return ResponseEntity.ok(riskService.getRisksByProject(projectId));
+    }
+
+    @PutMapping("/{riskId}/acknowledge")
+    public ResponseEntity<RiskAcknowledgement> acknowledgeRisk(@PathVariable Long riskId, @RequestParam String status){
+        return ResponseEntity.ok(riskService.acknowledgeRisk(riskId, status));
     }
 }
