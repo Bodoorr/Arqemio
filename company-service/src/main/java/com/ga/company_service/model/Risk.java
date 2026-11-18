@@ -50,6 +50,9 @@ public class Risk {
     @Column
     private String level;
 
+    @Column(nullable = false)
+    private Boolean evacuationRequired= false;
+
     @ManyToOne
     @JoinColumn(name = "reportedBy", nullable = false)
     private CompanyMembership reportedBy;
