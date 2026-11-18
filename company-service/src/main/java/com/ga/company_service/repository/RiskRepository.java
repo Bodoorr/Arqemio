@@ -10,7 +10,6 @@ import java.util.Optional;
 
 public interface RiskRepository extends JpaRepository<Risk, Long> {
     List<Risk> findByProjectId(Long projectId);
-    List<Risk> findByProjectIdAndStatus(Long projectId, String status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Risk> findWithLockById(Long id);

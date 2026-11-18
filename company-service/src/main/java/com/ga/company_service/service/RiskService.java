@@ -44,9 +44,7 @@ public class RiskService {
         }
 
         Project project= projectService.getProjectById(riskRequest.getProjectId());
-        CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(
-                currentUser.getId(), project.getCompany().getId(), "ACTIVE")
-                .orElseThrow(()-> new ResponseStatusException(HttpStatus.FORBIDDEN, "Active company membership not found."));
+        CompanyMembership membership = requireProjectAccess(project, currentUser.getId());
 
         Risk risk= new Risk();
         risk.setProject(project);
@@ -163,10 +161,128 @@ public class RiskService {
         return savedRisk;
     }
 
+    @Transactional
+    public Risk assignRisk(Long riskId, Long userId, String action){
+        UserResponse currentUser= ProjectService.getCurrentLoggedInUser();
+        Risk risk= riskRepository.findWithLockById(riskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
+        Project project= risk.getProject();
+        getRiskReviewManager(risk, currentUser.getId());
+
+        if (!"APPROVED".equals(risk.getStatus())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only approved risks can be assigned.");
+        }
+
+        if (userId==null || action==null || action.isBlank()){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Assignee and action are required.");
+        }
+
+        CompanyMembership assignee= requireProjectAccess(project, userId);
+        risk.setAssignedTo(assignee);
+        risk.setAction(action);
+        risk.setStatus("ASSIGNED");
+        Risk savedRisk= riskRepository.save(risk);
+
+        auditLogClient.createAuditLog(
+                currentUser.getId(),
+                project.getCompany().getId(),
+                "ASSIGN",
+                "RISK",
+                savedRisk.getId(),
+                "Assigned risk: " + savedRisk.getTitle()
+        );
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        ArqemioEvent event = new ArqemioEvent(
+                                UUID.randomUUID().toString(),
+                                userId,
+                                project.getCompany().getId(),
+                                "RISK_ASSIGNED",
+                                "RISK",
+                                savedRisk.getId(),
+                                "You have been assigned to resolve risk: "
+                                        + savedRisk.getTitle(),
+                                LocalDateTime.now()
+                        );
+                        arqemioEventProducer.sendEvent(event);
+                    }
+                });
+        return savedRisk;
+    }
+
+    @Transactional
+    public Risk resolveRisk(Long riskId, LocalDateTime resolvedAt){
+        UserResponse currentUser= ProjectService.getCurrentLoggedInUser();
+        Risk risk= riskRepository.findWithLockById(riskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
+        Project project= risk.getProject();
+
+        if (!"ASSIGNED".equals(risk.getStatus())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only assigned risks can be resolved.");
+        }
+
+        CompanyMembership membership = getActiveMembership(project, currentUser.getId());
+
+        if (risk.getAssignedTo() == null || !risk.getAssignedTo().getId().equals(membership.getId())){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the assigned user can resolve this risk.");
+        }
+
+        if (resolvedAt == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resolution date and time are required.");
+        }
+
+        if (resolvedAt.isAfter(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resolution date cannot be in the future.");
+        }
+
+        if (resolvedAt.isBefore(risk.getCreatedAt())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resolution date cannot be before the risk was reported.");
+        }
+
+        risk.setStatus("RESOLVED");
+        risk.setResolvedAt(resolvedAt);
+
+        Risk savedRisk= riskRepository.save(risk);
+        auditLogClient.createAuditLog(
+                currentUser.getId(),
+                project.getCompany().getId(),
+                "RESOLVE",
+                "RISK",
+                savedRisk.getId(),
+                "Resolved risk: " + savedRisk.getTitle()
+        );
+
+        Long managerId= risk.getApprovedBy().getUserId();
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        ArqemioEvent event = new ArqemioEvent(
+                                UUID.randomUUID().toString(),
+                                managerId,
+                                project.getCompany().getId(),
+                                "RISK_RESOLVED",
+                                "RISK",
+                                savedRisk.getId(),
+                                "Risk resolved: " + savedRisk.getTitle(),
+                                LocalDateTime.now()
+                        );
+                        arqemioEventProducer.sendEvent(event);
+                    }
+                });
+        return savedRisk;
+    }
+
+    public List<Risk> getRisksByProject(Long projectId){
+        UserResponse currentUser= ProjectService.getCurrentLoggedInUser();
+        Project project= projectService.getProjectById(projectId);
+        requireProjectAccess(project, currentUser.getId());
+        return riskRepository.findByProjectId(projectId);
+    }
+
     private CompanyMembership getRiskReviewManager(Risk risk, Long userId){
         Project project= risk.getProject();
-        CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(userId, project.getCompany().getId(), "ACTIVE")
-                .orElseThrow(()->new ResponseStatusException(HttpStatus.FORBIDDEN, "Active company membership not found."));
+        CompanyMembership membership = getActiveMembership(project, userId);
 
         boolean assignedManager= false;
 
@@ -175,11 +291,40 @@ public class RiskService {
                     && "ACTIVE".equals(manager.getStatus()) &&
                     "MANAGER".equals(manager.getRole())){
                 assignedManager= true;
-                break;
             }
         }
         if (!assignedManager){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only assigned managers can review risks.");
+        }
+        return membership;
+    }
+
+    private CompanyMembership getActiveMembership(Project project, Long userId) {
+        return companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(userId, project.getCompany().getId(), "ACTIVE")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Active company membership not found."));
+    }
+
+    private boolean isAssignedToProject(Project project, CompanyMembership membership) {
+        for (CompanyMembership manager : project.getManagers()) {
+            if (manager.getId().equals(membership.getId())) {
+                return true;
+            }
+        }
+
+        for (CompanyMembership worker : project.getWorkers()) {
+            if (worker.getId().equals(membership.getId())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private CompanyMembership requireProjectAccess(Project project, Long userId) {
+        CompanyMembership membership = getActiveMembership(project, userId);
+
+        if (!isAssignedToProject(project, membership)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not assigned to this project.");
         }
         return membership;
     }
@@ -212,6 +357,5 @@ public class RiskService {
                 }
                 }
         );
-
     }
 }
