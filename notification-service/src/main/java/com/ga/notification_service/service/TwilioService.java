@@ -1,17 +1,20 @@
 package com.ga.notification_service.service;
 
+import com.ga.notification_service.client.CompanyClient;
 import com.twilio.Twilio;
 import com.twilio.rest.api.v2010.account.Call;
 import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.type.PhoneNumber;
 import com.twilio.type.Twiml;
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
 @Service
 public class TwilioService {
+    private CompanyClient companyClient;
     @Value("${twilio.account-sid}")
     private String accountSid;
 
@@ -56,8 +59,7 @@ public class TwilioService {
         ).create();
     }
 
-    public void makeWorkerCall(String mobileNumber, String riskTitle,
-                               String riskLocation, String callbackUrl) {
+    public void makeWorkerCall(String mobileNumber, String riskTitle, String riskLocation, String callbackUrl, String callToken) {
         String safeRiskTitle = HtmlUtils.htmlEscape(riskTitle);
         String safeRiskLocation = HtmlUtils.htmlEscape(riskLocation);
         String safeCallbackUrl = HtmlUtils.htmlEscape(callbackUrl);
@@ -88,11 +90,13 @@ public class TwilioService {
                 + "No response received. Please update your status using the SMS link."
                 + "</Say>"
                 + "</Response>";
-        Call.creator(
+        Call call = Call.creator(
                 new PhoneNumber(mobileNumber),
                 new PhoneNumber(twilioPhoneNumber),
                 new Twiml(twiml)
         ).create();
+
+        companyClient.registerRiskCall(callToken, call.getSid());
     }
 
 }
