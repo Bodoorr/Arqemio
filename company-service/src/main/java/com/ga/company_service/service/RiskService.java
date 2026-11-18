@@ -403,7 +403,7 @@ public class RiskService {
         return savedAcknowledgement;
     }
 
-    public RiskAcknowledgement acknowledgeRiskByCallToken(String callToken, String status) {
+    public RiskAcknowledgement acknowledgeRiskByCallToken(String callToken, String callSid, String status) {
         if (callToken == null || callToken.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Call token is required.");
         }
@@ -415,6 +415,10 @@ public class RiskService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Call token has expired.");
         }
 
+        if (callSid == null || !callSid.equals(acknowledgement.getTwilioCallSid())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Twilio call.");
+        }
+
         if (!"PENDING".equals(acknowledgement.getStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Worker has already responded.");
         }
@@ -422,8 +426,30 @@ public class RiskService {
         RiskAcknowledgement savedAcknowledgement = acknowledgeRiskInternal(acknowledgement.getRisk().getId(), acknowledgement.getWorker().getUserId(), status);
         savedAcknowledgement.setCallToken(null);
         savedAcknowledgement.setCallTokenExpiresAt(null);
-
+        savedAcknowledgement.setTwilioCallSid(null);
         return riskAcknowledgementRepository.save(savedAcknowledgement);
+    }
+
+    public void registerRiskCall(String callToken, String callSid) {
+        if (callToken == null || callToken.isBlank() || callSid == null || callSid.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Call token and Call SID are required.");
+        }
+
+        RiskAcknowledgement acknowledgement = riskAcknowledgementRepository.findByCallToken(callToken).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Call token not found."));
+        if (acknowledgement.getCallTokenExpiresAt() == null || !acknowledgement.getCallTokenExpiresAt().isAfter(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Call token has expired.");
+        }
+
+        if (!"PENDING".equals(acknowledgement.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Worker has already responded.");
+        }
+
+        if (acknowledgement.getTwilioCallSid() != null && !acknowledgement.getTwilioCallSid().equals(callSid)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A different call is already registered.");
+        }
+
+        acknowledgement.setTwilioCallSid(callSid);
+        riskAcknowledgementRepository.save(acknowledgement);
     }
 
     public List<RiskAcknowledgement> getRiskAcknowledgements(Long riskId){
