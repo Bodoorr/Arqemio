@@ -38,18 +38,21 @@ public class ArqemioEventConsumer {
             sentNotifications.put(event.eventId(), true);
         }
 
-        if ("RISK_REPORTED".equals(event.action())){
+        if ("RISK_REPORTED".equals(event.action()) || "CRITICAL_RISK_ALERT".equals(event.action()) || "WORKER_NEEDS_ASSISTANCE".equals(event.action())){
             UserProfileResponse user= authClient.getUserById(event.userId());
 
             if (user==null || user.getEmail()== null || user.getEmail().isBlank()){
                 throw new IllegalStateException("Email not found for user "+ event.userId());
             }
 
-            authClient.sendEmail(
-                    user.getEmail(),
-                    "Arqemio - New Risk Reported",
-                    event.message()
-            );
+            String subject = "Arqemio - New Risk Reported";
+            if ("CRITICAL_RISK_ALERT".equals(event.action())) {
+                subject = "Arqemio - CRITICAL RISK ALERT";
+            } else if ("WORKER_NEEDS_ASSISTANCE".equals(event.action())) {
+                subject = "Arqemio - URGENT Worker Assistance Required";
+            }
+
+            authClient.sendEmail(user.getEmail(), subject, event.message());
         }
         processedEvents.put(event.eventId(), true);
     }
