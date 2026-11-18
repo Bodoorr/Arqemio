@@ -76,9 +76,12 @@ public class ArqemioEventConsumer {
                             + "\nReview and approve or reject:\n" + riskLink
                             + "\nيرجى مراجعة بلاغ الخطر عبر الرابط.";
                 } else if ("CRITICAL_RISK_ALERT".equals(event.action())) {
-                    smsMessage = "ARQEMIO | CRITICAL SAFETY ALERT\n" + event.message()
-                            + "\nUpdate your safety status:\n" + riskLink + "/acknowledge"
-                            + "\nيرجى تحديث حالة سلامتك عبر الرابط.";
+                    smsMessage = "ARQEMIO | CRITICAL SAFETY ALERT\n" + event.message();
+                    if (Boolean.TRUE.equals(event.evacuationRequired())) {
+                        smsMessage += "\nUpdate your safety status:\n" + riskLink + "/acknowledge" + "\nيرجى تحديث حالة سلامتك عبر الرابط.";
+                    } else {
+                        smsMessage += "\nView the risk:\n" + riskLink + "\nيرجى الاطلاع على بلاغ الخطر عبر الرابط.";
+                    }
                 } else if ("WORKER_NEEDS_ASSISTANCE".equals(event.action())) {
                     smsMessage = "ARQEMIO | URGENT ASSISTANCE\n" + event.message()
                             + "\nView the risk:\n" + riskLink
@@ -108,7 +111,7 @@ public class ArqemioEventConsumer {
                         riskLocation = details[1].replace("Location:", "").trim();
                     }
 
-                    boolean evacuationRequired = event.message().contains("Evacuation required: true");
+                    boolean evacuationRequired = Boolean.TRUE.equals(event.evacuationRequired());
                     if (evacuationRequired) {
                         String callToken = companyClient.getRiskCallToken(event.entityId(), event.userId());
                         String callbackUrl = notificationPublicUrl + "/notifications/twilio/response?callToken=" + callToken;
