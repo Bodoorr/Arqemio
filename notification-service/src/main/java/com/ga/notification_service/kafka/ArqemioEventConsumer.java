@@ -4,6 +4,7 @@ import com.ga.notification_service.client.AuthClient;
 import com.ga.notification_service.event.ArqemioEvent;
 import com.ga.notification_service.model.response.UserProfileResponse;
 import com.ga.notification_service.service.NotificationService;
+import com.ga.notification_service.service.TwilioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ public class ArqemioEventConsumer {
 
     private final NotificationService notificationService;
     private final AuthClient authClient;
+    private final TwilioService twilioService;
     private final Map<String, Boolean> processedEvents = new ConcurrentHashMap<>();
     private final Map<String, Boolean> sentNotifications = new ConcurrentHashMap<>();
 
@@ -38,11 +40,11 @@ public class ArqemioEventConsumer {
             sentNotifications.put(event.eventId(), true);
         }
 
-        if ("RISK_REPORTED".equals(event.action()) || "CRITICAL_RISK_ALERT".equals(event.action()) || "WORKER_NEEDS_ASSISTANCE".equals(event.action())){
-            UserProfileResponse user= authClient.getUserById(event.userId());
+        if ("RISK_REPORTED".equals(event.action()) || "CRITICAL_RISK_ALERT".equals(event.action()) || "WORKER_NEEDS_ASSISTANCE".equals(event.action())) {
+            UserProfileResponse user = authClient.getUserById(event.userId());
 
-            if (user==null || user.getEmail()== null || user.getEmail().isBlank()){
-                throw new IllegalStateException("Email not found for user "+ event.userId());
+            if (user == null) {
+                throw new IllegalStateException("User not found: " + event.userId());
             }
 
             String subject = "Arqemio - New Risk Reported";
@@ -52,7 +54,16 @@ public class ArqemioEventConsumer {
                 subject = "Arqemio - URGENT Worker Assistance Required";
             }
 
-            authClient.sendEmail(user.getEmail(), subject, event.message());
+            if (user.getEmail() != null && !user.getEmail().isBlank()) {
+                authClient.sendEmail(user.getEmail(), subject, event.message());
+            }
+
+            if ("CRITICAL_RISK_ALERT".equals(event.action()) || "WORKER_NEEDS_ASSISTANCE".equals(event.action())) {
+                if (user.getMobileNumber() != null && !user.getMobileNumber().isBlank()) {
+                    twilioService.sendSms(user.getMobileNumber(), event.message());
+                    twilioService.makeCall(user.getMobileNumber(), event.message());
+                }
+            }
         }
         processedEvents.put(event.eventId(), true);
     }
