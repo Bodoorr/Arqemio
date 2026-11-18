@@ -87,6 +87,19 @@ public class ArqemioEventConsumer {
                 if ("RISK_REPORTED".equals(event.action()) || "WORKER_NEEDS_ASSISTANCE".equals(event.action())) {
                     twilioService.makeManagerCall(user.getMobileNumber());
                 }
+
+                if ("CRITICAL_RISK_ALERT".equals(event.action())) {
+                    String riskTitle = event.message();
+                    String riskLocation = "Not specified";
+
+                    String[] details = event.message().split("\\|");
+                    if (details.length > 0) {
+                        riskTitle = details[0].replace("CRITICAL RISK:", "").trim();
+                    }
+                    if (details.length > 1) {
+                        riskLocation = details[1].replace("Location:", "").trim();
+                    }
+                }
             }
         }
         processedEvents.put(event.eventId(), true);
