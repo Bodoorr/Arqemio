@@ -18,6 +18,7 @@ public class ArqemioEventConsumer {
     private final NotificationService notificationService;
     private final AuthClient authClient;
     private final Map<String, Boolean> processedEvents = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> sentNotifications = new ConcurrentHashMap<>();
 
     @KafkaListener(topics = "arqemio-events", groupId = "arqemio-notification-group")
     public synchronized void consume(ArqemioEvent event) {
@@ -32,7 +33,10 @@ public class ArqemioEventConsumer {
             return;
         }
 
-        notificationService.sendNotification(event.userId(), event.message());
+        if (!sentNotifications.containsKey(event.eventId())) {
+            notificationService.sendNotification(event.userId(), event.message());
+            sentNotifications.put(event.eventId(), true);
+        }
 
         if ("RISK_REPORTED".equals(event.action())){
             UserProfileResponse user= authClient.getUserById(event.userId());
