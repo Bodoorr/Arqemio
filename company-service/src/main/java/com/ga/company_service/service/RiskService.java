@@ -291,6 +291,7 @@ public class RiskService {
         return savedRisk;
     }
 
+    @Transactional
     public RiskAcknowledgement acknowledgeRisk(Long riskId, String status){
         UserResponse currentUser= ProjectService.getCurrentLoggedInUser();
 
@@ -316,9 +317,42 @@ public class RiskService {
         RiskAcknowledgement acknowledgement= riskAcknowledgementRepository.findByRiskIdAndWorkerId(riskId, membership.getId())
                 .orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Safety acknowledgment not found."));
 
+        boolean needsAssistance = "NEED_ASSISTANCE".equals(status) && !"NEED_ASSISTANCE".equals(acknowledgement.getStatus());
         acknowledgement.setStatus(status);
         acknowledgement.setRespondedAt(LocalDateTime.now());
-        return riskAcknowledgementRepository.save(acknowledgement);
+        RiskAcknowledgement savedAcknowledgement= riskAcknowledgementRepository.save(acknowledgement);
+
+        if (needsAssistance){
+            Project project= risk.getProject();
+            List<Long> managerIds= new ArrayList<>();
+
+            for (CompanyMembership manager: project.getManagers()){
+                if ("ACTIVE".equals(manager.getStatus()) && "MANAGER".equals(manager.getRole()) && !managerIds.contains(manager.getUserId())){
+                    managerIds.add(manager.getUserId());
+                }
+            }
+
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            for (Long managerId : managerIds) {
+                                ArqemioEvent event = new ArqemioEvent(
+                                        UUID.randomUUID().toString(),
+                                        managerId,
+                                        project.getCompany().getId(),
+                                        "WORKER_NEEDS_ASSISTANCE",
+                                        "RISK",
+                                        risk.getId(),
+                                        "URGENT: A worker needs assistance for risk: " + risk.getTitle(),
+                                        LocalDateTime.now()
+                                );
+                                arqemioEventProducer.sendEvent(event);
+                            }
+                        }
+                    });
+        }
+        return savedAcknowledgement;
     }
 
     public List<RiskAcknowledgement> getRiskAcknowledgements(Long riskId){
