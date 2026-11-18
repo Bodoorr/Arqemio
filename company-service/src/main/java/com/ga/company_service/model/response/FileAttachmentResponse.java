@@ -17,4 +17,7 @@ public class FileAttachmentResponse {
     private Long uploadedByMembershipId;
     private String uploadedByName;
     private String status;
+    private String attachmentType;
+    private Long sourceAttachmentId;
+    private String conversionStatus;
 }

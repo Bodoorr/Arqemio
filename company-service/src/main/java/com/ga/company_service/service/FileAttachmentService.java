@@ -60,8 +60,44 @@ public class FileAttachmentService {
                         "overwrite", false
                 )
         );
-
         return uploadResult;
+    }
+
+    public Map uploadConstructionFile(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please select a file.");
+        }
+
+        String fileName = file.getOriginalFilename();
+        if (fileName == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file name.");
+        }
+
+        String name = fileName.toLowerCase();
+        boolean isImage = name.endsWith(".png")
+                || name.endsWith(".jpg")
+                || name.endsWith(".jpeg");
+
+        boolean isPdf = name.endsWith(".pdf");
+        boolean isModel = name.endsWith(".glb")
+                || name.endsWith(".gltf");
+
+        if (!isImage && !isPdf && !isModel) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Only PNG, JPG, PDF, GLB and GLTF files are allowed.");
+        }
+
+        String resourceType = isImage ? "image" : "raw";
+        return cloudinary.uploader().upload(
+                file.getBytes(),
+                ObjectUtils.asMap(
+                        "folder", "arqemio/construction",
+                        "resource_type", resourceType,
+                        "use_filename", true,
+                        "unique_filename", true,
+                        "overwrite", false
+                )
+        );
     }
 
     public FileAttachment createFileAttachment(MultipartFile file, Long projectId, Long projectUpdateId, Long expenseId, Long riskId){
@@ -139,6 +175,50 @@ public class FileAttachmentService {
             return savedAttachment;
         } catch (IOException e){
             throw new RuntimeException("Failed to upload image.");
+        }
+    }
+
+    public FileAttachment createConstructionDrawing(MultipartFile file, Long projectId) {
+        UserResponse currentUser = getCurrentLoggedInUser();
+
+        Project project = projectRepository.findById(projectId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
+
+        CompanyMembership membership = companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(), project.getCompany().getId(), "ACTIVE")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not an active member of this company."));
+
+        boolean isOwner = membership.getRole().equals("OWNER");
+        boolean isManager = "MANAGER".equals(membership.getRole()) && projectRepository.existsByIdAndManagersUserIdAndManagersStatus(projectId, currentUser.getId(), "ACTIVE");
+        if (!isOwner && !isManager) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only project owners and managers can upload construction drawings.");
+        }
+
+        String fileName = file.getOriginalFilename();
+        if (fileName == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file name.");
+        }
+
+        String name = fileName.toLowerCase();
+        if (!name.endsWith(".png") && !name.endsWith(".jpg") && !name.endsWith(".jpeg") && !name.endsWith(".pdf")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Construction drawings must be PNG, JPG or PDF.");
+        }
+
+        try {
+            Map uploadResult = uploadConstructionFile(file);
+
+            FileAttachment attachment = new FileAttachment();
+            attachment.setProject(project);
+            attachment.setUploadedBy(membership);
+            attachment.setFileUrl(uploadResult.get("secure_url").toString());
+            attachment.setFileName(fileName);
+            attachment.setFileType(file.getContentType());
+            attachment.setAttachmentType("CONSTRUCTION_DRAWING");
+            attachment.setConversionStatus("PENDING");
+
+            return fileAttachmentRepository.save(attachment);
+        } catch (IOException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to upload construction drawing.");
         }
     }
 

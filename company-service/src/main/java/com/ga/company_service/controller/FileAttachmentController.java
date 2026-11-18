@@ -27,6 +27,12 @@ public class FileAttachmentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(fileAttachment));
     }
 
+    @PostMapping("/construction-drawing")
+    public ResponseEntity<FileAttachmentResponse> createConstructionDrawing(@RequestParam("file") MultipartFile file, @RequestParam Long projectId) {
+        FileAttachment fileAttachment = fileAttachmentService.createConstructionDrawing(file, projectId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(fileAttachment));
+    }
+
     @GetMapping("/{attachmentId}")
     public ResponseEntity<FileAttachmentResponse> getFileAttachment(@PathVariable Long attachmentId){
         FileAttachment fileAttachment= fileAttachmentService.getFileAttachmentById(attachmentId);
@@ -98,7 +104,10 @@ public class FileAttachmentController {
                 fileAttachment.getFileType(),
                 fileAttachment.getUploadedBy().getId(),
                 uploader.getName(),
-                fileAttachment.getStatus()
+                fileAttachment.getStatus(),
+                fileAttachment.getAttachmentType(),
+                fileAttachment.getSourceAttachmentId(),
+                fileAttachment.getConversionStatus()
         );
     }
 

@@ -36,6 +36,15 @@ public class FileAttachment {
     private String fileType;
 
     @Column
+    private String attachmentType = "GENERAL";
+
+    @Column
+    private Long sourceAttachmentId;
+
+    @Column
+    private String conversionStatus;
+
+    @Column
     private String status = "ACTIVE";
 
     @ManyToOne
