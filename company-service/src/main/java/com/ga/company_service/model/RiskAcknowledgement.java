@@ -32,4 +32,13 @@ public class RiskAcknowledgement {
 
     @Column
     private LocalDateTime respondedAt;
+
+    @Column(unique = true)
+    private String callToken;
+
+    @Column
+    private String twilioCallSid;
+
+    @Column
+    private LocalDateTime callTokenExpiresAt;
 }

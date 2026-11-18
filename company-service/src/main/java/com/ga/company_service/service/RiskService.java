@@ -140,6 +140,9 @@ public class RiskService {
                     acknowledgement.setWorker(worker);
                     acknowledgement.setStatus("PENDING");
 
+                    acknowledgement.setCallToken(UUID.randomUUID().toString());
+                    acknowledgement.setCallTokenExpiresAt(LocalDateTime.now().plusHours(1));
+
                     riskAcknowledgementRepository.save(acknowledgement);
                 }
             }
@@ -400,6 +403,29 @@ public class RiskService {
         return savedAcknowledgement;
     }
 
+    public RiskAcknowledgement acknowledgeRiskByCallToken(String callToken, String status) {
+        if (callToken == null || callToken.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Call token is required.");
+        }
+
+        RiskAcknowledgement acknowledgement = riskAcknowledgementRepository.findByCallToken(callToken)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Call token not found."));
+
+        if (acknowledgement.getCallTokenExpiresAt() == null || !acknowledgement.getCallTokenExpiresAt().isAfter(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Call token has expired.");
+        }
+
+        if (!"PENDING".equals(acknowledgement.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Worker has already responded.");
+        }
+
+        RiskAcknowledgement savedAcknowledgement = acknowledgeRiskInternal(acknowledgement.getRisk().getId(), acknowledgement.getWorker().getUserId(), status);
+        savedAcknowledgement.setCallToken(null);
+        savedAcknowledgement.setCallTokenExpiresAt(null);
+
+        return riskAcknowledgementRepository.save(savedAcknowledgement);
+    }
+
     public List<RiskAcknowledgement> getRiskAcknowledgements(Long riskId){
         UserResponse currentUser = ProjectService.getCurrentLoggedInUser();
         Risk risk = riskRepository.findById(riskId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
@@ -454,7 +480,6 @@ public class RiskService {
                 return true;
             }
         }
-
         return false;
     }
 
@@ -493,7 +518,6 @@ public class RiskService {
                     );
                     arqemioEventProducer.sendEvent(event);
                 }
-                }
-        );
+                });
     }
 }
