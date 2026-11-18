@@ -87,7 +87,7 @@ public class RiskService {
     }
 
     @Transactional
-    public Risk approveRisk(Long riskId, Integer likelihood, Integer impact){
+    public Risk approveRisk(Long riskId, Integer likelihood, Integer impact, Boolean evacuationRequired){
         UserResponse currentUser= ProjectService.getCurrentLoggedInUser();
 
         Risk risk= riskRepository.findWithLockById(riskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
@@ -118,6 +118,7 @@ public class RiskService {
         risk.setImpact(impact);
         risk.setRiskScore(score);
         risk.setLevel(level);
+        risk.setEvacuationRequired(Boolean.TRUE.equals(evacuationRequired));
         risk.setApprovedBy(manager);
         risk.setStatus("APPROVED");
 
@@ -128,7 +129,7 @@ public class RiskService {
                 "APPROVE",
                 "RISK",
                 savedRisk.getId(),
-                "Approved risk: "+ savedRisk.getTitle() + " ("+ level+ ")"
+                "Approved risk: "+ savedRisk.getTitle() + " ("+ level + ", score: "+score+", evacuation required: "+ savedRisk.getEvacuationRequired()+ ")"
         );
         sendRiskReviewNotification(savedRisk, "RISK_APPROVED");
 
