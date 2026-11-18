@@ -321,6 +321,17 @@ public class RiskService {
         return riskAcknowledgementRepository.save(acknowledgement);
     }
 
+    public List<RiskAcknowledgement> getRiskAcknowledgements(Long riskId){
+        UserResponse currentUser = ProjectService.getCurrentLoggedInUser();
+        Risk risk = riskRepository.findById(riskId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
+        getRiskReviewManager(risk, currentUser.getId());
+
+        if (!Boolean.TRUE.equals(risk.getEvacuationRequired())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Evacuation is not required for this risk.");
+        }
+        return riskAcknowledgementRepository.findByRiskId(riskId);
+    }
+
     public List<Risk> getRisksByProject(Long projectId){
         UserResponse currentUser= ProjectService.getCurrentLoggedInUser();
         Project project= projectService.getProjectById(projectId);
