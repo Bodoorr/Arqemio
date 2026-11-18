@@ -72,6 +72,9 @@ services:
       COMPANY_SERVICE_URL: http://company-service:8082
       FINANCE_SERVICE_URL: http://finance-service:8083
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
     depends_on:
       postgres_db:
         condition: service_healthy
