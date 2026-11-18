@@ -30,4 +30,21 @@ public class CompanyClient {
                 .retrieve()
                 .toBodilessEntity();
     }
+
+    public void registerRiskCall(String callToken, String callSid) {
+        restClient.put()
+                .uri("/company/projects/risks/internal/register-call?callToken={callToken}&callSid={callSid}", callToken, callSid)
+                .header("X-Internal-Api-Key", internalApiKey)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    public void acknowledgeRiskPhoneResponse(String callToken, String callSid, String status) {
+        restClient.put()
+                .uri("/company/projects/risks/internal/phone-response?callToken={callToken}&callSid={callSid}&status={status}", callToken, callSid, status)
+                .header("X-Internal-Api-Key", internalApiKey)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
 }
