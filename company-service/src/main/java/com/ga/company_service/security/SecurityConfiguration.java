@@ -61,7 +61,9 @@ public class SecurityConfiguration {
                         "/company/projects/*/internal/expenses/project/*",
                         "/company/projects/*/internal/expenses/members/*/*",
                         "/company/internal/*/owners/*",
-                        "/company/projects/risks/internal/acknowledge"
+                        "/company/projects/risks/internal/acknowledge",
+                        "/company/projects/risks/internal/register-call",
+                        "/company/projects/risks/internal/phone-response"
                 ).permitAll().anyRequest().authenticated());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();

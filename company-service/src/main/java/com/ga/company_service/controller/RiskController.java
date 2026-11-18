@@ -67,6 +67,23 @@ public class RiskController {
         return ResponseEntity.ok(riskService.acknowledgeRiskInternal(riskId, workerUserId, status));
     }
 
+    @PutMapping("/internal/register-call")
+    public ResponseEntity<Void> registerRiskCall(@RequestHeader("X-Internal-Api-Key") String apiKey, @RequestParam String callToken, @RequestParam String callSid) {
+        if (internalApiKey == null || internalApiKey.isBlank() || !internalApiKey.equals(apiKey)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid API key");
+        }
+        riskService.registerRiskCall(callToken, callSid);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/internal/phone-response")
+    public ResponseEntity<RiskAcknowledgement> acknowledgeRiskPhoneResponse(@RequestHeader("X-Internal-Api-Key") String apiKey, @RequestParam String callToken, @RequestParam String callSid, @RequestParam String status) {
+        if (internalApiKey == null || internalApiKey.isBlank() || !internalApiKey.equals(apiKey)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid API key");
+        }
+        return ResponseEntity.ok(riskService.acknowledgeRiskByCallToken(callToken, callSid, status));
+    }
+
     @GetMapping("/{riskId}/acknowledgements")
     public ResponseEntity<List<RiskAcknowledgement>> getRiskAcknowledgements(@PathVariable Long riskId) {
         return ResponseEntity.ok(riskService.getRiskAcknowledgements(riskId));
