@@ -80,7 +80,11 @@ public class RiskService {
                         "RISK_REPORTED",
                         "RISK",
                         savedRisk.getId(),
-                        "New risk reported in project "+ project.getName()+": "+savedRisk.getTitle(), LocalDateTime.now()
+                            "RISK APPROVAL REQUIRED"
+                                    + " | Project: " + project.getName()
+                                    + " | Risk: " + savedRisk.getTitle()
+                                    + " | Location: " + savedRisk.getLocation(),
+                        LocalDateTime.now()
                 );
             arqemioEventProducer.sendEvent(event);
                 }
