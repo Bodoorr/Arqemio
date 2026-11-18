@@ -25,7 +25,7 @@ public class ArqemioEventConsumer {
     private final Map<String, Boolean> processedEvents = new ConcurrentHashMap<>();
     private final Map<String, Boolean> sentNotifications = new ConcurrentHashMap<>();
 
-    @Value("${arqemio.frontend-url}")
+    @Value("${app.frontend-url}")
     private String frontendUrl;
 
     @Value("${arqemio.notification-public-url}")
