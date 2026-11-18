@@ -23,8 +23,8 @@ public class RiskController {
     }
 
     @PutMapping("/{riskId}/approve")
-    public ResponseEntity<Risk> approveRisk(@PathVariable Long riskId, @RequestParam Integer likelihood, @RequestParam Integer impact){
-        return  ResponseEntity.ok(riskService.approveRisk(riskId,likelihood,impact));
+    public ResponseEntity<Risk> approveRisk(@PathVariable Long riskId, @RequestParam Integer likelihood, @RequestParam Integer impact, @RequestParam(defaultValue = "false") Boolean evacuationRequired){
+        return  ResponseEntity.ok(riskService.approveRisk(riskId,likelihood,impact, evacuationRequired));
     }
 
     @PutMapping("/{riskId}/reject")
