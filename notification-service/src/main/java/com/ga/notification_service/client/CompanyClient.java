@@ -47,4 +47,12 @@ public class CompanyClient {
                 .toBodilessEntity();
     }
 
+    public String getRiskCallToken(Long riskId, Long workerUserId) {
+        return restClient.get()
+                .uri("/company/projects/risks/internal/call-token?riskId={riskId}&workerUserId={workerUserId}", riskId, workerUserId)
+                .header("X-Internal-Api-Key", internalApiKey)
+                .retrieve()
+                .body(String.class);
+    }
+
 }

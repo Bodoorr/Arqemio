@@ -95,7 +95,6 @@ public class TwilioService {
                 new PhoneNumber(twilioPhoneNumber),
                 new Twiml(twiml)
         ).create();
-
         companyClient.registerRiskCall(callToken, call.getSid());
     }
 
