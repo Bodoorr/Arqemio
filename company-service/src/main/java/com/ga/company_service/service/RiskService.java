@@ -221,7 +221,7 @@ public class RiskService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only assigned risks can be resolved.");
         }
 
-        CompanyMembership membership = getActiveMembership(project, currentUser.getId());
+        CompanyMembership membership = requireProjectAccess(project, currentUser.getId());
 
         if (risk.getAssignedTo() == null || !risk.getAssignedTo().getId().equals(membership.getId())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the assigned user can resolve this risk.");
