@@ -6,6 +6,7 @@ import com.ga.notification_service.model.response.UserProfileResponse;
 import com.ga.notification_service.service.NotificationService;
 import com.ga.notification_service.service.TwilioService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -21,6 +22,9 @@ public class ArqemioEventConsumer {
     private final TwilioService twilioService;
     private final Map<String, Boolean> processedEvents = new ConcurrentHashMap<>();
     private final Map<String, Boolean> sentNotifications = new ConcurrentHashMap<>();
+
+    @Value("${arqemio.frontend-url}")
+    private String frontendUrl;
 
     @KafkaListener(topics = "arqemio-events", groupId = "arqemio-notification-group")
     public synchronized void consume(ArqemioEvent event) {
@@ -58,9 +62,29 @@ public class ArqemioEventConsumer {
                 authClient.sendEmail(user.getEmail(), subject, event.message());
             }
 
-            if ("CRITICAL_RISK_ALERT".equals(event.action()) || "WORKER_NEEDS_ASSISTANCE".equals(event.action())) {
-                if (user.getMobileNumber() != null && !user.getMobileNumber().isBlank()) {
-                    twilioService.sendSms(user.getMobileNumber(), event.message());
+            if (user.getMobileNumber() != null && !user.getMobileNumber().isBlank()) {
+                String riskLink = frontendUrl + "/risks/" + event.entityId();
+                String smsMessage = null;
+
+                if ("RISK_REPORTED".equals(event.action())) {
+                    smsMessage = "ARQEMIO | Risk Approval Required\n" + event.message()
+                            + "\nReview and approve or reject:\n" + riskLink
+                            + "\nيرجى مراجعة بلاغ الخطر عبر الرابط.";
+                } else if ("CRITICAL_RISK_ALERT".equals(event.action())) {
+                    smsMessage = "ARQEMIO | CRITICAL SAFETY ALERT\n" + event.message()
+                            + "\nUpdate your safety status:\n" + riskLink + "/acknowledge"
+                            + "\nيرجى تحديث حالة سلامتك عبر الرابط.";
+                } else if ("WORKER_NEEDS_ASSISTANCE".equals(event.action())) {
+                    smsMessage = "ARQEMIO | URGENT ASSISTANCE\n" + event.message()
+                            + "\nView the risk:\n" + riskLink
+                            + "\nيوجد عامل بحاجة إلى مساعدة فورية.";
+                }
+
+                if (smsMessage != null) {
+                    twilioService.sendSms(user.getMobileNumber(), smsMessage);
+                }
+
+                if ("CRITICAL_RISK_ALERT".equals(event.action()) || "WORKER_NEEDS_ASSISTANCE".equals(event.action())) {
                     twilioService.makeCall(user.getMobileNumber(), event.message());
                 }
             }
