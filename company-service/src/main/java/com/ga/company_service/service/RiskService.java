@@ -179,7 +179,8 @@ public class RiskService {
                                         "RISK",
                                         savedRisk.getId(),
                                         "CRITICAL RISK: " + savedRisk.getTitle() + " | Location: " + savedRisk.getLocation() + " | Evacuation required: " + savedRisk.getEvacuationRequired(),
-                                        LocalDateTime.now()
+                                        LocalDateTime.now(),
+                                        savedRisk.getEvacuationRequired()
                                 );
                                 arqemioEventProducer.sendEvent(event);
                             }
