@@ -1,5 +1,6 @@
 package com.ga.company_service.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -33,12 +34,15 @@ public class RiskAcknowledgement {
     @Column
     private LocalDateTime respondedAt;
 
+    @JsonIgnore
     @Column(unique = true)
     private String callToken;
 
+    @JsonIgnore
     @Column
     private String twilioCallSid;
 
+    @JsonIgnore
     @Column
     private LocalDateTime callTokenExpiresAt;
 }
