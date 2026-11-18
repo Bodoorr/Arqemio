@@ -1,6 +1,7 @@
 package com.ga.notification_service.kafka;
 
 import com.ga.notification_service.client.AuthClient;
+import com.ga.notification_service.client.CompanyClient;
 import com.ga.notification_service.event.ArqemioEvent;
 import com.ga.notification_service.model.response.UserProfileResponse;
 import com.ga.notification_service.service.NotificationService;
@@ -20,11 +21,15 @@ public class ArqemioEventConsumer {
     private final NotificationService notificationService;
     private final AuthClient authClient;
     private final TwilioService twilioService;
+    private final CompanyClient companyClient;
     private final Map<String, Boolean> processedEvents = new ConcurrentHashMap<>();
     private final Map<String, Boolean> sentNotifications = new ConcurrentHashMap<>();
 
     @Value("${arqemio.frontend-url}")
     private String frontendUrl;
+
+    @Value("${arqemio.notification-public-url}")
+    private String notificationPublicUrl;
 
     @KafkaListener(topics = "arqemio-events", groupId = "arqemio-notification-group")
     public synchronized void consume(ArqemioEvent event) {
@@ -96,8 +101,16 @@ public class ArqemioEventConsumer {
                     if (details.length > 0) {
                         riskTitle = details[0].replace("CRITICAL RISK:", "").trim();
                     }
+
                     if (details.length > 1) {
                         riskLocation = details[1].replace("Location:", "").trim();
+                    }
+
+                    boolean evacuationRequired = event.message().contains("Evacuation required: true");
+                    if (evacuationRequired) {
+                        String callToken = companyClient.getRiskCallToken(event.entityId(), event.userId());
+                        String callbackUrl = notificationPublicUrl + "/notifications/twilio/response?callToken=" + callToken;
+                        twilioService.makeWorkerCall(user.getMobileNumber(), riskTitle, riskLocation, callbackUrl, callToken);
                     }
                 }
             }
