@@ -403,6 +403,7 @@ public class RiskService {
         return savedAcknowledgement;
     }
 
+    @Transactional
     public RiskAcknowledgement acknowledgeRiskByCallToken(String callToken, String callSid, String status) {
         if (callToken == null || callToken.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Call token is required.");
@@ -430,6 +431,7 @@ public class RiskService {
         return riskAcknowledgementRepository.save(savedAcknowledgement);
     }
 
+    @Transactional
     public void registerRiskCall(String callToken, String callSid) {
         if (callToken == null || callToken.isBlank() || callSid == null || callSid.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Call token and Call SID are required.");
@@ -450,6 +452,30 @@ public class RiskService {
 
         acknowledgement.setTwilioCallSid(callSid);
         riskAcknowledgementRepository.save(acknowledgement);
+    }
+
+    @Transactional
+    public String getRiskCallToken(Long riskId, Long workerUserId){
+        if (riskId == null || workerUserId== null){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Risk and worker IDs are required.");
+        }
+
+        Risk risk= riskRepository.findById(riskId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
+        CompanyMembership worker= requireProjectAccess(risk.getProject(), workerUserId);
+
+        if (!"WORKER".equals(worker.getRole())){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User is not a worker.");
+        }
+
+        RiskAcknowledgement acknowledgement= riskAcknowledgementRepository.findByRiskIdAndWorkerId(riskId, worker.getId())
+                .orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Acknowledgment not found."));
+
+        if (!"PENDING".equals(acknowledgement.getStatus()) || acknowledgement.getCallToken()== null
+                || acknowledgement.getCallTokenExpiresAt() == null || !acknowledgement.getCallTokenExpiresAt().isAfter(LocalDateTime.now())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No active call token available.");
+        }
+
+        return acknowledgement.getCallToken();
     }
 
     public List<RiskAcknowledgement> getRiskAcknowledgements(Long riskId){

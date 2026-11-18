@@ -88,4 +88,12 @@ public class RiskController {
     public ResponseEntity<List<RiskAcknowledgement>> getRiskAcknowledgements(@PathVariable Long riskId) {
         return ResponseEntity.ok(riskService.getRiskAcknowledgements(riskId));
     }
+
+    @GetMapping("/internal/call-token")
+    public String getRiskCallToken(@RequestParam Long riskId, @RequestParam Long workerUserId, @RequestHeader("X-Internal-Api-Key") String apiKey) {
+        if (!internalApiKey.equals(apiKey)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid internal API key.");
+        }
+        return riskService.getRiskCallToken(riskId, workerUserId);
+    }
 }
