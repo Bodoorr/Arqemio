@@ -52,4 +52,9 @@ public class RiskController {
     public ResponseEntity<RiskAcknowledgement> acknowledgeRisk(@PathVariable Long riskId, @RequestParam String status){
         return ResponseEntity.ok(riskService.acknowledgeRisk(riskId, status));
     }
+
+    @GetMapping("/{riskId}/acknowledgements")
+    public ResponseEntity<List<RiskAcknowledgement>> getRiskAcknowledgements(@PathVariable Long riskId) {
+        return ResponseEntity.ok(riskService.getRiskAcknowledgements(riskId));
+    }
 }
