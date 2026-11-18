@@ -291,6 +291,36 @@ public class RiskService {
         return savedRisk;
     }
 
+    public RiskAcknowledgement acknowledgeRisk(Long riskId, String status){
+        UserResponse currentUser= ProjectService.getCurrentLoggedInUser();
+
+        if (!"SAFE".equals(status) && !"NEED_ASSISTANCE".equals(status)){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status must be SAFE or NEED_ASSISTANCE.");
+        }
+
+        Risk risk= riskRepository.findById(riskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
+        CompanyMembership membership= requireProjectAccess(risk.getProject(), currentUser.getId());
+
+        if (!"WORKER".equals(membership.getRole())){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only assigned workers can confirm their safety.");
+        }
+
+        if (!Boolean.TRUE.equals(risk.getEvacuationRequired())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Evacuation is not required for this risk.");
+        }
+
+        if (!"APPROVED".equals(risk.getStatus()) && !"ASSIGNED".equals(risk.getStatus())){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"The risk is not awaiting safety confirmations");
+        }
+
+        RiskAcknowledgement acknowledgement= riskAcknowledgementRepository.findByRiskIdAndWorkerId(riskId, membership.getId())
+                .orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Safety acknowledgment not found."));
+
+        acknowledgement.setStatus(status);
+        acknowledgement.setRespondedAt(LocalDateTime.now());
+        return riskAcknowledgementRepository.save(acknowledgement);
+    }
+
     public List<Risk> getRisksByProject(Long projectId){
         UserResponse currentUser= ProjectService.getCurrentLoggedInUser();
         Project project= projectService.getProjectById(projectId);
