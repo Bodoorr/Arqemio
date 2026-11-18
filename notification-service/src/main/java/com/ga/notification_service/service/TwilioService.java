@@ -81,7 +81,7 @@ public class TwilioService {
         ).create();
     }
 
-    public void makeWorkerCall(String mobileNumber, String riskTitle, String riskLocation, String callbackUrl, String callToken) {
+    public String makeWorkerCall(String mobileNumber, String riskTitle, String riskLocation, String callbackUrl, String callToken) {
         String safeRiskTitle = HtmlUtils.htmlEscape(riskTitle);
         String safeRiskLocation = HtmlUtils.htmlEscape(riskLocation);
         String safeCallbackUrl = HtmlUtils.htmlEscape(callbackUrl);
@@ -117,7 +117,7 @@ public class TwilioService {
                 new PhoneNumber(twilioPhoneNumber),
                 new Twiml(twiml)
         ).create();
-        companyClient.registerRiskCall(callToken, call.getSid());
+        return call.getSid();
     }
 
 }

@@ -23,6 +23,16 @@ public class CompanyClient {
                 .body(Boolean.class);
     }
 
+    public boolean claimRiskCall(String callToken) {
+        Boolean claimed = restClient.put()
+                .uri("/company/projects/risks/internal/claim-call?callToken={callToken}", callToken)
+                .header("X-Internal-Api-Key", internalApiKey)
+                .retrieve()
+                .body(Boolean.class);
+
+        return Boolean.TRUE.equals(claimed);
+    }
+
     public void acknowledgeRisk(Long riskId, Long workerUserId, String status) {
         restClient.put()
                 .uri("/company/projects/risks/internal/acknowledge?riskId={riskId}&workerUserId={workerUserId}&status={status}", riskId, workerUserId, status)

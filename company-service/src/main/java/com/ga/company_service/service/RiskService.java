@@ -452,6 +452,11 @@ public class RiskService {
         }
 
         acknowledgement.setTwilioCallSid(callSid);
+        acknowledgement.setVoiceCallRequested(true);
+        acknowledgement.setVoiceCallAccepted(true);
+        if (acknowledgement.getVoiceCallRequestedAt() == null) {
+            acknowledgement.setVoiceCallRequestedAt(LocalDateTime.now());
+        }
         riskAcknowledgementRepository.save(acknowledgement);
     }
 
@@ -534,6 +539,25 @@ public class RiskService {
             }
         }
         return false;
+    }
+
+    @Transactional
+    public boolean claimRiskCall(String callToken) {
+        if (callToken == null || callToken.isBlank()) {
+            return false;
+        }
+
+        RiskAcknowledgement acknowledgement = riskAcknowledgementRepository.findByCallToken(callToken).orElse(null);
+        if (acknowledgement == null || !"PENDING".equals(acknowledgement.getStatus())
+                || acknowledgement.getCallTokenExpiresAt() == null || !acknowledgement.getCallTokenExpiresAt().isAfter(LocalDateTime.now())
+                || acknowledgement.isVoiceCallRequested()) {
+            return false;
+        }
+        acknowledgement.setVoiceCallRequested(true);
+        acknowledgement.setVoiceCallRequestedAt(LocalDateTime.now());
+        riskAcknowledgementRepository.save(acknowledgement);
+
+        return true;
     }
 
     private CompanyMembership requireProjectAccess(Project project, Long userId) {

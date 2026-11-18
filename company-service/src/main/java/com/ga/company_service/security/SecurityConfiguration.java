@@ -63,6 +63,7 @@ public class SecurityConfiguration {
                         "/company/internal/*/owners/*",
                         "/company/projects/risks/internal/acknowledge",
                         "/company/projects/risks/internal/register-call",
+                        "/company/projects/risks/internal/claim-call",
                         "/company/projects/risks/internal/phone-response",
                         "/company/projects/risks/internal/call-token"
                 ).permitAll().anyRequest().authenticated());

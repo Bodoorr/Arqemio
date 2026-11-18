@@ -24,6 +24,7 @@ public class ArqemioEventConsumer {
     private final CompanyClient companyClient;
     private final Map<String, Boolean> processedEvents = new ConcurrentHashMap<>();
     private final Map<String, Boolean> sentNotifications = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> sentSms = new ConcurrentHashMap<>();
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -63,10 +64,6 @@ public class ArqemioEventConsumer {
                 subject = "Arqemio - URGENT Worker Assistance Required";
             }
 
-            if (user.getEmail() != null && !user.getEmail().isBlank()) {
-                authClient.sendEmail(user.getEmail(), subject, event.message());
-            }
-
             if (user.getMobileNumber() != null && !user.getMobileNumber().isBlank()) {
                 String riskLink = frontendUrl + "/risks/" + event.entityId();
                 String smsMessage = null;
@@ -88,8 +85,13 @@ public class ArqemioEventConsumer {
                             + "\nيوجد عامل بحاجة إلى مساعدة فورية.";
                 }
 
-                if (smsMessage != null) {
-                    twilioService.sendSms(user.getMobileNumber(), smsMessage);
+                if (smsMessage != null && !sentSms.containsKey(event.eventId())) {
+                    try {
+                        twilioService.sendSms(user.getMobileNumber(), smsMessage);
+                        sentSms.put(event.eventId(), true);
+                    } catch (Exception e) {
+                        System.err.println("SMS failed for event " + event.eventId());
+                    }
                 }
 
                 if ("RISK_REPORTED".equals(event.action())) {
@@ -114,9 +116,23 @@ public class ArqemioEventConsumer {
                     boolean evacuationRequired = Boolean.TRUE.equals(event.evacuationRequired());
                     if (evacuationRequired) {
                         String callToken = companyClient.getRiskCallToken(event.entityId(), event.userId());
-                        String callbackUrl = notificationPublicUrl + "/notifications/twilio/response?callToken=" + callToken;
-                        twilioService.makeWorkerCall(user.getMobileNumber(), riskTitle, riskLocation, callbackUrl, callToken);
+                        if (callToken != null && !callToken.isBlank()) {
+                            boolean claimed = companyClient.claimRiskCall(callToken);
+
+                            if (claimed) {
+                                String callbackUrl = notificationPublicUrl + "/notifications/twilio/response?callToken=" + callToken;
+                                String callSid = twilioService.makeWorkerCall(user.getMobileNumber(), riskTitle, riskLocation, callbackUrl, callToken);
+                                companyClient.registerRiskCall(callToken, callSid);
+                            }
+                        }
                     }
+                }
+            }
+            if (user.getEmail() != null && !user.getEmail().isBlank()) {
+                try {
+                    authClient.sendEmail(user.getEmail(), subject, event.message());
+                } catch (Exception e) {
+                    System.err.println("Email failed for event " + event.eventId());
                 }
             }
         }

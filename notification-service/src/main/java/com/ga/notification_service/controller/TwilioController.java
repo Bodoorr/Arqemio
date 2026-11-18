@@ -47,6 +47,7 @@ public class TwilioController {
                     "<Response><Say>Invalid selection.</Say></Response>");
         }
 
+        companyClient.registerRiskCall(callToken, callSid);
         companyClient.acknowledgeRiskPhoneResponse(callToken, callSid, status);
         return ResponseEntity.ok(
                 "<Response><Say>Thank you. Your response has been recorded.</Say></Response>");

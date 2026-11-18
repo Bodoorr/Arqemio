@@ -45,4 +45,16 @@ public class RiskAcknowledgement {
     @JsonIgnore
     @Column
     private LocalDateTime callTokenExpiresAt;
+
+    @JsonIgnore
+    @Column(nullable = false)
+    private boolean voiceCallRequested = false;
+
+    @JsonIgnore
+    @Column(nullable = false)
+    private boolean voiceCallAccepted = false;
+
+    @JsonIgnore
+    @Column
+    private LocalDateTime voiceCallRequestedAt;
 }
