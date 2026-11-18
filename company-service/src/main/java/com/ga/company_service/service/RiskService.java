@@ -92,7 +92,7 @@ public class RiskService {
     public Risk approveRisk(Long riskId, Integer likelihood, Integer impact){
         UserResponse currentUser= ProjectService.getCurrentLoggedInUser();
 
-        Risk risk= riskRepository.findById(riskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
+        Risk risk= riskRepository.findWithLockById(riskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
         CompanyMembership manager= getRiskReviewManager(risk, currentUser.getId());
 
         if (!"PENDING_REVIEW".equals(risk.getStatus())){
@@ -140,7 +140,7 @@ public class RiskService {
     @Transactional
     public Risk rejectRisk(Long riskId){
         UserResponse currentUser= ProjectService.getCurrentLoggedInUser();
-        Risk risk= riskRepository.findById(riskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
+        Risk risk= riskRepository.findWithLockById(riskId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
 
         getRiskReviewManager(risk, currentUser.getId());
 
