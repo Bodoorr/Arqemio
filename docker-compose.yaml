@@ -49,6 +49,7 @@ services:
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
       CLOUDINARY_URL: ${CLOUDINARY_URL}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       AUTH_SERVICE_URL: http://auth-service:8081
       COMPANY_SERVICE_URL: http://company-service:8082
       NOTIFICATION_SERVICE_URL: http://notification-service:8084
