@@ -14,7 +14,9 @@ import org.springframework.web.util.HtmlUtils;
 
 @Service
 public class TwilioService {
+    @Autowired
     private CompanyClient companyClient;
+
     @Value("${twilio.account-sid}")
     private String accountSid;
 
