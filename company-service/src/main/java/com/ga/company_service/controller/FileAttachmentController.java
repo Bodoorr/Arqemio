@@ -22,8 +22,8 @@ public class FileAttachmentController {
     private final AuthClient authClient;
 
     @PostMapping
-    public ResponseEntity<FileAttachmentResponse> createFileAttachment(@RequestParam("file") MultipartFile file, @RequestParam Long projectId, @RequestParam(required = false) Long projectUpdateId, @RequestParam(required = false) Long expenseId){
-        FileAttachment fileAttachment= fileAttachmentService.createFileAttachment(file,projectId,projectUpdateId,expenseId);
+    public ResponseEntity<FileAttachmentResponse> createFileAttachment(@RequestParam("file") MultipartFile file, @RequestParam Long projectId, @RequestParam(required = false) Long projectUpdateId, @RequestParam(required = false) Long expenseId, @RequestParam(required = false) Long riskId){
+        FileAttachment fileAttachment= fileAttachmentService.createFileAttachment(file,projectId,projectUpdateId,expenseId,riskId);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(fileAttachment));
     }
 
@@ -61,6 +61,17 @@ public class FileAttachmentController {
         List<FileAttachmentResponse> fileAttachmentResponses= new ArrayList<>();
 
         for (FileAttachment fileAttachment : fileAttachments){
+            fileAttachmentResponses.add(toResponse(fileAttachment));
+        }
+        return ResponseEntity.ok(fileAttachmentResponses);
+    }
+
+    @GetMapping("/risk/{riskId}")
+    public ResponseEntity<List<FileAttachmentResponse>> getAllProjectRiskAttachments(@PathVariable Long riskId) {
+        List<FileAttachment> fileAttachments = fileAttachmentService.getAllProjectRiskAttachments(riskId);
+        List<FileAttachmentResponse> fileAttachmentResponses = new ArrayList<>();
+
+        for (FileAttachment fileAttachment : fileAttachments) {
             fileAttachmentResponses.add(toResponse(fileAttachment));
         }
         return ResponseEntity.ok(fileAttachmentResponses);
