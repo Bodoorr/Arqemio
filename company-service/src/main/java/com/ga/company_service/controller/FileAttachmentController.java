@@ -92,6 +92,7 @@ public class FileAttachmentController {
                 fileAttachment.getProject().getId(),
                 fileAttachment.getExpenseId(),
                 fileAttachment.getProjectUpdate() != null ? fileAttachment.getProjectUpdate().getId() : null,
+                fileAttachment.getRisk() != null ? fileAttachment.getRisk().getId() : null,
                 fileAttachment.getFileUrl(),
                 fileAttachment.getFileName(),
                 fileAttachment.getFileType(),
