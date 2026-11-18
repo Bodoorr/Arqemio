@@ -6,9 +6,11 @@ import com.ga.company_service.kafka.ArqemioEventProducer;
 import com.ga.company_service.model.CompanyMembership;
 import com.ga.company_service.model.Project;
 import com.ga.company_service.model.Risk;
+import com.ga.company_service.model.RiskAcknowledgement;
 import com.ga.company_service.model.request.RiskRequest;
 import com.ga.company_service.model.response.UserResponse;
 import com.ga.company_service.repository.CompanyMembershipRepository;
+import com.ga.company_service.repository.RiskAcknowledgementRepository;
 import com.ga.company_service.repository.RiskRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,6 +32,7 @@ import java.util.logging.Logger;
 public class RiskService {
     private static final Logger logger= Logger.getLogger(RiskService.class.getName());
     private RiskRepository riskRepository;
+    private RiskAcknowledgementRepository riskAcknowledgementRepository;
     private CompanyMembershipRepository companyMembershipRepository;
     private ProjectService projectService;
     private AuditLogClient auditLogClient;
@@ -123,6 +126,20 @@ public class RiskService {
         risk.setStatus("APPROVED");
 
         Risk savedRisk= riskRepository.save(risk);
+
+        if (Boolean.TRUE.equals(savedRisk.getEvacuationRequired())){
+            Project project= savedRisk.getProject();
+            for (CompanyMembership worker : project.getWorkers()){
+                if ("ACTIVE".equals(worker.getStatus()) && "WORKER".equals(worker.getRole())){
+                    RiskAcknowledgement acknowledgement= new RiskAcknowledgement();
+                    acknowledgement.setRisk(savedRisk);
+                    acknowledgement.setWorker(worker);
+                    acknowledgement.setStatus("PENDING");
+
+                    riskAcknowledgementRepository.save(acknowledgement);
+                }
+            }
+        }
         auditLogClient.createAuditLog(
                 currentUser.getId(),
                 risk.getProject().getCompany().getId(),
