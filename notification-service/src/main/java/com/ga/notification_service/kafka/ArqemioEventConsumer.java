@@ -89,8 +89,10 @@ public class ArqemioEventConsumer {
                     twilioService.sendSms(user.getMobileNumber(), smsMessage);
                 }
 
-                if ("RISK_REPORTED".equals(event.action()) || "WORKER_NEEDS_ASSISTANCE".equals(event.action())) {
+                if ("RISK_REPORTED".equals(event.action())) {
                     twilioService.makeManagerCall(user.getMobileNumber());
+                } else if ("WORKER_NEEDS_ASSISTANCE".equals(event.action())) {
+                    twilioService.makeEmergencyManagerCall(user.getMobileNumber());
                 }
 
                 if ("CRITICAL_RISK_ALERT".equals(event.action())) {

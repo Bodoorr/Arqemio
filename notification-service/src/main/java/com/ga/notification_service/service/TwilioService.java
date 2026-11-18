@@ -61,6 +61,26 @@ public class TwilioService {
         ).create();
     }
 
+    public void makeEmergencyManagerCall(String mobileNumber) {
+        String twiml = "<Response>"
+                + "<Say language=\"en-US\">"
+                + "This is an urgent emergency alert from Arqemio. "
+                + "A worker has requested immediate assistance. "
+                + "Please check the risk notification and respond immediately."
+                + "</Say>"
+                + "<Say language=\"ar-SA\">"
+                + "هذا تنبيه طوارئ عاجل من نظام أركيميو. "
+                + "أحد العمال بحاجة إلى مساعدة فورية. "
+                + "يرجى مراجعة إشعار الخطر والتدخل فوراً."
+                + "</Say>"
+                + "</Response>";
+        Call.creator(
+                new PhoneNumber(mobileNumber),
+                new PhoneNumber(twilioPhoneNumber),
+                new Twiml(twiml)
+        ).create();
+    }
+
     public void makeWorkerCall(String mobileNumber, String riskTitle, String riskLocation, String callbackUrl, String callToken) {
         String safeRiskTitle = HtmlUtils.htmlEscape(riskTitle);
         String safeRiskLocation = HtmlUtils.htmlEscape(riskLocation);
