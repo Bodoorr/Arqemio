@@ -9,4 +9,5 @@ public interface FileAttachmentRepository extends JpaRepository<FileAttachment, 
     List<FileAttachment> findByProjectIdAndStatus(Long projectId, String status);
     List<FileAttachment> findByProjectUpdateIdAndStatus(Long projectUpdateId, String status);
     List<FileAttachment> findByExpenseIdAndStatus(Long expenseId, String status);
+    List<FileAttachment> findByRiskIdAndStatus(Long riskId, String status);
 }
