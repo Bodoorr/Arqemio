@@ -149,7 +149,36 @@ public class RiskService {
                 "Approved risk: "+ savedRisk.getTitle() + " ("+ level + ", score: "+score+", evacuation required: "+ savedRisk.getEvacuationRequired()+ ")"
         );
         sendRiskReviewNotification(savedRisk, "RISK_APPROVED");
+        if (score >= 20) {
+            Project project = savedRisk.getProject();
+            List<Long> workerIds = new ArrayList<>();
 
+            for (CompanyMembership worker : project.getWorkers()) {
+                if ("ACTIVE".equals(worker.getStatus()) && "WORKER".equals(worker.getRole()) && worker.getUserId() != null && !workerIds.contains(worker.getUserId())) {
+                    workerIds.add(worker.getUserId());
+                }
+            }
+
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            for (Long workerId : workerIds) {
+                                ArqemioEvent event = new ArqemioEvent(
+                                        UUID.randomUUID().toString(),
+                                        workerId,
+                                        project.getCompany().getId(),
+                                        "CRITICAL_RISK_ALERT",
+                                        "RISK",
+                                        savedRisk.getId(),
+                                        "CRITICAL RISK: " + savedRisk.getTitle() + " | Location: " + savedRisk.getLocation() + " | Evacuation required: " + savedRisk.getEvacuationRequired(),
+                                        LocalDateTime.now()
+                                );
+                                arqemioEventProducer.sendEvent(event);
+                            }
+                        }
+                    });
+        }
         return savedRisk;
     }
 
