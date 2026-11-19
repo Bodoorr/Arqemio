@@ -23,8 +23,7 @@ import java.util.logging.Logger;
 @Service
 @RequiredArgsConstructor
 public class FileAttachmentService {
-    private final Dotenv dotenv = Dotenv.load();
-    private final Cloudinary cloudinary = new Cloudinary(dotenv.get("CLOUDINARY_URL"));
+    private final Cloudinary cloudinary = new Cloudinary(System.getenv("CLOUDINARY_URL"));
     private final FileAttachmentRepository fileAttachmentRepository;
     private final ProjectRepository projectRepository;
     private final ProjectService projectService;
