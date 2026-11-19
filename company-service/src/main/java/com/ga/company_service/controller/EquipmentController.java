@@ -1,0 +1,70 @@
+package com.ga.company_service.controller;
+
+import com.ga.company_service.model.Equipment;
+import com.ga.company_service.model.request.EquipmentRequest;
+import com.ga.company_service.model.response.EquipmentResponse;
+import com.ga.company_service.service.EquipmentService;
+import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@RestController
+@RequestMapping("/company/equipments")
+@AllArgsConstructor
+public class EquipmentController {
+    private EquipmentService equipmentService;
+
+    @PostMapping
+    public ResponseEntity<EquipmentResponse> createEquipment(@Valid @RequestBody EquipmentRequest equipmentRequest){
+        Equipment equipment= equipmentService.createEquipment(equipmentRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(equipment));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<EquipmentResponse>> getAllEquipments(){
+        List<Equipment> equipments= equipmentService.getAllEquipment();
+        List<EquipmentResponse> equipmentResponses=new ArrayList<>();
+        for (Equipment equipment: equipments){
+            equipmentResponses.add(toResponse(equipment));
+        }
+        return ResponseEntity.ok(equipmentResponses);
+    }
+
+    @GetMapping("/{equipmentId}")
+    public ResponseEntity<EquipmentResponse> getEquipment(@PathVariable Long equipmentId){
+        Equipment equipment= equipmentService.getEquipmentById(equipmentId);
+        return ResponseEntity.ok(toResponse(equipment));
+    }
+
+    @PutMapping("/{equipmentId}")
+    public ResponseEntity<EquipmentResponse> updateEquipment(@PathVariable Long equipmentId,@Valid @RequestBody EquipmentRequest equipmentRequest){
+        Equipment equipment= equipmentService.updateEquipment(equipmentId,equipmentRequest);
+        return ResponseEntity.ok(toResponse(equipment));
+    }
+
+    @DeleteMapping("/{equipmentId}")
+    public ResponseEntity<EquipmentResponse> archiveEquipment(@PathVariable Long equipmentId){
+        Equipment equipment= equipmentService.archiveEquipment(equipmentId);
+        return ResponseEntity.ok(toResponse(equipment));
+    }
+
+    private EquipmentResponse toResponse(Equipment equipment){
+        return new EquipmentResponse(
+                equipment.getId(),
+                equipment.getCompany().getId(),
+                equipment.getCompany().getName(),
+                equipment.getName(),
+                equipment.getDescription(),
+                equipment.getImageUrl(),
+                equipment.getStatus(),
+                equipment.getQuantity(),
+                equipment.getCreatedAt(),
+                equipment.getUpdatedAt()
+        );
+    }
+}

@@ -1,0 +1,310 @@
+package com.ga.company_service.service;
+
+import com.ga.company_service.client.AuditLogClient;
+import com.ga.company_service.client.AuthClient;
+import com.ga.company_service.model.Company;
+import com.ga.company_service.model.CompanyMembership;
+import com.ga.company_service.model.EmailDetails;
+import com.ga.company_service.model.Invitation;
+import com.ga.company_service.model.request.InvitationRegistrationRequest;
+import com.ga.company_service.model.request.RegistrationRequest;
+import com.ga.company_service.model.response.UserResponse;
+import com.ga.company_service.repository.CompanyMembershipRepository;
+import com.ga.company_service.repository.CompanyRepository;
+import com.ga.company_service.repository.InvitationRepository;
+import lombok.AllArgsConstructor;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+@Service
+@AllArgsConstructor
+public class InvitationService {
+    private InvitationRepository invitationRepository;
+    private CompanyRepository companyRepository;
+    private CompanyMembershipRepository companyMembershipRepository;
+    private AuthClient authClient;
+    private AuditLogClient auditLogClient;
+
+    private static final Logger logger= Logger.getLogger(InvitationService.class.getName());
+
+    public static UserResponse getCurrentLoggedInUser(){
+        return (UserResponse) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
+
+    public String getInvitationEmail(
+            String companyName,
+            String role,
+            String invitationLink
+    ) {
+        try {
+            ClassPathResource resource = new ClassPathResource("templates/invitation-email.html");
+            String html = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+
+            html = html.replace("{{companyName}}", companyName);
+            html = html.replace("{{role}}", role);
+            html = html.replace("{{invitationLink}}", invitationLink);
+            return html;
+
+        } catch (IOException e) {
+            throw new RuntimeException("Could not load invitation email.");
+        }
+    }
+
+    public Invitation createInvitation(String email, String role, Long companyId) {
+        UserResponse currentUser = getCurrentLoggedInUser();
+        Company company= companyRepository.findById(companyId)
+                .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
+
+        if (!"OWNER".equals(role) &&
+                        !"MANAGER".equals(role) &&
+                        !"WORKER".equals(role)
+        ) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid role. Role must be OWNER, MANAGER, or WORKER."
+            );
+        }
+
+        boolean isPlatformAdmin = Boolean.TRUE.equals(currentUser.getIsPlatformAdmin());
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(currentUser.getId(), companyId,"OWNER", "ACTIVE");
+
+        if ("OWNER".equals(role)){
+            if (!isPlatformAdmin){
+                logger.log(Level.WARNING, "User {0} attempted to invite a company owner without permission", currentUser.getId());
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only platform admins can invite company owners.");
+                }
+            } else {
+            if (!isCompanyOwner){
+                logger.log(Level.WARNING, "User {0} attempted to invite a member to company {1} without permission", new Object[]{currentUser.getId(), companyId});
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only company owners can invite managers and workers.");
+            }
+        }
+
+        boolean alreadyAccepted =
+                invitationRepository.existsByEmailIgnoreCaseAndCompanyIdAndRoleAndStatus(
+                        email,
+                        companyId,
+                        role,
+                        "ACCEPTED"
+                );
+
+        if (alreadyAccepted) {
+            throw new RuntimeException(
+                    "This email has already accepted an invitation for this role."
+            );
+        }
+
+        boolean alreadyPending =
+                invitationRepository.existsByEmailIgnoreCaseAndCompanyIdAndRoleAndStatus(
+                        email,
+                        companyId,
+                        role,
+                        "PENDING"
+                );
+
+        if (alreadyPending) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "This email already has a pending invitation."
+            );
+        }
+
+        Invitation invitation = new Invitation();
+
+        invitation.setEmail(email);
+        invitation.setRole(role);
+        invitation.setInvitedBy(currentUser.getId());
+        invitation.setCompany(company);
+        invitation.setToken(UUID.randomUUID().toString());
+        invitation.setStatus("PENDING");
+        invitation.setExpiresAt(LocalDateTime.now().plusHours(48));
+
+        Invitation savedInvitation = invitationRepository.save(invitation);
+
+       boolean isEmailSent= sendInvitationEmail(savedInvitation);
+        if (!isEmailSent) {
+            logger.log(Level.WARNING, "Invitation {0} saved but email delivery failed", savedInvitation.getId());
+            throw new RuntimeException("Invitation saved, but email could not be sent.");
+        }
+        auditLogClient.createAuditLog(currentUser.getId(), company.getId(),"CREATE_INVITATION","INVITATION", savedInvitation.getId(), "Invited "+email+" as "+role);
+        logger.log(Level.INFO,"Invitation {0} created for company {1} by user {2}", new Object[]{savedInvitation.getId(), companyId, currentUser.getId()});
+        return savedInvitation;
+    }
+
+
+    public Invitation validateInvitation(String token){
+        Invitation invitation= invitationRepository.findByToken(token).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitation not found."));
+
+        if (!invitation.getStatus().equals("PENDING")){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "This invitation is no longer available.");
+        }
+        if (!invitation.getExpiresAt().isAfter(LocalDateTime.now())){
+            invitation.setStatus("EXPIRED");
+            invitationRepository.save(invitation);
+            logger.log(Level.WARNING,"Invitation {0} has expired", invitation.getId());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "This invitation has expired.");
+        }
+        return invitation;
+    }
+
+    public UserResponse registerInvitedUser(InvitationRegistrationRequest invitationRegistrationRequest){
+        Invitation invitation= validateInvitation(invitationRegistrationRequest.getToken());
+
+        if (authClient.existsByEmail(invitation.getEmail())){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exist. Please login to accept the invitation.");
+        }
+
+        RegistrationRequest newUser=new RegistrationRequest();
+            newUser.setName(invitationRegistrationRequest.getName());
+            newUser.setEmail(invitation.getEmail());
+            newUser.setPassword(invitationRegistrationRequest.getPassword());
+            newUser.setProfilePicture(invitationRegistrationRequest.getProfilePicture());
+
+            UserResponse savedUser= authClient.registerUser(newUser);
+
+            CompanyMembership savedMembership= createMembership(savedUser.getId(), invitation);
+
+            updateCompanyOwner(invitation, savedMembership);
+            markInvitationAccepted(invitation, savedUser);
+
+            String action= "REGISTER_"+invitation.getRole();
+            auditLogClient.createAuditLog(savedUser.getId(), invitation.getCompany().getId(),action,"USER", savedUser.getId(), "Registered as "+invitation.getRole()+": " +invitationRegistrationRequest.getName());
+        return savedUser;
+    }
+
+
+    public Invitation acceptInvitation(String token){
+        UserResponse currentUser= getCurrentLoggedInUser();
+        Invitation invitation= validateInvitation(token);
+
+        if (!currentUser.getEmail().equalsIgnoreCase(invitation.getEmail())){
+            logger.log(Level.WARNING, "User {0} attempted to accept invitation {1} belonging to another user", new Object[]{currentUser.getId(), invitation.getId()});
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This invitation does not belong to the logged in user.");
+        }
+
+        boolean alreadyMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), invitation.getCompany().getId(), "ACTIVE");
+        if (alreadyMember){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You are already an active member of this company.");
+        }
+
+        CompanyMembership savedMembership= createMembership(currentUser.getId(), invitation);
+        updateCompanyOwner(invitation, savedMembership);
+
+       return markInvitationAccepted(invitation, currentUser);
+    }
+
+    public Invitation cancelInvitation(Long invitationId){
+        UserResponse currentUser= getCurrentLoggedInUser();
+        Invitation invitation= findInvitationById(invitationId);
+
+        if (!canManageInvitation(currentUser,invitation)){
+            logger.log(Level.WARNING, "User {0} attempted to cancel invitation {1} without permission", new Object[]{currentUser.getId(), invitationId});
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to cancel the invitation.");
+        }
+
+        if (!invitation.getStatus().equals("PENDING")){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You can't cancel this invitation.");
+        }
+
+        invitation.setStatus("CANCELLED");
+        invitationRepository.save(invitation);
+        auditLogClient.createAuditLog(currentUser.getId(),invitation.getCompany().getId(),"CANCEL_INVITATION","INVITATION",invitation.getId(),"Cancelled invitation for "+invitation.getEmail());
+        logger.log(Level.INFO,"Invitation {0} cancelled by user {1}", new Object[]{invitationId, currentUser.getId()});
+        return invitation;
+    }
+
+    public Invitation resendInvitation(Long invitationId){
+        UserResponse currentUser= getCurrentLoggedInUser();
+        Invitation invitation= findInvitationById(invitationId);
+
+        if (!canManageInvitation(currentUser, invitation)){
+            logger.log(Level.WARNING,"User {0} attempted to resend invitation {1} without permission", new Object[]{currentUser.getId(), invitationId});
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to resend the invitation.");
+
+        }
+        if (invitation.getStatus().equals("ACCEPTED") || invitation.getStatus().equals("CANCELLED")){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You can't resend this invitation.");
+        }
+
+        invitation.setToken(UUID.randomUUID().toString());
+        invitation.setStatus("PENDING");
+        invitation.setExpiresAt(LocalDateTime.now().plusHours(48));
+        invitationRepository.save(invitation);
+
+        boolean isEmailSent= sendInvitationEmail(invitation);
+        if (!isEmailSent){
+            logger.log(Level.WARNING,"Failed to resend invitation email for invitation {0}", invitationId);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invitation updated, but email could not be sent.");
+        }
+        logger.log(Level.INFO,"Invitation {0} resent successfully by user {1}", new Object[]{invitationId, currentUser.getId()});
+        return invitation;
+    }
+
+    private boolean canManageInvitation(UserResponse user, Invitation invitation){
+        if ("OWNER".equals(invitation.getRole())){
+            return Boolean.TRUE.equals(user.getIsPlatformAdmin());
+        }
+        return companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), invitation.getCompany().getId(), "OWNER","ACTIVE");
+    }
+
+    private Invitation findInvitationById(Long invitationId){
+        return invitationRepository.findById(invitationId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Invitation not found."));
+    }
+
+    private boolean sendInvitationEmail(Invitation invitation){
+        String invitationLink = "http://localhost:5173/invitation/" + invitation.getToken();
+        String emailBody = getInvitationEmail(invitation.getCompany().getName(), invitation.getRole(), invitationLink);
+
+        EmailDetails emailDetails = new EmailDetails();
+
+        emailDetails.setRecipient(invitation.getEmail());
+        emailDetails.setSubject("You're invited to join Arqemio!");
+        emailDetails.setMsgBody(emailBody);
+
+        return Boolean.TRUE.equals(authClient.sendEmail(emailDetails));
+    }
+
+    private CompanyMembership createMembership(Long userId, Invitation invitation){
+        CompanyMembership membership= new CompanyMembership();
+        membership.setUserId(userId);
+        membership.setCompany(invitation.getCompany());
+        membership.setRole(invitation.getRole());
+        membership.setStatus("ACTIVE");
+
+        return companyMembershipRepository.save(membership);
+    }
+
+    private void updateCompanyOwner(Invitation invitation, CompanyMembership membership){
+        if ("OWNER".equals(invitation.getRole())){
+            Company company= invitation.getCompany();
+            if (company.getOwner() == null) {
+                company.setOwner(membership);
+                companyRepository.save(company);
+            }
+        }
+    }
+
+    private Invitation markInvitationAccepted(Invitation invitation, UserResponse user){
+        invitation.setStatus("ACCEPTED");
+        Invitation savedInvitation = invitationRepository.save(invitation);
+        logger.log(Level.INFO,"Invitation {0} accepted by user {1} for company {2}", new Object[]{savedInvitation.getId(), user.getId(), invitation.getCompany().getId()});
+        auditLogClient.createAuditLog(user.getId(), invitation.getCompany().getId(),
+                "ACCEPT", "INVITATION", savedInvitation.getId(),
+                "Accepted invitation as " + invitation.getRole()
+        );
+
+        return savedInvitation;
+    }
+}

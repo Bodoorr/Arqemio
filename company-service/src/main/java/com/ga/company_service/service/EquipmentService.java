@@ -1,0 +1,128 @@
+package com.ga.company_service.service;
+
+import com.ga.company_service.client.AuditLogClient;
+import com.ga.company_service.model.Company;
+import com.ga.company_service.model.CompanyMembership;
+import com.ga.company_service.model.Equipment;
+import com.ga.company_service.model.request.EquipmentRequest;
+import com.ga.company_service.model.response.UserResponse;
+import com.ga.company_service.repository.CompanyMembershipRepository;
+import com.ga.company_service.repository.CompanyRepository;
+import com.ga.company_service.repository.EquipmentRepository;
+import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+@Service
+@AllArgsConstructor
+public class EquipmentService {
+    private EquipmentRepository equipmentRepository;
+    private CompanyRepository companyRepository;
+    private CompanyMembershipRepository companyMembershipRepository;
+    private AuditLogClient auditLogClient;
+    private static final Logger logger= Logger.getLogger(EquipmentService.class.getName());
+
+    public static UserResponse getCurrentLoggedInUser() {
+        return (UserResponse) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+    }
+
+    public Equipment createEquipment(EquipmentRequest equipmentRequest){
+        UserResponse currentUser= getCurrentLoggedInUser();
+        Company company= companyRepository.findById(equipmentRequest.getCompanyId()).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Company not found."));
+        validateEquipmentManagementAccess(currentUser, company);
+        validateEquipmentQuantity(equipmentRequest);
+
+        Equipment equipment=new Equipment();
+        equipment.setCompany(company);
+        equipment.setName(equipmentRequest.getName());
+        equipment.setDescription(equipmentRequest.getDescription());
+        equipment.setImageUrl(equipmentRequest.getImageUrl());
+        equipment.setStatus(equipmentRequest.getStatus());
+        equipment.setQuantity(equipmentRequest.getQuantity());
+
+        Equipment savedEquipment= equipmentRepository.save(equipment);
+        auditLogClient.createAuditLog(currentUser.getId(), company.getId(), "CREATE", "EQUIPMENT", savedEquipment.getId(), "Created equipment: " + savedEquipment.getName());
+        logger.log(Level.INFO,"Equipment {0} created for company {1} by user {2}", new Object[]{savedEquipment.getId(), company.getId(), currentUser.getId()});
+        return savedEquipment;
+    }
+
+    public List<Equipment> getAllEquipment(){
+        UserResponse currentUser= getCurrentLoggedInUser();
+        List<Equipment> equipments=new ArrayList<>();
+        List<CompanyMembership> memberships= companyMembershipRepository.findByUserIdAndStatus(currentUser.getId(), "ACTIVE");
+
+        for (CompanyMembership membership: memberships){
+            List <Equipment> companyEquipments= equipmentRepository.findByCompanyId(membership.getCompany().getId());
+
+            for (Equipment equipment: companyEquipments){
+                equipments.add(equipment);
+            }
+        }
+        return equipments;
+    }
+
+    public Equipment getEquipmentById(Long equipmentId){
+        UserResponse currentUser= getCurrentLoggedInUser();
+        Equipment equipment= equipmentRepository.findById(equipmentId).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
+
+        boolean isActiveMember= companyMembershipRepository.existsByUserIdAndCompanyIdAndStatus(currentUser.getId(), equipment.getCompany().getId(), "ACTIVE");
+        if (!isActiveMember){
+            logger.log(Level.WARNING,"User {0} attempted to view equipment {1} without permission", new Object[]{currentUser.getId(), equipmentId});
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"You're not allowed to view this equipment.");
+        }
+        return equipment;
+    }
+
+    public Equipment updateEquipment(Long equipmentId, EquipmentRequest equipmentRequest){
+        UserResponse currentUser= getCurrentLoggedInUser();
+        Equipment equipment= equipmentRepository.findById(equipmentId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
+        validateEquipmentManagementAccess(currentUser, equipment.getCompany());
+        validateEquipmentQuantity(equipmentRequest);
+
+        equipment.setName(equipmentRequest.getName());
+        equipment.setDescription(equipmentRequest.getDescription());
+        equipment.setImageUrl(equipmentRequest.getImageUrl());
+        equipment.setStatus(equipmentRequest.getStatus());
+        equipment.setQuantity(equipmentRequest.getQuantity());
+
+        Equipment savedEquipment= equipmentRepository.save(equipment);
+        auditLogClient.createAuditLog(currentUser.getId(), savedEquipment.getCompany().getId(), "UPDATE", "EQUIPMENT", savedEquipment.getId(), "Updated equipment: " + savedEquipment.getName());
+        logger.log(Level.INFO,"Equipment {0} updated by user {1}", new Object[]{savedEquipment.getId(), currentUser.getId()});
+        return savedEquipment;
+    }
+
+    public Equipment archiveEquipment(Long equipmentId){
+        UserResponse currentUser= getCurrentLoggedInUser();
+        Equipment equipment= equipmentRepository.findById(equipmentId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
+        validateEquipmentManagementAccess(currentUser, equipment.getCompany());
+        equipment.setStatus("ARCHIVED");
+
+        Equipment savedEquipment= equipmentRepository.save(equipment);
+        auditLogClient.createAuditLog(currentUser.getId(), savedEquipment.getCompany().getId(), "ARCHIVE", "EQUIPMENT", savedEquipment.getId(), "Archived equipment: " + savedEquipment.getName());
+        logger.log(Level.INFO,"Equipment {0} archived by user {1}", new Object[]{savedEquipment.getId(), currentUser.getId()});
+        return savedEquipment;
+    }
+
+    private void validateEquipmentManagementAccess(UserResponse user, Company company){
+        boolean isCompanyOwner= companyMembershipRepository.existsByUserIdAndCompanyIdAndRoleAndStatus(user.getId(), company.getId(), "OWNER", "ACTIVE");
+        if (!isCompanyOwner){
+            logger.log(Level.WARNING,"User {0} attempted to manage equipment for company {1} without permission", new Object[]{user.getId(), company.getId()});
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not allowed to manage equipment for this company.");
+        }
+    }
+
+    private void validateEquipmentQuantity(EquipmentRequest equipmentRequest){
+        if (equipmentRequest.getQuantity()<0){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Equipment quantity cannot be negative.");
+        }
+    }
+
+}
