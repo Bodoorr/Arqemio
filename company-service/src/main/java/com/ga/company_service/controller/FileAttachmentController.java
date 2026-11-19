@@ -22,8 +22,14 @@ public class FileAttachmentController {
     private final AuthClient authClient;
 
     @PostMapping
-    public ResponseEntity<FileAttachmentResponse> createFileAttachment(@RequestParam("file") MultipartFile file, @RequestParam Long projectId, @RequestParam(required = false) Long projectUpdateId, @RequestParam(required = false) Long expenseId){
-        FileAttachment fileAttachment= fileAttachmentService.createFileAttachment(file,projectId,projectUpdateId,expenseId);
+    public ResponseEntity<FileAttachmentResponse> createFileAttachment(@RequestParam("file") MultipartFile file, @RequestParam Long projectId, @RequestParam(required = false) Long projectUpdateId, @RequestParam(required = false) Long expenseId, @RequestParam(required = false) Long riskId){
+        FileAttachment fileAttachment= fileAttachmentService.createFileAttachment(file,projectId,projectUpdateId,expenseId,riskId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(fileAttachment));
+    }
+
+    @PostMapping("/construction-drawing")
+    public ResponseEntity<FileAttachmentResponse> createConstructionDrawing(@RequestParam("file") MultipartFile file, @RequestParam Long projectId) {
+        FileAttachment fileAttachment = fileAttachmentService.createConstructionDrawing(file, projectId);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(fileAttachment));
     }
 
@@ -66,6 +72,17 @@ public class FileAttachmentController {
         return ResponseEntity.ok(fileAttachmentResponses);
     }
 
+    @GetMapping("/risk/{riskId}")
+    public ResponseEntity<List<FileAttachmentResponse>> getAllProjectRiskAttachments(@PathVariable Long riskId) {
+        List<FileAttachment> fileAttachments = fileAttachmentService.getAllProjectRiskAttachments(riskId);
+        List<FileAttachmentResponse> fileAttachmentResponses = new ArrayList<>();
+
+        for (FileAttachment fileAttachment : fileAttachments) {
+            fileAttachmentResponses.add(toResponse(fileAttachment));
+        }
+        return ResponseEntity.ok(fileAttachmentResponses);
+    }
+
     @DeleteMapping("/{attachmentId}")
     public ResponseEntity<FileAttachmentResponse> archiveFileAttachment(@PathVariable Long attachmentId){
         FileAttachment fileAttachment= fileAttachmentService.archiveFileAttachment(attachmentId);
@@ -81,12 +98,16 @@ public class FileAttachmentController {
                 fileAttachment.getProject().getId(),
                 fileAttachment.getExpenseId(),
                 fileAttachment.getProjectUpdate() != null ? fileAttachment.getProjectUpdate().getId() : null,
+                fileAttachment.getRisk() != null ? fileAttachment.getRisk().getId() : null,
                 fileAttachment.getFileUrl(),
                 fileAttachment.getFileName(),
                 fileAttachment.getFileType(),
                 fileAttachment.getUploadedBy().getId(),
                 uploader.getName(),
-                fileAttachment.getStatus()
+                fileAttachment.getStatus(),
+                fileAttachment.getAttachmentType(),
+                fileAttachment.getSourceAttachmentId(),
+                fileAttachment.getConversionStatus()
         );
     }
 

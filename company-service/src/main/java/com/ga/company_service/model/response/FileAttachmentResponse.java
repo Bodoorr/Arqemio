@@ -10,10 +10,14 @@ public class FileAttachmentResponse {
     private Long projectId;
     private Long expenseId;
     private Long projectUpdateId;
+    private Long riskId;
     private String fileUrl;
     private String fileName;
     private String fileType;
     private Long uploadedByMembershipId;
     private String uploadedByName;
     private String status;
+    private String attachmentType;
+    private Long sourceAttachmentId;
+    private String conversionStatus;
 }

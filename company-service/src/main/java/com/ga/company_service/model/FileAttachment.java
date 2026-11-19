@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Setter
 @Entity
 @Table(name = "file_attachments")
-@ToString(exclude = {"project","projectUpdate","uploadedBy"})
+@ToString(exclude = {"project","projectUpdate","uploadedBy","risk"})
 public class FileAttachment {
     @Id
     @Column
@@ -36,6 +36,15 @@ public class FileAttachment {
     private String fileType;
 
     @Column
+    private String attachmentType = "GENERAL";
+
+    @Column
+    private Long sourceAttachmentId;
+
+    @Column
+    private String conversionStatus;
+
+    @Column
     private String status = "ACTIVE";
 
     @ManyToOne
@@ -45,6 +54,10 @@ public class FileAttachment {
     @ManyToOne
     @JoinColumn(name = "project_update_id")
     private ProjectUpdate projectUpdate;
+
+    @ManyToOne
+    @JoinColumn(name = "risk_id")
+    private Risk risk;
 
     @Column
     @CreationTimestamp

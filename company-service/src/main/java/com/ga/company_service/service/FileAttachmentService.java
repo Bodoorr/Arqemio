@@ -3,15 +3,9 @@ package com.ga.company_service.service;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.ga.company_service.client.FinanceClient;
-import com.ga.company_service.model.CompanyMembership;
-import com.ga.company_service.model.FileAttachment;
-import com.ga.company_service.model.Project;
-import com.ga.company_service.model.ProjectUpdate;
+import com.ga.company_service.model.*;
 import com.ga.company_service.model.response.UserResponse;
-import com.ga.company_service.repository.CompanyMembershipRepository;
-import com.ga.company_service.repository.FileAttachmentRepository;
-import com.ga.company_service.repository.ProjectRepository;
-import com.ga.company_service.repository.ProjectUpdateRepository;
+import com.ga.company_service.repository.*;
 import io.github.cdimascio.dotenv.Dotenv;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -36,6 +30,7 @@ public class FileAttachmentService {
     private final ProjectService projectService;
     private final ProjectUpdateRepository projectUpdateRepository;
     private final CompanyMembershipRepository companyMembershipRepository;
+    private final RiskRepository riskRepository;
     private final FinanceClient financeClient;
 
     private static final Logger logger= Logger.getLogger(FileAttachmentService.class.getName());
@@ -65,11 +60,47 @@ public class FileAttachmentService {
                         "overwrite", false
                 )
         );
-
         return uploadResult;
     }
 
-    public FileAttachment createFileAttachment(MultipartFile file, Long projectId, Long projectUpdateId, Long expenseId){
+    public Map uploadConstructionFile(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please select a file.");
+        }
+
+        String fileName = file.getOriginalFilename();
+        if (fileName == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file name.");
+        }
+
+        String name = fileName.toLowerCase();
+        boolean isImage = name.endsWith(".png")
+                || name.endsWith(".jpg")
+                || name.endsWith(".jpeg");
+
+        boolean isPdf = name.endsWith(".pdf");
+        boolean isModel = name.endsWith(".glb")
+                || name.endsWith(".gltf");
+
+        if (!isImage && !isPdf && !isModel) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Only PNG, JPG, PDF, GLB and GLTF files are allowed.");
+        }
+
+        String resourceType = isImage ? "image" : "raw";
+        return cloudinary.uploader().upload(
+                file.getBytes(),
+                ObjectUtils.asMap(
+                        "folder", "arqemio/construction",
+                        "resource_type", resourceType,
+                        "use_filename", true,
+                        "unique_filename", true,
+                        "overwrite", false
+                )
+        );
+    }
+
+    public FileAttachment createFileAttachment(MultipartFile file, Long projectId, Long projectUpdateId, Long expenseId, Long riskId){
         UserResponse currentUser= getCurrentLoggedInUser();
         Project project= projectRepository.findById(projectId).orElseThrow(()-> new ResponseStatusException(HttpStatus.NOT_FOUND,"Project not found."));
         CompanyMembership membership= companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(),project.getCompany().getId(), "ACTIVE")
@@ -109,12 +140,31 @@ public class FileAttachmentService {
             }
         }
 
+        Risk risk = null;
+
+        if (riskId != null) {
+            risk = riskRepository.findById(riskId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
+
+            if (!risk.getProject().getId().equals(projectId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Risk does not belong to this project.");
+            }
+
+            if (!risk.getReportedBy().getUserId().equals(currentUser.getId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only attach files to risks you reported.");
+            }
+
+            if (!"PENDING_REVIEW".equals(risk.getStatus())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You can only add evidence before the risk is reviewed.");
+            }
+        }
+
         try {
             Map uploadResult= uploadImage(file);
             FileAttachment fileAttachment= new FileAttachment();
             fileAttachment.setProject(project);
             fileAttachment.setProjectUpdate(projectUpdate);
             fileAttachment.setExpenseId(expenseId);
+            fileAttachment.setRisk(risk);
             fileAttachment.setFileUrl(uploadResult.get("secure_url").toString());
             fileAttachment.setFileName(file.getOriginalFilename());
             fileAttachment.setFileType(file.getContentType());
@@ -125,6 +175,50 @@ public class FileAttachmentService {
             return savedAttachment;
         } catch (IOException e){
             throw new RuntimeException("Failed to upload image.");
+        }
+    }
+
+    public FileAttachment createConstructionDrawing(MultipartFile file, Long projectId) {
+        UserResponse currentUser = getCurrentLoggedInUser();
+
+        Project project = projectRepository.findById(projectId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found."));
+
+        CompanyMembership membership = companyMembershipRepository.findByUserIdAndCompanyIdAndStatus(currentUser.getId(), project.getCompany().getId(), "ACTIVE")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "You're not an active member of this company."));
+
+        boolean isOwner = membership.getRole().equals("OWNER");
+        boolean isManager = "MANAGER".equals(membership.getRole()) && projectRepository.existsByIdAndManagersUserIdAndManagersStatus(projectId, currentUser.getId(), "ACTIVE");
+        if (!isOwner && !isManager) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only project owners and managers can upload construction drawings.");
+        }
+
+        String fileName = file.getOriginalFilename();
+        if (fileName == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file name.");
+        }
+
+        String name = fileName.toLowerCase();
+        if (!name.endsWith(".png") && !name.endsWith(".jpg") && !name.endsWith(".jpeg") && !name.endsWith(".pdf")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Construction drawings must be PNG, JPG or PDF.");
+        }
+
+        try {
+            Map uploadResult = uploadConstructionFile(file);
+
+            FileAttachment attachment = new FileAttachment();
+            attachment.setProject(project);
+            attachment.setUploadedBy(membership);
+            attachment.setFileUrl(uploadResult.get("secure_url").toString());
+            attachment.setFileName(fileName);
+            attachment.setFileType(file.getContentType());
+            attachment.setAttachmentType("CONSTRUCTION_DRAWING");
+            attachment.setConversionStatus("PENDING");
+
+            return fileAttachmentRepository.save(attachment);
+        } catch (IOException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to upload construction drawing.");
         }
     }
 
@@ -143,6 +237,12 @@ public class FileAttachmentService {
         Long projectId= financeClient.getExpenseProjectId(expenseId);
         projectService.getProjectById(projectId);
         return fileAttachmentRepository.findByExpenseIdAndStatus(expenseId, "ACTIVE");
+    }
+
+    public List<FileAttachment> getAllProjectRiskAttachments(Long riskId) {
+        Risk risk = riskRepository.findById(riskId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Risk not found."));
+        projectService.getProjectById(risk.getProject().getId());
+        return fileAttachmentRepository.findByRiskIdAndStatus(riskId, "ACTIVE");
     }
 
     public FileAttachment getFileAttachmentById(Long attachmentId){

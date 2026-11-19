@@ -52,7 +52,8 @@ public class SecurityConfiguration {
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/notifications/send",
-                        "/audit-logs/create"
+                        "/audit-logs/create",
+                        "/notifications/twilio/response"
                 ).permitAll().anyRequest().authenticated());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
